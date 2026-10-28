@@ -105,7 +105,7 @@
 - Kind: setup
 - Change: README "Getting started" (prerequisites, `make setup`, `make dev`, `make check`); root `CLAUDE.md` and project `CLAUDE.md` files drop "scaffolded in F-00" notes.
 - Commit: `docs(F-00): document development setup`
-- [ ] done
+- [x] done
 
 ## Acceptance criteria mapping
 

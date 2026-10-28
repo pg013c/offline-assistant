@@ -37,7 +37,7 @@ A feature's intent is in `docs/features/F-xx-*/spec.md`, its steps in `plan.md`,
 | `make api-client` | regenerate the TypeScript client from OpenAPI |
 | `make offline-check` | end-to-end with networking disabled |
 
-The Makefile arrives with F-00. Until then the repository is documentation only.
+`make eval` arrives with F-04 and `make offline-check` with F-10. `make help` lists what exists now. Use Node from `.nvmrc` (`nvm use`).
 
 ## Skills
 

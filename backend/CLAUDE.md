@@ -9,5 +9,3 @@ Rules: [../docs/standards/python.md](../docs/standards/python.md), [../docs/stan
 - Unit tests use fakes and do no I/O. Real adapters are tested in `tests/integration/` with the `integration` marker.
 - Prompts are files in `src/assistant/prompts/`.
 - Run everything with `uv run ...`; add dependencies with `uv add` only after an ADR.
-
-The project is scaffolded in F-00.

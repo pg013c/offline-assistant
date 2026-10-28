@@ -11,7 +11,7 @@ Built to answer three practical questions about local AI:
 2. How do local models compare with a cloud model on **quality, latency, memory and cost**, measured on the same evaluation set?
 3. Can the whole thing be **installed and verified on an air-gapped machine**?
 
-> **Status:** design phase. The documentation, standards and workflow are in place; implementation starts with [F-00](docs/backlog.md). Results will be published in [docs/evals/](docs/evals/).
+> **Status:** early implementation. The repository skeleton (F-00) is in place: backend and frontend projects, checks, CI and the agent workflow. Product features start with [F-01](docs/backlog.md). Results will be published in [docs/evals/](docs/evals/).
 
 ## What it will do
 
@@ -58,7 +58,26 @@ MacBook Pro 14", Apple M5 Pro, 64 GB unified memory. A Linux + NVIDIA profile wi
 
 ## Getting started
 
-Not yet runnable. Setup instructions arrive with F-00 and F-10.
+Development setup. Docker packaging and the offline install guide arrive with F-10 and F-12.
+
+Prerequisites: [uv](https://docs.astral.sh/uv/), Node 24 (`nvm use` reads `.nvmrc`), GNU Make. pnpm comes through Corepack.
+
+```bash
+cp .env.example .env
+make setup
+```
+
+```bash
+make dev
+```
+
+The UI runs at `http://localhost:5173` and the API at `http://localhost:8000/api` (docs at `/api/docs`). If a port is taken, set `API_PORT` or `UI_PORT` in `.env`.
+
+```bash
+make check
+```
+
+`make check` runs formatting, lint, type checks, layer contracts, tests and the API contract check for both projects; CI runs the same targets. `make help` lists all targets.
 
 ## Licence
 
