@@ -6,6 +6,9 @@ import type { components } from '../../api/schema'
 export type Health = components['schemas']['HealthResponse']
 
 const REFRESH_INTERVAL_MS = 30_000
+// One quick retry: a status indicator should report an outage within a second, not after backoff.
+const RETRIES = 1
+const RETRY_DELAY_MS = 300
 
 /** Backend health, refreshed periodically so the shell notices when the API goes down. */
 export function useApiHealth() {
@@ -19,5 +22,7 @@ export function useApiHealth() {
       return data
     },
     refetchInterval: REFRESH_INTERVAL_MS,
+    retry: RETRIES,
+    retryDelay: RETRY_DELAY_MS,
   })
 }
