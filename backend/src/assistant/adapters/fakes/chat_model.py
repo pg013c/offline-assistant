@@ -13,6 +13,7 @@ class FakeExtractiveChatModel:
     """Answers with the opening sentences of the best passage, word by word."""
 
     model_id = "fake-extractive"
+    is_test_model = False
 
     async def stream_answer(self, question: str, passages: Sequence[Chunk]) -> AsyncIterator[str]:
         if not passages:

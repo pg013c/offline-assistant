@@ -29,7 +29,7 @@ const FOUND = [
     document_title: 'policy',
     quote: QUOTE,
   },
-  { type: 'end', model_id: 'fake-extractive', found: true },
+  { type: 'end', model_id: 'fake-extractive', found: true, is_test_model: true },
 ]
 
 async function ask(question: string) {
@@ -55,6 +55,31 @@ describe('ChatView', () => {
     expect(screen.getByText(/test model, not AI/i)).toBeInTheDocument()
   })
 
+  it('marks answers from a test model by its flag, not its name', async () => {
+    serveAnswer([
+      { type: 'text', text: 'Quoted.' },
+      { type: 'end', model_id: 'stand-in', found: true, is_test_model: true },
+    ])
+    renderWithQueryClient(<ChatView />)
+
+    await ask('Anything?')
+
+    expect(await screen.findByText(/test model, not AI/i)).toBeInTheDocument()
+  })
+
+  it('shows no test-model notice for a real model', async () => {
+    serveAnswer([
+      { type: 'text', text: 'An answer.' },
+      { type: 'end', model_id: 'fake-extractive', found: true, is_test_model: false },
+    ])
+    renderWithQueryClient(<ChatView />)
+
+    await ask('Anything?')
+
+    expect(await screen.findByText(/Answered by fake-extractive/)).toBeInTheDocument()
+    expect(screen.queryByText(/test model, not AI/i)).not.toBeInTheDocument()
+  })
+
   it('opens a citation to show the quoted passage and its document', async () => {
     serveAnswer(FOUND)
     renderWithQueryClient(<ChatView />)
@@ -71,7 +96,7 @@ describe('ChatView', () => {
   it('shows no citations when no relevant passage was found', async () => {
     serveAnswer([
       { type: 'text', text: 'No relevant passage was found in the uploaded documents.' },
-      { type: 'end', model_id: 'fake-extractive', found: false },
+      { type: 'end', model_id: 'fake-extractive', found: false, is_test_model: true },
     ])
     renderWithQueryClient(<ChatView />)
 

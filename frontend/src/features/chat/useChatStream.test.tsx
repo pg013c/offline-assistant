@@ -61,7 +61,7 @@ describe('useChatStream', () => {
       { type: 'text', text: 'Providers ' },
       { type: 'text', text: 'keep logs.' },
       CITATION,
-      { type: 'end', model_id: 'fake-extractive', found: true },
+      { type: 'end', model_id: 'fake-extractive', found: true, is_test_model: true },
     ])
     const { result } = renderHook(() => useChatStream(), { wrapper })
 
@@ -80,6 +80,7 @@ describe('useChatStream', () => {
       citations: [CITATION],
       modelId: 'fake-extractive',
       found: true,
+      isTestModel: true,
     })
   })
 

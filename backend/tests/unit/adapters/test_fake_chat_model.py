@@ -17,7 +17,10 @@ def chunk(position: int, text: str) -> Chunk:
 
 
 def test_identifies_itself_as_fake() -> None:
-    assert FakeExtractiveChatModel().model_id == "fake-extractive"
+    model = FakeExtractiveChatModel()
+
+    assert model.model_id == "fake-extractive"
+    assert model.is_test_model is True
 
 
 def test_answers_with_the_first_two_sentences_of_the_first_passage() -> None:

@@ -87,7 +87,7 @@ def test_end_event_names_the_model_and_reports_a_found_answer(
 
     events = ask(questions, "How long do providers keep logs?")
 
-    assert events[-1] == AnswerEnd(model_id="fake-extractive", found=True)
+    assert events[-1] == AnswerEnd(model_id="fake-extractive", found=True, is_test_model=True)
 
 
 def test_without_documents_no_relevant_passage_is_reported(
@@ -99,7 +99,7 @@ def test_without_documents_no_relevant_passage_is_reported(
 
     assert events == [
         AnswerText(text=NO_RELEVANT_PASSAGE),
-        AnswerEnd(model_id="fake-extractive", found=False),
+        AnswerEnd(model_id="fake-extractive", found=False, is_test_model=True),
     ]
 
 
@@ -112,4 +112,4 @@ def test_without_a_shared_word_no_relevant_passage_is_reported(
     events = ask(questions, "biometric identification rules")
 
     assert not any(isinstance(event, AnswerCitation) for event in events)
-    assert events[-1] == AnswerEnd(model_id="fake-extractive", found=False)
+    assert events[-1] == AnswerEnd(model_id="fake-extractive", found=False, is_test_model=True)

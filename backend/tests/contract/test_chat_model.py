@@ -36,6 +36,10 @@ def test_has_a_model_id(model: ChatModel) -> None:
     assert model.model_id
 
 
+def test_declares_whether_it_is_a_test_model(model: ChatModel) -> None:
+    assert isinstance(model.is_test_model, bool)
+
+
 def test_streams_a_non_empty_answer_in_pieces(model: ChatModel) -> None:
     pieces = collect(model.stream_answer("How long are logs kept?", [PASSAGE]))
 

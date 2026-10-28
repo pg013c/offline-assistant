@@ -30,6 +30,7 @@ class AnswerCitation:
 class AnswerEnd:
     model_id: str
     found: bool
+    is_test_model: bool = False
 
 
 type AnswerEvent = AnswerText | AnswerCitation | AnswerEnd

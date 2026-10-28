@@ -52,7 +52,12 @@ def test_answer_is_a_stream_of_text_then_citation_then_end(client: TestClient) -
     assert first_citation > 1
     assert set(kinds[:first_citation]) == {"text"}
     assert set(kinds[first_citation:-1]) == {"citation"}
-    assert events[-1] == {"type": "end", "model_id": "fake-extractive", "found": True}
+    assert events[-1] == {
+        "type": "end",
+        "model_id": "fake-extractive",
+        "found": True,
+        "is_test_model": True,
+    }
 
 
 def test_citation_events_carry_the_quoted_passage(client: TestClient) -> None:
