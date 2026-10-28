@@ -13,7 +13,10 @@ export COREPACK_ENABLE_DOWNLOAD_PROMPT := 0
 export API_PORT ?= 8000
 export UI_PORT ?= 5173
 
-.PHONY: help setup dev check check-backend check-frontend test test-backend test-frontend node-version
+# Where `make api-client` writes the schema and generated types (ADR 0005).
+API_OUT ?= $(CURDIR)/frontend/src/api
+
+.PHONY: help setup dev check check-backend check-frontend check-api-client api-client test test-backend test-frontend node-version
 
 help: ## List targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
@@ -35,7 +38,7 @@ dev: node-version ## API on :8000 and UI on :5173 (API_PORT, UI_PORT), both with
 	$(FRONTEND) dev --port $(UI_PORT) & \
 	wait
 
-check: check-backend check-frontend ## Format, lint, types and tests for everything
+check: check-backend check-frontend check-api-client ## Format, lint, types, tests and API contract for everything
 
 check-backend: ## Backend: ruff format, ruff lint, mypy, layer contracts, pytest
 	$(BACKEND) ruff format --check .
@@ -49,6 +52,14 @@ check-frontend: node-version ## Frontend: prettier, eslint, tsc, vitest
 	$(FRONTEND) lint
 	$(FRONTEND) typecheck
 	$(MAKE) test-frontend
+
+check-api-client: node-version ## API contract: the committed client matches the backend schema
+	bash scripts/ci/check-api-client.sh
+
+api-client: node-version ## Regenerate the TypeScript client from the backend's OpenAPI schema
+	@mkdir -p "$(API_OUT)"
+	$(BACKEND) python -m assistant.openapi > "$(API_OUT)/openapi.json"
+	$(FRONTEND) exec openapi-typescript "$(API_OUT)/openapi.json" --output "$(API_OUT)/schema.d.ts" --silent
 
 test: test-backend test-frontend ## Tests only
 
