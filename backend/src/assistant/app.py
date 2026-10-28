@@ -1,11 +1,21 @@
 """Composition root: the only module that wires adapters into services (ADR 0002)."""
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
+import structlog
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
 
 from assistant import __version__
-from assistant.api.routes import health
+from assistant.adapters.fakes.chat_model import FakeExtractiveChatModel
+from assistant.adapters.file_document_store import LocalFileDocumentStore
+from assistant.adapters.keyword_index import KeywordChunkIndex
+from assistant.api.errors import register_error_handlers
+from assistant.api.routes import documents, health
 from assistant.log import configure_logging
+from assistant.services.documents import DocumentService
+from assistant.services.questions import QuestionService
 from assistant.settings import Settings, load_settings
 
 API_PREFIX = "/api"
@@ -18,7 +28,20 @@ def operation_id(route: APIRoute) -> str:
 
 def create_app(settings: Settings) -> FastAPI:
     """Build the HTTP application from settings."""
+    store = LocalFileDocumentStore(settings.data_dir)
+    index = KeywordChunkIndex()
+    model = FakeExtractiveChatModel()
+    document_service = DocumentService(store, index)
+    question_service = QuestionService(index, model, store)
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        restored = document_service.restore()
+        structlog.get_logger(__name__).info("documents_restored", count=restored)
+        yield
+
     app = FastAPI(
+        lifespan=lifespan,
         title="Offline Assistant",
         version=__version__,
         openapi_url=f"{API_PREFIX}/openapi.json",
@@ -27,7 +50,11 @@ def create_app(settings: Settings) -> FastAPI:
         generate_unique_id_function=operation_id,
     )
     app.state.settings = settings
+    app.state.document_service = document_service
+    app.state.question_service = question_service
+    register_error_handlers(app)
     app.include_router(health.router, prefix=API_PREFIX)
+    app.include_router(documents.router, prefix=API_PREFIX)
     return app
 
 

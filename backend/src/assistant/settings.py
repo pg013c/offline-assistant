@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Literal
 
 from pydantic import ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -12,6 +13,8 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix=ENV_PREFIX)
 
     data_dir: Path
+    # The only chat model until F-06 adds real ones.
+    chat_model: Literal["fake-extractive"] = "fake-extractive"
 
 
 class SettingsError(Exception):

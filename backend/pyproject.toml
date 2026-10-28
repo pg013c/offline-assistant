@@ -8,6 +8,7 @@ dependencies = [
     "fastapi>=0.162.0",
     "pydantic>=2.14.1",
     "pydantic-settings>=2.16.2",
+    "python-multipart>=0.0.32",
     "structlog>=26.1.0",
     "uvicorn>=0.54.0",
 ]
@@ -72,6 +73,8 @@ name = "Only the composition root imports adapters"
 type = "forbidden"
 source_modules = ["assistant.api", "assistant.settings", "assistant.openapi"]
 forbidden_modules = ["assistant.adapters"]
+# Direct imports only: `openapi` builds the whole app through `app`, which is meant to wire adapters.
+allow_indirect_imports = true
 
 # Third-party libraries the inner layers may not use. Each model, database or parsing library
 # (Qdrant, Docling, Whisper, ...) is added here in the same change as the ADR that introduces it.
