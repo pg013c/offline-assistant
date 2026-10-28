@@ -81,7 +81,7 @@
 - Tests first: `frontend/src/features/status/ApiStatus.test.tsx` with msw: when `/api/health` returns ok, the shell shows "API: ok" and the version; when the request fails or returns 5xx, it shows "API: unavailable"; while loading, it shows "API: checking". Accessible: the status is a `role="status"` element.
 - Change: `useApiHealth.ts`, `ApiStatus.tsx`, `App.tsx` shell, `main.tsx` with `QueryClientProvider`; default Vite demo content removed.
 - Done when: tests pass, `make check` green, and with `make dev` the page shows "API: ok".
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 8. Git hooks

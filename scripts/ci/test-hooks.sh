@@ -35,6 +35,7 @@ expect green backend/tests/unit/test_retrieval.py 2
 expect green backend/tests/conftest.py 2
 expect green frontend/src/features/chat/ChatView.test.tsx 2
 expect green frontend/e2e/ask-question.spec.ts 2
+expect green frontend/src/test/server.ts 2
 expect green evals/datasets/questions.yaml 2
 expect green backend/src/assistant/services/retrieval.py 0
 expect green frontend/src/features/chat/ChatView.tsx 0
