@@ -5,7 +5,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from assistant.app import create_app
-from assistant.domain.errors import DocumentRejected, UnsupportedFileType
+from assistant.domain.errors import DocumentRejected, FileTooLarge, UnsupportedFileType
+from assistant.services.documents import MAX_UPLOAD_BYTES
 from assistant.settings import Settings
 
 POLICY = b"Providers keep logs.\n\nAuthorities may inspect the logs."
@@ -140,3 +141,21 @@ def test_an_unmapped_rejection_is_still_reported_with_the_standard_body(
     body = result["body"]
     assert isinstance(body, dict)
     assert body["code"] == "document_rejected"
+
+
+class RecordingDocuments:
+    def __init__(self) -> None:
+        self.received: list[int] = []
+
+    def upload(self, filename: str, content: bytes) -> object:
+        self.received.append(len(content))
+        raise FileTooLarge(f"{filename}: too large")
+
+
+def test_an_oversized_upload_is_not_read_beyond_the_limit(client: TestClient) -> None:
+    documents = RecordingDocuments()
+    client.app.state.document_service = documents  # type: ignore[attr-defined]
+
+    upload(client, "big.txt", b"x" * (MAX_UPLOAD_BYTES * 2))
+
+    assert documents.received == [MAX_UPLOAD_BYTES + 1]
