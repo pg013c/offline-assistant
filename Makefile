@@ -7,6 +7,8 @@ FRONTEND := pnpm --dir frontend
 # Local settings for `make dev`; see .env.example. Paths are resolved from the repository root.
 ENV_FILE ?= .env
 -include $(ENV_FILE)
+# Export every variable the env file defines, so all ASSISTANT_* settings reach the API.
+export $(shell sed -n 's/^\([A-Za-z_][A-Za-z0-9_]*\)=.*/\1/p' $(ENV_FILE) 2>/dev/null)
 # Required, no default (GEN-20): `make dev-preflight` stops when it is missing.
 ifdef ASSISTANT_DATA_DIR
 export ASSISTANT_DATA_DIR := $(abspath $(ASSISTANT_DATA_DIR))
@@ -32,9 +34,9 @@ setup: node-version ## Install project dependencies
 
 dev: node-version dev-preflight ## API on :8000 and UI on :5173 (API_PORT, UI_PORT), both with hot reload
 	@mkdir -p "$(ASSISTANT_DATA_DIR)"
-	@trap 'kill 0' INT TERM EXIT; \
-	$(BACKEND) uvicorn assistant.app:main --factory --reload --port $(API_PORT) & \
-	$(FRONTEND) dev --port $(UI_PORT) & \
+	@$(BACKEND) uvicorn assistant.app:main --factory --reload --port $(API_PORT) & api=$$!; \
+	frontend/node_modules/.bin/vite frontend --port $(UI_PORT) & ui=$$!; \
+	trap 'kill $$api $$ui 2>/dev/null' INT TERM EXIT; \
 	wait
 
 check: check-backend check-frontend check-api-client ## Format, lint, types, tests and API contract for everything
