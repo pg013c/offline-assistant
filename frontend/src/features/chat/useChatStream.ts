@@ -72,10 +72,13 @@ async function streamAnswer(
   if (!response.ok || !response.body) {
     throw new Error(`The answer failed with HTTP ${String(response.status)}`)
   }
+  // Set from the parser's callback, so it lives in an object the type checker does not narrow.
+  const progress = { ended: false }
   const parser = createParser({
     onEvent: ({ data }) => {
       const event: unknown = JSON.parse(data)
       if (isChatEvent(event)) {
+        progress.ended ||= event.type === 'end'
         onEvent(event)
       }
     },
@@ -84,9 +87,12 @@ async function streamAnswer(
   for (;;) {
     const { done, value } = await reader.read()
     if (done) {
-      return
+      break
     }
     parser.feed(value)
+  }
+  if (!progress.ended) {
+    throw new Error('The answer stopped before it was complete.')
   }
 }
 
