@@ -64,7 +64,20 @@ def test_rejected_uploads_return_the_standard_error_and_store_nothing(
     assert isinstance(body, dict)
     assert body["code"] == code
     assert body["message"]
+    assert body["details"] is None
     assert client.get("/api/documents").json() == []
+
+
+def test_a_request_without_a_file_returns_the_standard_error_with_details(
+    client: TestClient,
+) -> None:
+    response = client.post("/api/documents", data={"note": "no file here"})
+
+    assert response.status_code == 422
+    body = response.json()
+    assert body["code"] == "invalid_request"
+    assert body["message"]
+    assert body["details"] == [{"field": "body.file", "message": "Field required"}]
 
 
 def test_uploading_the_same_content_twice_returns_the_same_document(client: TestClient) -> None:

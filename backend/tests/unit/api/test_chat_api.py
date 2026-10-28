@@ -91,3 +91,12 @@ def test_openapi_documents_the_event_stream_and_its_event_types(client: TestClie
     assert {"ChatTextEvent", "ChatCitationEvent", "ChatEndEvent"} <= set(
         schema["components"]["schemas"]
     )
+
+
+def test_an_empty_question_returns_the_standard_error(client: TestClient) -> None:
+    response = client.post("/api/chat", json={"question": ""})
+
+    assert response.status_code == 422
+    body = response.json()
+    assert body["code"] == "invalid_request"
+    assert [detail["field"] for detail in body["details"]] == ["body.question"]
