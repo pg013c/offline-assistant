@@ -2,9 +2,22 @@
 
 from fastapi import FastAPI
 
+from assistant import __version__
+from assistant.api.routes import health
 from assistant.settings import Settings
+
+API_PREFIX = "/api"
 
 
 def create_app(settings: Settings) -> FastAPI:
     """Build the HTTP application from settings."""
-    raise NotImplementedError
+    app = FastAPI(
+        title="Offline Assistant",
+        version=__version__,
+        openapi_url=f"{API_PREFIX}/openapi.json",
+        docs_url=f"{API_PREFIX}/docs",
+        redoc_url=None,
+    )
+    app.state.settings = settings
+    app.include_router(health.router, prefix=API_PREFIX)
+    return app

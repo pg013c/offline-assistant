@@ -39,7 +39,7 @@
 - Change: `app.py` (`create_app`), `settings.py` (minimal), `api/schemas.py`, `api/routes/health.py`.
 - Done when: tests pass, `make check` green.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 3. Settings fail fast
 

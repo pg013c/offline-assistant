@@ -21,6 +21,5 @@ check-backend: ## Backend: ruff format, ruff lint, mypy, pytest
 
 test: test-backend ## Tests only
 
-# Exit code 5 means "no tests collected"; allowed only until the first test lands (F-00 step 2).
 test-backend: ## Backend tests
-	$(BACKEND) pytest -q || [ $$? -eq 5 ]
+	$(BACKEND) pytest -q
