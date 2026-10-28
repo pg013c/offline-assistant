@@ -4,11 +4,14 @@ from assistant.domain.documents import Document
 
 
 class FakeDocumentStore:
+    def __init__(self) -> None:
+        self._documents: dict[str, tuple[Document, str]] = {}
+
     def save(self, document: Document, content: str) -> None:
-        raise NotImplementedError
+        self._documents.setdefault(document.id, (document, content))
 
     def list_documents(self) -> list[Document]:
-        raise NotImplementedError
+        return [document for document, _ in self._documents.values()]
 
     def load_all(self) -> list[tuple[Document, str]]:
-        raise NotImplementedError
+        return list(self._documents.values())
