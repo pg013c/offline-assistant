@@ -6,6 +6,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 BACKEND = Path(__file__).resolve().parents[2]
 CONFIG = BACKEND / "pyproject.toml"
 PACKAGE = BACKEND / "src" / "assistant"
@@ -58,3 +60,26 @@ def test_the_domain_importing_a_web_framework_breaks_the_contract(tmp_path: Path
 
     assert result.returncode != 0
     assert "assistant.domain._violation -> fastapi" in result.stdout
+
+
+def test_a_service_importing_a_web_framework_breaks_the_contract(tmp_path: Path) -> None:
+    source_root = copy_package(tmp_path)
+    violation = source_root / "assistant" / "services" / "_violation.py"
+    violation.write_text("import fastapi\n")
+
+    result = lint_imports(source_root, cwd=tmp_path)
+
+    assert result.returncode != 0
+    assert "assistant.services._violation -> fastapi" in result.stdout
+
+
+@pytest.mark.parametrize("module", ["settings", "openapi"])
+def test_modules_outside_the_layers_may_not_import_adapters(tmp_path: Path, module: str) -> None:
+    source_root = copy_package(tmp_path)
+    module_file = source_root / "assistant" / f"{module}.py"
+    module_file.write_text(module_file.read_text() + "\nimport assistant.adapters\n")
+
+    result = lint_imports(source_root, cwd=tmp_path)
+
+    assert result.returncode != 0
+    assert f"assistant.{module} -> assistant.adapters" in result.stdout
