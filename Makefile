@@ -21,7 +21,7 @@ export UI_PORT ?= 5173
 # Where `make api-client` writes the schema and generated types (ADR 0005).
 API_OUT ?= $(CURDIR)/frontend/src/api
 
-.PHONY: help setup dev dev-preflight check check-backend check-frontend check-api-client api-client test test-backend test-frontend node-version
+.PHONY: help setup dev dev-preflight e2e check check-backend check-frontend check-api-client api-client test test-backend test-frontend node-version
 
 help: ## List targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
@@ -30,6 +30,7 @@ setup: node-version ## Install project dependencies
 	uv sync --directory backend
 	corepack enable pnpm
 	$(FRONTEND) install --frozen-lockfile
+	$(FRONTEND) exec playwright install chromium
 	uvx pre-commit install
 
 dev: node-version dev-preflight ## API on :8000 and UI on :5173 (API_PORT, UI_PORT), both with hot reload
@@ -63,6 +64,9 @@ api-client: node-version ## Regenerate the TypeScript client from the backend's 
 	$(FRONTEND) exec openapi-typescript "$(API_OUT)/openapi.json" --output "$(API_OUT)/schema.d.ts" --silent
 
 test: test-backend test-frontend ## Tests only
+
+e2e: node-version ## Browser journeys: real API with the fake model, fresh data directory
+	$(FRONTEND) e2e
 
 test-backend: ## Backend tests
 	$(BACKEND) pytest -q

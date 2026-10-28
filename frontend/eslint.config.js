@@ -8,7 +8,7 @@ import tseslint from 'typescript-eslint'
 
 // Rules from docs/standards/react.md (FE-02, FE-03, FE-24).
 export default defineConfig([
-  globalIgnores(['dist', 'coverage', 'src/api/schema.d.ts']),
+  globalIgnores(['dist', 'coverage', 'test-results', 'playwright-report', 'src/api/schema.d.ts']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [

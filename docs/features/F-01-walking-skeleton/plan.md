@@ -127,7 +127,7 @@
 - Change: `@playwright/test`, `frontend/playwright.config.ts`, `frontend/e2e/ask-question.spec.ts` (upload the fixture, ask, see the streamed answer and the model label, open a citation), `frontend/e2e/fixtures/sample-policy.txt`, Makefile `e2e` and Chromium install in `setup`, CI job `E2E`, README.
 - Done when: `make e2e` passes locally and the journey fails if the citation button is removed from `ChatView` (checked by hand, noted here).
 - Commit: `build(e2e): run the first browser journey in CI`
-- [ ] done
+- [x] done (verified 2026-10-28: the journey passes with `make e2e`, and fails when the citation buttons are hidden in `ChatView`)
 
 ### Step 13. Documentation
 
