@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from assistant.app import main
-from assistant.settings import SettingsError, load_settings
+from assistant.settings import SettingsError, load_settings, variable_name
 
 
 @pytest.fixture(autouse=True)
@@ -50,3 +50,17 @@ def test_app_factory_builds_the_app_from_the_environment(
     app = main()
 
     assert app.state.settings.data_dir == tmp_path
+
+
+@pytest.mark.parametrize(
+    ("location", "expected"),
+    [
+        (("data_dir",), "ASSISTANT_DATA_DIR"),
+        (("models", "default"), "ASSISTANT_MODELS_DEFAULT"),
+        ((), "ASSISTANT_* settings"),
+    ],
+)
+def test_validation_error_locations_name_the_environment_variable(
+    location: tuple[str, ...], expected: str
+) -> None:
+    assert variable_name(location) == expected

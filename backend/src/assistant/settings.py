@@ -18,6 +18,11 @@ class SettingsError(Exception):
     """Configuration is missing or invalid; the message names the environment variables."""
 
 
+def variable_name(location: tuple[int | str, ...]) -> str:
+    """The environment variable behind a validation error location."""
+    raise NotImplementedError
+
+
 def load_settings() -> Settings:
     """Read settings from the environment, failing with the names of bad variables (GEN-20)."""
     try:
