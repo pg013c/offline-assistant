@@ -25,4 +25,5 @@ Use the `/adr` skill or copy [template.md](template.md).
 | [0008](0008-vite-spa-frontend.md) | Vite single-page app instead of a server-rendered framework | accepted |
 | [0009](0009-test-first-commits-and-merge-strategy.md) | Test-first commits, kept in history | accepted |
 | [0010](0010-continuous-integration-from-the-first-commit.md) | Continuous integration from the first commit | accepted |
-| [0011](0011-baseline-dependencies.md) | Baseline dependencies | accepted |
+| [0011](0011-baseline-dependencies.md) | Baseline dependencies | accepted, amended by 0012 |
+| [0012](0012-frontend-toolchain-versions.md) | Frontend toolchain versions | accepted |

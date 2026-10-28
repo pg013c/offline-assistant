@@ -1,6 +1,6 @@
 # 0011. Baseline dependencies
 
-- Status: accepted
+- Status: accepted (toolchain versions amended by [0012](0012-frontend-toolchain-versions.md))
 - Date: 2026-10-28
 - Related: GEN-30, ADR 0001, ADR 0002, ADR 0005, ADR 0008, F-00
 
