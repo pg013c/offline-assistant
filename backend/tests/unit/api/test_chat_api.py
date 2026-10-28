@@ -7,6 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from assistant.app import create_app
+from assistant.domain.documents import document_id_for, split_into_chunks
 from assistant.settings import Settings
 
 POLICY = (
@@ -67,7 +68,9 @@ def test_citation_events_carry_the_quoted_passage(client: TestClient) -> None:
 
     citation = next(event for event in events if event["type"] == "citation")
     assert citation["document_title"] == "policy"
-    assert citation["quote"] in POLICY.decode()
+    text = POLICY.decode()
+    chunks = {chunk.id: chunk.text for chunk in split_into_chunks(document_id_for(text), text)}
+    assert citation["quote"] in chunks[citation["chunk_id"]]
     assert citation["chunk_id"].startswith(citation["document_id"] + ":")
 
 

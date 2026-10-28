@@ -12,6 +12,7 @@ from assistant.domain.answers import (
     AnswerEvent,
     AnswerText,
 )
+from assistant.domain.documents import split_into_chunks
 from assistant.services.documents import DocumentService
 from assistant.services.questions import QuestionService
 
@@ -71,12 +72,13 @@ def test_citations_quote_their_chunk_verbatim(
     events = ask(questions, "How long do providers keep logs?")
 
     citations = [event.citation for event in events if isinstance(event, AnswerCitation)]
+    chunks = {chunk.id: chunk.text for chunk in split_into_chunks(document.id, POLICY.decode())}
     assert citations
     for citation in citations:
+        assert citation.quote in chunks[citation.chunk_id]
         assert citation.document_id == document.id
         assert citation.document_title == "policy"
         assert citation.chunk_id.startswith(f"{document.id}:")
-        assert citation.quote in POLICY.decode()
 
 
 def test_end_event_names_the_model_and_reports_a_found_answer(
