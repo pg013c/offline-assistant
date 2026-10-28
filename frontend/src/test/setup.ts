@@ -1,4 +1,3 @@
-/// <reference types="node" />
 import '@testing-library/jest-dom/vitest'
 import { Blob as NodeBlob, File as NodeFile } from 'node:buffer'
 import { cleanup } from '@testing-library/react'
