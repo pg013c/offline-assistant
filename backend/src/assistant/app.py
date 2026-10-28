@@ -21,3 +21,8 @@ def create_app(settings: Settings) -> FastAPI:
     app.state.settings = settings
     app.include_router(health.router, prefix=API_PREFIX)
     return app
+
+
+def main() -> FastAPI:
+    """Application factory for uvicorn (`--factory`): settings come from the environment."""
+    raise NotImplementedError

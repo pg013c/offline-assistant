@@ -15,7 +15,7 @@
 
 - **Dependencies:** [ADR 0011](../../adr/0011-baseline-dependencies.md), accepted with this plan.
 - **Commits without behaviour:** steps of kind `setup` are one `build(...)`/`ci(...)` commit, as now described in [workflow.md §4](../../workflow.md#4-the-redgreen-loop).
-- **Backend entry points:** `assistant.app:create_app(settings: Settings) -> FastAPI` builds the app; `assistant.app:app` is the module-level app for uvicorn, created from `Settings()` loaded from the environment.
+- **Backend entry points:** `assistant.app:create_app(settings: Settings) -> FastAPI` builds the app; `assistant.app:main` is the application factory for uvicorn (`--factory`), which loads settings from the environment; importing the module never reads the environment, so tests can build apps with their own settings.
 - **Settings:** `Settings` with prefix `ASSISTANT_`; the one required field in F-00 is `data_dir: Path` (storage root, needed from F-01 and by GEN-42). `.env.example` documents it; `make dev` loads `.env`.
 - **Health:** `GET /api/health` → `HealthResponse(status: Literal["ok"], version: str)`, version from package metadata. Route in `api/routes/health.py`, response model in `api/schemas.py`. No service: there is no domain behaviour yet.
 - **Schema export:** `python -m assistant.api.openapi` prints the OpenAPI JSON. `make api-client` writes it to `frontend/src/api/openapi.json` and runs `openapi-typescript` to `frontend/src/api/schema.d.ts`. The `API contract` CI job runs `make api-client` and fails on `git diff --exit-code frontend/src/api`.
@@ -45,9 +45,9 @@
 
 - Kind: code
 - Tests first: `backend/tests/unit/test_settings.py`: without `ASSISTANT_DATA_DIR`, loading `Settings` raises an error whose message names `ASSISTANT_DATA_DIR`; with it set, `data_dir` is a `Path`; unknown `ASSISTANT_` variables are ignored.
-- Change: `settings.py`, module-level `app` in `app.py`, `.env.example`.
+- Change: `settings.py` (`load_settings`, `SettingsError`), `main` factory in `app.py`, `.env.example`.
 - Done when: tests pass, `make check` green.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 4. Layer contract
