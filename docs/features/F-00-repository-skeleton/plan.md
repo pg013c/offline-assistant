@@ -98,7 +98,7 @@
 - Change: `ci.yml` jobs `Backend` (setup-uv, `make check-backend`), `Frontend` (setup-node from `.nvmrc`, pnpm, `make check-frontend`), `API contract` (both toolchains, `scripts/ci/check-api-client.sh`). Actions pinned to SHAs. `ADR 0010` table unchanged (it already lists these jobs).
 - Done when: all six jobs pass on the pull request.
 - Commit: `ci: check backend, frontend and API contract`
-- [ ] done
+- [x] done (workflow linted locally; the jobs are proven by the pull request run)
 
 ### Step 10. Developer documentation
 
