@@ -36,7 +36,7 @@ Every later feature needs the same foundation: a backend and a frontend project 
 - [x] AC-5: Given a change to an API schema without running `make api-client`, when CI runs, then the `API contract` job fails. — proof: `scripts/ci/check-api-client.sh` (CI job `API contract`); stale-client failure checked by hand, see plan step 6
 - [x] AC-6: When `make dev` runs, then the API starts on port 8000 and the UI on port 5173 with `/api` proxied to the API, both with hot reload. — proof: checked by hand with `make dev` (plan steps 5 and 7, review #9); configuration and port checks in `scripts/ci/test-make.sh`
 - [x] AC-7: Given staged changes, when the developer commits, then the `pre-commit` hooks run formatting, lint and type checks and do not run the test suite. — proof: checked by hand, see plan step 8
-- [ ] AC-8: Given a pull request, when CI runs, then `Backend`, `Frontend` and `API contract` jobs run alongside the existing jobs and pass.
+- [x] AC-8: Given a pull request, when CI runs, then `Backend`, `Frontend` and `API contract` jobs run alongside the existing jobs and pass. — proof: all six jobs passed on [PR #2](https://github.com/pg013c/offline-assistant/pull/2) at `e6460b1`
 - [x] AC-9: Missing required settings fail at startup with a message naming the variable (GEN-20, GEN-50). — proof: `backend/tests/unit/test_settings.py`, `scripts/ci/test-make.sh`
 
 ### Proof of each criterion
