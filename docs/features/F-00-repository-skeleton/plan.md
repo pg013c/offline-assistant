@@ -82,7 +82,7 @@
 - Change: `useApiHealth.ts`, `ApiStatus.tsx`, `App.tsx` shell, `main.tsx` with `QueryClientProvider`; default Vite demo content removed.
 - Done when: tests pass, `make check` green, and with `make dev` the page shows "API: ok".
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 8. Git hooks
 

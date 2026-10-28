@@ -66,9 +66,8 @@ test: test-backend test-frontend ## Tests only
 test-backend: ## Backend tests
 	$(BACKEND) pytest -q
 
-# --passWithNoTests only until the first frontend test lands (F-00 step 7).
 test-frontend: ## Frontend tests
-	$(FRONTEND) test --passWithNoTests
+	$(FRONTEND) test
 
 node-version:
 	@node -e 'const want = require("fs").readFileSync(".nvmrc", "utf8").trim(); \
