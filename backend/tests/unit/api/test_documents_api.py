@@ -5,6 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from assistant.app import create_app
+from assistant.domain.errors import DocumentRejected, UnsupportedFileType
 from assistant.settings import Settings
 
 POLICY = b"Providers keep logs.\n\nAuthorities may inspect the logs."
@@ -97,3 +98,45 @@ def test_documents_survive_a_restart(tmp_path: Path) -> None:
 
     with client_for(tmp_path) as after:
         assert after.get("/api/documents").json() == [created]
+
+
+class EmptyFile(UnsupportedFileType):
+    """A rejection added later, without its own HTTP mapping."""
+
+
+class RejectingDocuments:
+    def upload(self, filename: str, content: bytes) -> object:
+        raise EmptyFile(f"{filename}: empty")
+
+
+def test_a_new_kind_of_rejection_falls_back_to_its_parent_mapping(client: TestClient) -> None:
+    client.app.state.document_service = RejectingDocuments()  # type: ignore[attr-defined]
+
+    result = upload(client, "empty.txt", b"")
+
+    assert result["status"] == 415
+    body = result["body"]
+    assert isinstance(body, dict)
+    assert body["code"] == "unsupported_file_type"
+
+
+class UnmappedRejection(DocumentRejected):
+    """A rejection with no mapping anywhere in its class hierarchy."""
+
+
+class RejectingWithUnmapped:
+    def upload(self, filename: str, content: bytes) -> object:
+        raise UnmappedRejection(f"{filename}: rejected")
+
+
+def test_an_unmapped_rejection_is_still_reported_with_the_standard_body(
+    client: TestClient,
+) -> None:
+    client.app.state.document_service = RejectingWithUnmapped()  # type: ignore[attr-defined]
+
+    result = upload(client, "file.txt", b"x")
+
+    assert result["status"] == 422
+    body = result["body"]
+    assert isinstance(body, dict)
+    assert body["code"] == "document_rejected"
