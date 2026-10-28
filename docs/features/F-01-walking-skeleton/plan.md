@@ -70,7 +70,7 @@
 - Kind: code
 - Tests first: `backend/tests/unit/services/test_document_service.py` with fakes: upload stores and indexes; rejects other extensions, more than 5 MB and invalid UTF-8 with distinct domain errors and stores nothing; duplicate content returns the existing document; `restore()` indexes stored documents.
 - Change: `domain/errors.py`, `services/documents.py`.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 6. Question service
