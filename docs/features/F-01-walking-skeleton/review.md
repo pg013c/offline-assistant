@@ -50,8 +50,8 @@ Decision is filled in by the human: `fix`, `backlog (F-xx)`, or `reject: <reason
 | 11 | `7d6779e` test, `cfc2073` fix |
 | 12 | `cfb6dbc` test (tightened; code already correct) |
 | 13 | `3100f80` refactor |
-| 14 | `f1606f0` fix (one directory per run, removed in global teardown; checked by counting directories) |
-| 15 | `58d4f65` docs: ADR 0014 and `testing.md` |
-| 16 | moved to [backlog follow-ups](../../backlog.md#follow-ups) for F-03 in `58d4f65` |
-| 17 | `1c672a8` build (tests in their own TypeScript project; `process` in `src/` is a type error) |
-| 18 | moved to [backlog follow-ups](../../backlog.md#follow-ups) for F-07 in `58d4f65` |
+| 14 | `5125139` build (one directory per run, removed in global teardown; checked by counting directories) |
+| 15 | `b2a16af` docs: ADR 0014 and `testing.md` |
+| 16 | moved to [backlog follow-ups](../../backlog.md#follow-ups) for F-03 in `b2a16af` |
+| 17 | `0b4893a` build (tests in their own TypeScript project; `process` in `src/` is a type error) |
+| 18 | moved to [backlog follow-ups](../../backlog.md#follow-ups) for F-07 in `b2a16af` |
