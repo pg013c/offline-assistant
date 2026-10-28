@@ -93,7 +93,7 @@ def test_openapi_documents_the_event_stream_and_its_event_types(client: TestClie
 
     content = schema["paths"]["/api/chat"]["post"]["responses"]["200"]["content"]
     assert "text/event-stream" in content
-    assert {"ChatTextEvent", "ChatCitationEvent", "ChatEndEvent"} <= set(
+    assert {"ChatEvent", "ChatTextEvent", "ChatCitationEvent", "ChatEndEvent"} <= set(
         schema["components"]["schemas"]
     )
 
