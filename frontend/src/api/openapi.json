@@ -336,6 +336,25 @@
         ],
         "title": "DocumentResponse"
       },
+      "ErrorDetail": {
+        "properties": {
+          "field": {
+            "type": "string",
+            "title": "Field"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "field",
+          "message"
+        ],
+        "title": "ErrorDetail",
+        "description": "One problem with one field of a request."
+      },
       "ErrorResponse": {
         "properties": {
           "code": {
@@ -345,6 +364,20 @@
           "message": {
             "type": "string",
             "title": "Message"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details"
           }
         },
         "type": "object",

@@ -17,11 +17,19 @@ class DocumentResponse(BaseModel):
     chunk_count: int
 
 
+class ErrorDetail(BaseModel):
+    """One problem with one field of a request."""
+
+    field: str
+    message: str
+
+
 class ErrorResponse(BaseModel):
     """The body of every error the API reports (PY-22)."""
 
     code: str
     message: str
+    details: list[ErrorDetail] | None = None
 
 
 class ChatRequest(BaseModel):

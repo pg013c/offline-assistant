@@ -141,6 +141,16 @@ export interface components {
             chunk_count: number;
         };
         /**
+         * ErrorDetail
+         * @description One problem with one field of a request.
+         */
+        ErrorDetail: {
+            /** Field */
+            field: string;
+            /** Message */
+            message: string;
+        };
+        /**
          * ErrorResponse
          * @description The body of every error the API reports (PY-22).
          */
@@ -149,6 +159,8 @@ export interface components {
             code: string;
             /** Message */
             message: string;
+            /** Details */
+            details?: components["schemas"]["ErrorDetail"][] | null;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
