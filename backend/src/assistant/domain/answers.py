@@ -36,10 +36,15 @@ class AnswerEnd:
 type AnswerEvent = AnswerText | AnswerCitation | AnswerEnd
 
 
-def quote_from(text: str) -> str:
-    """The opening sentences of a chunk, copied verbatim (AI-03)."""
+def opening_sentences(text: str, count: int = QUOTE_SENTENCES) -> str:
+    """The first `count` sentences of the text, copied verbatim."""
     stripped = text.strip()
     boundaries = [match.start() for match in _SENTENCE_END.finditer(stripped)]
-    if len(boundaries) < QUOTE_SENTENCES:
+    if len(boundaries) < count:
         return stripped
-    return stripped[: boundaries[QUOTE_SENTENCES - 1]]
+    return stripped[: boundaries[count - 1]]
+
+
+def quote_from(text: str) -> str:
+    """The quote shown for a cited chunk, copied verbatim (AI-03)."""
+    return opening_sentences(text)
