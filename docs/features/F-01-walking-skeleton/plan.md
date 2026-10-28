@@ -79,7 +79,7 @@
 - Tests first: `backend/tests/unit/services/test_question_service.py` with fakes: events come as text, then citations, then end; each citation's quote is a substring of its chunk; no documents or no shared word gives one "no relevant passage" text, no citation and `found=False`; the end event carries the model id.
 - Change: `domain/answers.py`, `services/questions.py`.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 7. Document endpoints and wiring
 
