@@ -118,7 +118,7 @@
 - Kind: ui
 - Tests first: `frontend/src/features/chat/ChatView.test.tsx` and an updated `App.test.tsx`: submitting the form streams the answer into the page; the model label is shown (`fake-extractive`); each citation is a button; opening it shows the quote and document title in a dialog; the "no relevant passage" answer shows no citations; `App` shows both panels.
 - Change: `ChatView.tsx`, `CitationDialog.tsx`, `App.tsx`.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 12. End-to-end journey
