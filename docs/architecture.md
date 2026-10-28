@@ -144,7 +144,7 @@ Chunk identity is stable across re-ingestion of the same file (derived from docu
 
 ## 8. Repository layout
 
-```
+```text
 offline-assistant/
 ├── CLAUDE.md                 global rules for the coding agent
 ├── Makefile                  single entry point: dev, test, check, eval, offline-check
