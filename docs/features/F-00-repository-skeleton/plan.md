@@ -48,7 +48,7 @@
 - Change: `settings.py` (`load_settings`, `SettingsError`), `main` factory in `app.py`, `.env.example`.
 - Done when: tests pass, `make check` green.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 4. Layer contract
 

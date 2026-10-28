@@ -4,7 +4,7 @@ from fastapi import FastAPI
 
 from assistant import __version__
 from assistant.api.routes import health
-from assistant.settings import Settings
+from assistant.settings import Settings, load_settings
 
 API_PREFIX = "/api"
 
@@ -25,4 +25,4 @@ def create_app(settings: Settings) -> FastAPI:
 
 def main() -> FastAPI:
     """Application factory for uvicorn (`--factory`): settings come from the environment."""
-    raise NotImplementedError
+    return create_app(load_settings())
