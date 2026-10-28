@@ -30,7 +30,7 @@
 - Change: `backend/pyproject.toml` (Python 3.13, dependencies from ADR 0011, ruff rules from PY-02, mypy strict, pytest with `integration` marker), `uv.lock`, `src/assistant/` with empty `domain`, `ports`, `services`, `adapters/fakes`, `api` packages, `.python-version`; root `Makefile` with `check-backend` (ruff format --check, ruff check, mypy, pytest) and `check`.
 - Done when: `make check` runs and passes (pytest with no tests allowed for this step only).
 - Commit: `build(backend): scaffold uv project with ruff, mypy and pytest`
-- [ ] done
+- [x] done
 
 ### Step 2. Health endpoint
 
