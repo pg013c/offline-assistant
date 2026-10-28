@@ -30,3 +30,14 @@ Decision is filled in by the human: `fix`, `backlog (F-xx)`, or `reject: <reason
 
 | # | Commits |
 |---|---|
+| 1 | `ed1d05e` test, `b791d36` fix |
+| 2 | `301704f` test, `fab173b` fix |
+| 3 | `c94c016` fix (Makefile only, verified by hand: a variable from the env file reaches the recipe environment) |
+| 4 | `c987160` test, `92a6364` fix |
+| 5 | `c987160` test, `92a6364` fix |
+| 6 | `f2e000c` test (characterisation; fails when `<ApiStatus />` is removed from the header) |
+| 7 | `ffe069d` test, `7b0cda6` fix |
+| 8 | `2ca53d1` test, `e28c7aa` fix |
+| 9 | `c94c016` fix (verified by hand: Ctrl-C to the group and TERM to the recipe shell both stop API and UI; the caller is not signalled) |
+| 10 | `3ba897f` docs |
+| 11 | moved to [backlog follow-ups](../../backlog.md#follow-ups) in `3ba897f` |
