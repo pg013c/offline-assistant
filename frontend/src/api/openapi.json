@@ -262,13 +262,18 @@
           "found": {
             "type": "boolean",
             "title": "Found"
+          },
+          "is_test_model": {
+            "type": "boolean",
+            "title": "Is Test Model"
           }
         },
         "type": "object",
         "required": [
           "type",
           "model_id",
-          "found"
+          "found",
+          "is_test_model"
         ],
         "title": "ChatEndEvent",
         "description": "The last event of an answer."

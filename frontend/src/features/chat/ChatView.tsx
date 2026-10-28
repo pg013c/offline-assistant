@@ -3,9 +3,6 @@ import { useState, type JSX, type SubmitEvent } from 'react'
 import { CitationDialog } from './CitationDialog'
 import { useChatStream, type ChatCitation } from './useChatStream'
 
-// Models that only stand in for a real one until F-06; their answers must not look like AI answers.
-const TEST_MODELS = new Set(['fake-extractive'])
-
 export function ChatView(): JSX.Element {
   const { answer, ask } = useChatStream()
   const [question, setQuestion] = useState('')
@@ -56,7 +53,7 @@ export function ChatView(): JSX.Element {
           {answer.modelId && (
             <p className="text-xs text-gray-500">
               Answered by {answer.modelId}
-              {TEST_MODELS.has(answer.modelId) && ' (test model, not AI: it quotes the best match)'}
+              {answer.isTestModel && ' (test model, not AI: it quotes the best match)'}
             </p>
           )}
           {answer.citations.length > 0 && (

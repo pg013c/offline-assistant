@@ -15,6 +15,7 @@ export interface ChatAnswer {
   citations: ChatCitation[]
   modelId?: string
   found?: boolean
+  isTestModel?: boolean
   error?: string
 }
 
@@ -43,6 +44,7 @@ function reduce(answer: ChatAnswer, action: Action): ChatAnswer {
             status: 'done',
             modelId: action.event.model_id,
             found: action.event.found,
+            isTestModel: action.event.is_test_model,
           }
       }
   }

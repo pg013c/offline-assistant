@@ -33,7 +33,12 @@ def _to_schema(event: AnswerEvent) -> ChatEvent:
                 quote=citation.quote,
             )
         case _:
-            return ChatEndEvent(type="end", model_id=event.model_id, found=event.found)
+            return ChatEndEvent(
+                type="end",
+                model_id=event.model_id,
+                found=event.found,
+                is_test_model=event.is_test_model,
+            )
 
 
 @router.post("", response_class=EventSourceResponse)

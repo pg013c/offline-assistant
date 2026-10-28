@@ -29,7 +29,11 @@ class QuestionService:
         results = self._index.search(question, limit=PASSAGES_PER_ANSWER)
         if not results:
             yield AnswerText(text=NO_RELEVANT_PASSAGE)
-            yield AnswerEnd(model_id=self._model.model_id, found=False)
+            yield AnswerEnd(
+                model_id=self._model.model_id,
+                found=False,
+                is_test_model=self._model.is_test_model,
+            )
             return
 
         passages = [result.chunk for result in results]
@@ -47,4 +51,8 @@ class QuestionService:
                 quote=quote_from(best.text),
             )
         )
-        yield AnswerEnd(model_id=self._model.model_id, found=True)
+        yield AnswerEnd(
+            model_id=self._model.model_id,
+            found=True,
+            is_test_model=self._model.is_test_model,
+        )

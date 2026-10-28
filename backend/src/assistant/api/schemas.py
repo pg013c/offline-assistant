@@ -59,6 +59,7 @@ class ChatEndEvent(BaseModel):
     type: Literal["end"]
     model_id: str
     found: bool
+    is_test_model: bool
 
 
 ChatEvent = Annotated[ChatTextEvent | ChatCitationEvent | ChatEndEvent, Field(discriminator="type")]

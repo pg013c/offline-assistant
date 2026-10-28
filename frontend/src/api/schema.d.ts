@@ -110,6 +110,8 @@ export interface components {
             model_id: string;
             /** Found */
             found: boolean;
+            /** Is Test Model */
+            is_test_model: boolean;
         };
         /** ChatRequest */
         ChatRequest: {
