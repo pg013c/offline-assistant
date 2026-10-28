@@ -1,6 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, UploadFile, status
+from fastapi.concurrency import run_in_threadpool
 
 from assistant.api.dependencies import get_document_service
 from assistant.api.schemas import DocumentResponse, ErrorResponse
@@ -34,7 +35,9 @@ async def upload_document(file: UploadFile, documents: Documents) -> DocumentRes
     """Upload a plain-text or Markdown document; known content returns the stored document."""
     # One byte past the limit is enough for the service to reject the file (GEN-42).
     content = await file.read(MAX_UPLOAD_BYTES + 1)
-    return _response(documents.upload(file.filename or "", content))
+    # Storing and indexing touch the disk; keep them off the event loop (PY-14).
+    document = await run_in_threadpool(documents.upload, file.filename or "", content)
+    return _response(document)
 
 
 @router.get("")

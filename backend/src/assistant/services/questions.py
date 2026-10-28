@@ -38,12 +38,12 @@ class QuestionService:
 
         # The answer is built from the best passage, so that is the one cited.
         best = passages[0]
-        titles = {document.id: document.title for document in self._store.list_documents()}
+        document = self._store.get(best.document_id)
         yield AnswerCitation(
             citation=Citation(
                 chunk_id=best.id,
                 document_id=best.document_id,
-                document_title=titles.get(best.document_id, best.document_id),
+                document_title=document.title if document else best.document_id,
                 quote=quote_from(best.text),
             )
         )

@@ -17,4 +17,5 @@ class FakeDocumentStore:
         return list(self._documents.values())
 
     def get(self, document_id: str) -> Document | None:
-        raise NotImplementedError
+        stored = self._documents.get(document_id)
+        return stored[0] if stored else None

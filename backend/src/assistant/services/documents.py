@@ -37,9 +37,9 @@ class DocumentService:
             raise NotUtf8Text(f"{filename}: not valid UTF-8 text") from error
 
         document_id = document_id_for(text)
-        for existing in self._store.list_documents():
-            if existing.id == document_id:
-                return existing
+        existing = self._store.get(document_id)
+        if existing is not None:
+            return existing
 
         chunks = split_into_chunks(document_id, text)
         document = Document(
