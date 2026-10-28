@@ -13,7 +13,7 @@ How each part of the system is verified ([ADR 0006](../adr/0006-tdd-for-code-eva
 | Model behaviour (answers, citations, refusals, tool choice) | evaluation cases, written first | Promptfoo | `make eval`, on demand |
 | Retrieval quality | recall@k and MRR against expected chunks | Promptfoo / pytest | `make eval` |
 | UI logic and state | component and hook tests | Vitest + Testing Library | `make check` |
-| UI journeys | 1–3 golden paths | Playwright, fake backend | `make check` |
+| UI journeys | 1–3 golden paths against the real API with the test model ([ADR 0014](../adr/0014-browser-journeys-against-the-real-api.md)) | Playwright | `make e2e`, CI job `E2E` |
 | Offline guarantee | end-to-end suite with networking disabled | Docker Compose | `make offline-check` (from F-10) |
 | Performance | TTFT, tokens/s, memory | measurement script | `make bench`, on demand |
 

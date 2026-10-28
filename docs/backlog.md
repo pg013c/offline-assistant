@@ -31,3 +31,5 @@ Small changes found during reviews, done as chores outside the feature that foun
 | Item | Found in | Status |
 |---|---|---|
 | Switch the backend test client from `httpx` to `httpx2` (Starlette deprecation warning), with a note in ADR 0011 | F-00 review #11 | planned |
+| Route tests with injected fake services instead of the file-backed composition root | F-01 review #16 | planned for F-03 |
+| Use `found=false` in the UI for a proper "no answer" state | F-01 review #18 | planned for F-07 |
