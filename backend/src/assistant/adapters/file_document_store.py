@@ -32,3 +32,6 @@ class LocalFileDocumentStore:
             content = metadata.with_suffix(".txt").read_text(encoding="utf-8")
             stored.append((document, content))
         return stored
+
+    def get(self, document_id: str) -> Document | None:
+        raise NotImplementedError

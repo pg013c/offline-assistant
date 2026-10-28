@@ -17,3 +17,7 @@ class DocumentStore(Protocol):
     def load_all(self) -> list[tuple[Document, str]]:
         """All stored documents with their text, to rebuild indexes at startup."""
         ...
+
+    def get(self, document_id: str) -> Document | None:
+        """The stored document with this id, or None."""
+        ...

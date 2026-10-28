@@ -20,3 +20,12 @@ def test_a_new_instance_sees_earlier_documents(tmp_path: Path) -> None:
     reopened = LocalFileDocumentStore(tmp_path)
 
     assert reopened.load_all() == [(POLICY, "Policy text.")]
+
+
+def test_listing_and_fetching_read_only_metadata(tmp_path: Path) -> None:
+    store = LocalFileDocumentStore(tmp_path)
+    store.save(POLICY, "Policy text.")
+    (tmp_path / "documents" / f"{POLICY.id}.txt").unlink()
+
+    assert store.list_documents() == [POLICY]
+    assert store.get(POLICY.id) == POLICY

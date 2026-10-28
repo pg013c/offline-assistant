@@ -15,3 +15,6 @@ class FakeDocumentStore:
 
     def load_all(self) -> list[tuple[Document, str]]:
         return list(self._documents.values())
+
+    def get(self, document_id: str) -> Document | None:
+        raise NotImplementedError

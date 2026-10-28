@@ -48,3 +48,10 @@ def test_saving_the_same_document_twice_keeps_one(store: DocumentStore) -> None:
 def test_an_empty_store_lists_nothing(store: DocumentStore) -> None:
     assert store.list_documents() == []
     assert store.load_all() == []
+
+
+def test_a_document_can_be_fetched_by_id(store: DocumentStore) -> None:
+    store.save(POLICY, "Policy text.")
+
+    assert store.get(POLICY.id) == POLICY
+    assert store.get("unknown") is None
