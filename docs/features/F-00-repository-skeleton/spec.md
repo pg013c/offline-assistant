@@ -39,6 +39,10 @@ Every later feature needs the same foundation: a backend and a frontend project 
 - [ ] AC-8: Given a pull request, when CI runs, then `Backend`, `Frontend` and `API contract` jobs run alongside the existing jobs and pass.
 - [ ] AC-9: Missing required settings fail at startup with a message naming the variable (GEN-20, GEN-50).
 
+### Proof of each criterion
+
+The mapping from criteria to the steps and tests that prove them is in [plan.md](plan.md#acceptance-criteria-mapping) (TEST-09). AC-1, AC-2, AC-3, AC-4, AC-8 and AC-9 have automated tests or CI jobs. AC-5, AC-6 and AC-7 were verified by hand, with the results noted in the plan, and are partly automated by `scripts/ci/test-make.sh`.
+
 ## Evaluation cases
 
 Not applicable: no model behaviour.
