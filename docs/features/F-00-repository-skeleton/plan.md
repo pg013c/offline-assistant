@@ -57,7 +57,7 @@
 - Change: import-linter configuration in `pyproject.toml` with the layers from ADR 0002 (`api` → `services` → `ports` | `domain`; `adapters` → `ports` | `domain`; only `app` imports `adapters`); `lint-imports` added to `check-backend`.
 - Done when: tests pass, `make check` green.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 5. Scaffold the frontend project
 

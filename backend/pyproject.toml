@@ -47,3 +47,35 @@ addopts = ["--strict-markers", "--import-mode=importlib"]
 markers = [
     "integration: uses real adapters (models, Qdrant, files); slower, may need local services",
 ]
+
+# Layer rules from ADR 0002, checked by `lint-imports` in `make check`.
+[tool.importlinter]
+root_package = "assistant"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+id = "layers"
+name = "Layers: app > api > services | adapters > ports > domain"
+type = "layers"
+containers = ["assistant"]
+layers = [
+    "app",
+    "api",
+    "services | adapters",
+    "ports",
+    "domain",
+]
+
+[[tool.importlinter.contracts]]
+id = "adapters-only-in-app"
+name = "Only the composition root imports adapters"
+type = "forbidden"
+source_modules = ["assistant.api"]
+forbidden_modules = ["assistant.adapters"]
+
+[[tool.importlinter.contracts]]
+id = "pure-domain"
+name = "Domain and ports import only the standard library and Pydantic"
+type = "forbidden"
+source_modules = ["assistant.domain", "assistant.ports"]
+forbidden_modules = ["fastapi", "starlette", "uvicorn", "pydantic_settings", "structlog"]

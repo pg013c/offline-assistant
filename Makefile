@@ -13,10 +13,11 @@ setup: ## Install project dependencies
 
 check: check-backend ## Format, lint, types and tests for everything
 
-check-backend: ## Backend: ruff format, ruff lint, mypy, pytest
+check-backend: ## Backend: ruff format, ruff lint, mypy, layer contracts, pytest
 	$(BACKEND) ruff format --check .
 	$(BACKEND) ruff check .
 	$(BACKEND) mypy
+	$(BACKEND) lint-imports --no-logo
 	$(MAKE) test-backend
 
 test: test-backend ## Tests only
