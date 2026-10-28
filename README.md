@@ -11,7 +11,7 @@ Built to answer three practical questions about local AI:
 2. How do local models compare with a cloud model on **quality, latency, memory and cost**, measured on the same evaluation set?
 3. Can the whole thing be **installed and verified on an air-gapped machine**?
 
-> **Status:** early implementation. The repository skeleton (F-00) is in place: backend and frontend projects, checks, CI and the agent workflow. Product features start with [F-01](docs/backlog.md). Results will be published in [docs/evals/](docs/evals/).
+> **Status:** walking skeleton (F-01). You can upload a text or Markdown document, ask a question and get a streamed answer with a clickable source. Retrieval is keyword-based and the answer comes from a clearly labelled test model; real parsing, embeddings and local LLMs follow in [F-02 to F-07](docs/backlog.md). Results will be published in [docs/evals/](docs/evals/).
 
 ## What it will do
 
@@ -77,7 +77,13 @@ The UI runs at `http://localhost:5173` and the API at `http://localhost:8000/api
 make check
 ```
 
-`make check` runs formatting, lint, type checks, layer contracts, tests and the API contract check for both projects; CI runs the same targets. `make help` lists all targets.
+`make check` runs formatting, lint, type checks, layer contracts, tests and the API contract check for both projects; CI runs the same targets.
+
+```bash
+make e2e
+```
+
+`make e2e` runs the browser journeys with Playwright against the real API and the test model, on a fresh data directory and ports 8011/5181. `make help` lists all targets.
 
 ## Licence
 

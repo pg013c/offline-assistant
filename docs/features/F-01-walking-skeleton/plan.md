@@ -134,7 +134,7 @@
 - Kind: setup
 - Change: `docs/architecture.md` (ports `DocumentStore`, `ChunkIndex`, `ChatModel` and the F-01 adapters), README (what works now), `.env.example` (`ASSISTANT_CHAT_MODEL`).
 - Commit: `docs(F-01): document the walking skeleton`
-- [ ] done
+- [x] done
 
 ## Acceptance criteria mapping
 
