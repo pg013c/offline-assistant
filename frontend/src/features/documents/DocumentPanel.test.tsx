@@ -79,8 +79,10 @@ describe('DocumentPanel', () => {
     )
     renderWithQueryClient(<DocumentPanel />)
     await screen.findByText(/no documents yet/i)
+    // The input only offers .txt and .md; a user can still pick "All files" in the file dialog.
+    const user = userEvent.setup({ applyAccept: false })
 
-    await userEvent.upload(
+    await user.upload(
       screen.getByLabelText(/upload a document/i),
       new File(['%PDF'], 'policy.pdf', { type: 'application/pdf' }),
     )
