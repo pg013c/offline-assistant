@@ -90,11 +90,14 @@ Which loop applies to which part of the system is set by [ADR 0006](adr/0006-tdd
 - `main` is always green. Red commits exist only on branches.
 - Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/). Scopes are backend modules (`ingest`, `retrieval`, `agent`, `voice`, `api`), `ui`, `eval`, `infra`, `adr`, or the feature id for docs.
 - Trailers:
-  ```
+
+  ```text
   Refs: F-03
   Co-Authored-By: Claude <noreply@anthropic.com>
   ```
+
 - One pull request per feature, merged with a merge commit. No squash.
+- CI ([ADR 0010](adr/0010-continuous-integration-from-the-first-commit.md)) runs on every pull request and on `main`. It checks the commit rules above: Conventional Commit subjects, and that `feat`, `fix` and `refactor` commits do not touch tests or evaluation data. A pull request merges only with all checks green.
 - The pull request description says what changed, links the spec, plan and review, shows the evaluation result if relevant, and lists the decisions the human made.
 
 ## 6. Definition of done
@@ -124,6 +127,7 @@ A feature is done when:
 | `eval-analyst` | agent, read-only | 7, when a metric drops |
 | `tdd-guard` | hook | 6, 10: rejects test edits in the green phase |
 | `format-on-edit` | hook | every edit: formats the touched file |
+| CI (`.github/workflows/ci.yml`) | GitHub Actions | every push and pull request |
 
 Skills are deliberately few and each produces one file or one commit pair. They are thin: the rules they apply live in [standards/](standards/), so the same rules apply whether a step is done by a skill, by hand, or reviewed later.
 
