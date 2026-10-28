@@ -47,7 +47,7 @@
 - Tests first: `backend/tests/contract/test_chunk_index.py` run against `KeywordChunkIndex`: ranks by number of shared words; ignores case and stop words; respects `limit`; returns nothing when no word is shared or the index is empty.
 - Change: `ports/chunk_index.py`, `adapters/keyword_index.py`.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 3. Fake extractive chat model
 
