@@ -53,10 +53,10 @@
 ### Step 4. Layer contract
 
 - Kind: code
-- Tests first: `backend/tests/architecture/test_layers.py`: (a) the import contract passes for the real package; (b) a copy of the package in `tmp_path` with an added `services/_violation.py` that imports `assistant.adapters` makes `lint-imports` fail, and the output names that import. Red because no contract is configured yet.
+- Tests first: `backend/tests/architecture/test_layers.py`: (a) the import contract passes for the real package; (b) a copy of the package in `tmp_path` with an added `services/_violation.py` that imports `assistant.adapters` makes `lint-imports` fail, and the output names that import; (c) the same for `domain/_violation.py` importing `fastapi` (the domain stays free of frameworks). Red because no contract is configured yet.
 - Change: import-linter configuration in `pyproject.toml` with the layers from ADR 0002 (`api` → `services` → `ports` | `domain`; `adapters` → `ports` | `domain`; only `app` imports `adapters`); `lint-imports` added to `check-backend`.
 - Done when: tests pass, `make check` green.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 5. Scaffold the frontend project
