@@ -12,15 +12,26 @@ from assistant.domain.errors import (
     UnsupportedFileType,
 )
 
-_DOCUMENT_REJECTIONS: dict[type[DocumentRejected], tuple[int, str]] = {
+_DOCUMENT_REJECTIONS: dict[type, tuple[int, str]] = {
     UnsupportedFileType: (status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, "unsupported_file_type"),
     FileTooLarge: (status.HTTP_413_CONTENT_TOO_LARGE, "file_too_large"),
     NotUtf8Text: (status.HTTP_422_UNPROCESSABLE_CONTENT, "not_utf8_text"),
 }
 
 
+_GENERIC_REJECTION = (status.HTTP_422_UNPROCESSABLE_CONTENT, "document_rejected")
+
+
+def _rejection_status(error: Exception) -> tuple[int, str]:
+    """The mapping of the closest class in the error's hierarchy that has one."""
+    for cls in type(error).__mro__:
+        if cls in _DOCUMENT_REJECTIONS:
+            return _DOCUMENT_REJECTIONS[cls]
+    return _GENERIC_REJECTION
+
+
 async def _document_rejected(_: Request, error: Exception) -> JSONResponse:
-    status_code, code = _DOCUMENT_REJECTIONS[type(error)]  # type: ignore[index]
+    status_code, code = _rejection_status(error)
     body = ErrorResponse(code=code, message=str(error))
     return JSONResponse(status_code=status_code, content=body.model_dump())
 
