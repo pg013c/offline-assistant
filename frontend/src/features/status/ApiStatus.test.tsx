@@ -1,4 +1,5 @@
-import { screen } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { render, screen } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
 
@@ -41,5 +42,24 @@ describe('ApiStatus', () => {
     renderWithQueryClient(<ApiStatus />)
 
     expect(await screen.findByText('API: unavailable')).toBeInTheDocument()
+  })
+
+  it('retries once with the default query settings, then shows unavailable', async () => {
+    let requests = 0
+    server.use(
+      http.get(HEALTH_URL, () => {
+        requests += 1
+        return HttpResponse.error()
+      }),
+    )
+
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ApiStatus />
+      </QueryClientProvider>,
+    )
+
+    expect(await screen.findByText('API: unavailable', {}, { timeout: 3000 })).toBeInTheDocument()
+    expect(requests).toBe(2)
   })
 })
