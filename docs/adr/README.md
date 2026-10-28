@@ -27,3 +27,4 @@ Use the `/adr` skill or copy [template.md](template.md).
 | [0010](0010-continuous-integration-from-the-first-commit.md) | Continuous integration from the first commit | accepted |
 | [0011](0011-baseline-dependencies.md) | Baseline dependencies | accepted, amended by 0012 |
 | [0012](0012-frontend-toolchain-versions.md) | Frontend toolchain versions | accepted |
+| [0013](0013-upload-streaming-and-e2e-dependencies.md) | Dependencies for uploads, streamed answers and end-to-end tests | accepted |
