@@ -38,7 +38,7 @@
 - Kind: code
 - Tests first: `backend/tests/unit/domain/test_chunking.py`: blank lines split chunks; surrounding whitespace trimmed; empty pieces dropped; chunk ids `"{doc}:{n}"`; same content gives the same document id; different content gives a different id; title is the filename without extension.
 - Change: `domain/documents.py`.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 2. Keyword chunk index
