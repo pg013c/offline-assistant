@@ -70,10 +70,12 @@ test-backend: ## Backend tests
 test-frontend: ## Frontend tests
 	$(FRONTEND) test
 
+# Line continuations stay outside quotes: GNU Make passes them into quoted strings verbatim.
 node-version:
-	@node -e 'const want = require("fs").readFileSync(".nvmrc", "utf8").trim(); \
-	  if (process.versions.node.split(".")[0] !== want) { \
-	    console.error(`Node $${want} required (found $${process.version}). Run: nvm use`); process.exit(1) }'
+	@want="$$(cat .nvmrc)"; have="$$(node -p 'process.versions.node.split(".")[0]')"; \
+	if [ "$$have" != "$$want" ]; then \
+	  echo "Node $$want required (found $$(node --version)). Run: nvm use"; exit 1; \
+	fi
 
 # Checks configuration and ports without starting anything (tested by scripts/ci/test-make.sh).
 dev-preflight:
