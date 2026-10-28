@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, UploadFile, status
 from assistant.api.dependencies import get_document_service
 from assistant.api.schemas import DocumentResponse, ErrorResponse
 from assistant.domain.documents import Document
-from assistant.services.documents import DocumentService
+from assistant.services.documents import MAX_UPLOAD_BYTES, DocumentService
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -32,7 +32,8 @@ def _response(document: Document) -> DocumentResponse:
 )
 async def upload_document(file: UploadFile, documents: Documents) -> DocumentResponse:
     """Upload a plain-text or Markdown document; known content returns the stored document."""
-    content = await file.read()
+    # One byte past the limit is enough for the service to reject the file (GEN-42).
+    content = await file.read(MAX_UPLOAD_BYTES + 1)
     return _response(documents.upload(file.filename or "", content))
 
 
