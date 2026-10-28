@@ -5,7 +5,7 @@
 # is_test_path <path relative to the repository root>
 is_test_path() {
   case "$1" in
-    backend/tests/*|frontend/e2e/*|evals/*|*.test.ts|*.test.tsx|*.spec.ts|*.spec.tsx|test_*.py|*/test_*.py|conftest.py|*/conftest.py)
+    backend/tests/*|frontend/e2e/*|frontend/src/test/*|scripts/ci/test-*|evals/*|*.test.ts|*.test.tsx|*.spec.ts|*.spec.tsx|test_*.py|*/test_*.py|conftest.py|*/conftest.py)
       return 0 ;;
   esac
   return 1

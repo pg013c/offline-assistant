@@ -1,0 +1,90 @@
+[project]
+name = "assistant"
+version = "0.1.0"
+description = "Offline Assistant backend: local LLM agent, RAG with citations and voice, served over HTTP."
+license = "MIT"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.162.0",
+    "pydantic>=2.14.1",
+    "pydantic-settings>=2.16.2",
+    "structlog>=26.1.0",
+    "uvicorn>=0.54.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.1,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "import-linter>=2.15",
+    "mypy>=2.4.1",
+    "pytest>=9.2.0",
+    "ruff>=0.17.3",
+]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "RUF", "PL", "S", "ASYNC"]
+
+[tool.ruff.lint.per-file-ignores]
+# Plain asserts are how pytest expresses expectations.
+"tests/**" = ["S101", "PLR2004"]
+
+[tool.mypy]
+strict = true
+python_version = "3.13"
+files = ["src", "tests"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["--strict-markers", "--import-mode=importlib"]
+markers = [
+    "integration: uses real adapters (models, Qdrant, files); slower, may need local services",
+]
+
+# Layer rules from ADR 0002, checked by `lint-imports` in `make check`.
+[tool.importlinter]
+root_package = "assistant"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+id = "layers"
+name = "Layers: app > api > services | adapters > ports > domain"
+type = "layers"
+containers = ["assistant"]
+layers = [
+    "app",
+    "api",
+    "services | adapters",
+    "ports",
+    "domain",
+]
+
+[[tool.importlinter.contracts]]
+id = "adapters-only-in-app"
+name = "Only the composition root imports adapters"
+type = "forbidden"
+source_modules = ["assistant.api", "assistant.settings", "assistant.openapi"]
+forbidden_modules = ["assistant.adapters"]
+
+# Third-party libraries the inner layers may not use. Each model, database or parsing library
+# (Qdrant, Docling, Whisper, ...) is added here in the same change as the ADR that introduces it.
+[[tool.importlinter.contracts]]
+id = "framework-free-core"
+name = "Domain, ports and services do not import the web framework or settings"
+type = "forbidden"
+source_modules = ["assistant.domain", "assistant.ports", "assistant.services"]
+forbidden_modules = ["fastapi", "starlette", "uvicorn", "pydantic_settings"]
+
+[[tool.importlinter.contracts]]
+id = "logging-free-domain"
+name = "Domain and ports do not log"
+type = "forbidden"
+source_modules = ["assistant.domain", "assistant.ports"]
+forbidden_modules = ["structlog"]

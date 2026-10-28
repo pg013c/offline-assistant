@@ -17,7 +17,7 @@ Each step is one red commit and one green commit. Steps are ordered so that ever
 
 ### Step 1. Short title
 
-- Kind: code | eval | ui | infra
+- Kind: code | eval | ui | infra | setup (setup: one build/ci commit, no red/green)
 - Tests first: which tests or evaluation cases, in which files, asserting what
 - Change: files to add or modify
 - Done when: the tests pass and `make check` is green

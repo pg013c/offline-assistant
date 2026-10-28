@@ -65,6 +65,9 @@ jobs:
       - name: Test agent hooks
         run: bash scripts/ci/test-hooks.sh
 
+      - name: Test Makefile entry points
+        run: bash scripts/ci/test-make.sh
+
   commits:
     name: Commit rules
     runs-on: ubuntu-latest
@@ -89,3 +92,72 @@ jobs:
           else
             bash scripts/ci/check-commits.sh "$PUSH_BEFORE" "$PUSH_AFTER"
           fi
+
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+
+      - name: Install dependencies
+        run: uv sync --directory backend --locked
+
+      - name: Format, lint, types, layer contracts, tests
+        run: make check-backend
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: Install dependencies
+        env:
+          COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+        run: |
+          corepack enable pnpm
+          pnpm --dir frontend install --frozen-lockfile
+
+      - name: Format, lint, types, tests
+        run: make check-frontend
+
+      - name: Build
+        run: pnpm --dir frontend build
+
+  api-contract:
+    name: API contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: Install dependencies
+        env:
+          COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+        run: |
+          uv sync --directory backend --locked
+          corepack enable pnpm
+          pnpm --dir frontend install --frozen-lockfile
+
+      - name: Generated client matches the backend schema
+        run: make check-api-client

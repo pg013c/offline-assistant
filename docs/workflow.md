@@ -80,6 +80,8 @@ Every step in a plan runs this loop ([ADR 0009](adr/0009-test-first-commits-and-
    `refactor(retrieval): extract scoring into a pure function`
 4. Tick the step in `plan.md`. Next step.
 
+Steps that only set up tooling and add no behaviour (scaffolding a project, adding a linter, a CI job, a Makefile target) have nothing for a test to specify. They are a single `build(...)` or `ci(...)` commit, verified by running the tool, and the plan marks them `kind: setup`. The first behaviour built on top of them follows red/green.
+
 If the green phase shows that a test is wrong, stop: go back to red, change the test in its own `test(...)` commit with the reason in the message, then continue. A test is never changed silently to make code pass.
 
 Which loop applies to which part of the system is set by [ADR 0006](adr/0006-tdd-for-code-evals-for-model-behaviour.md) and [standards/testing.md](standards/testing.md): unit and integration tests for code, evaluation cases for model behaviour, behaviour tests for the UI.
