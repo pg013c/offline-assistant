@@ -102,7 +102,7 @@
 - Kind: ui
 - Tests first: `frontend/src/features/documents/DocumentPanel.test.tsx` with msw: lists documents; uploading through the labelled file input adds the new document; a rejected upload shows the API's error message.
 - Change: `useDocuments.ts`, `useUploadDocument.ts`, `DocumentPanel.tsx`.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 10. Chat stream hook
