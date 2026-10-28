@@ -70,12 +70,21 @@ layers = [
 id = "adapters-only-in-app"
 name = "Only the composition root imports adapters"
 type = "forbidden"
-source_modules = ["assistant.api"]
+source_modules = ["assistant.api", "assistant.settings", "assistant.openapi"]
 forbidden_modules = ["assistant.adapters"]
 
+# Third-party libraries the inner layers may not use. Each model, database or parsing library
+# (Qdrant, Docling, Whisper, ...) is added here in the same change as the ADR that introduces it.
 [[tool.importlinter.contracts]]
-id = "pure-domain"
-name = "Domain and ports import only the standard library and Pydantic"
+id = "framework-free-core"
+name = "Domain, ports and services do not import the web framework or settings"
+type = "forbidden"
+source_modules = ["assistant.domain", "assistant.ports", "assistant.services"]
+forbidden_modules = ["fastapi", "starlette", "uvicorn", "pydantic_settings"]
+
+[[tool.importlinter.contracts]]
+id = "logging-free-domain"
+name = "Domain and ports do not log"
 type = "forbidden"
 source_modules = ["assistant.domain", "assistant.ports"]
-forbidden_modules = ["fastapi", "starlette", "uvicorn", "pydantic_settings", "structlog"]
+forbidden_modules = ["structlog"]
