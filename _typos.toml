@@ -1,0 +1,3 @@
+[default]
+# Commit hashes quoted in review files are not words.
+extend-ignore-re = ["`[0-9a-f]{7,40}`"]
