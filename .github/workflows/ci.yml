@@ -65,6 +65,9 @@ jobs:
       - name: Test agent hooks
         run: bash scripts/ci/test-hooks.sh
 
+      - name: Test Makefile entry points
+        run: bash scripts/ci/test-make.sh
+
   commits:
     name: Commit rules
     runs-on: ubuntu-latest

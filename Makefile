@@ -74,3 +74,6 @@ node-version:
 	@node -e 'const want = require("fs").readFileSync(".nvmrc", "utf8").trim(); \
 	  if (process.versions.node.split(".")[0] !== want) { \
 	    console.error(`Node $${want} required (found $${process.version}). Run: nvm use`); process.exit(1) }'
+
+dev-preflight:
+	@echo "not implemented"; exit 1
