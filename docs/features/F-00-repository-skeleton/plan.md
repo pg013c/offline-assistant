@@ -90,7 +90,7 @@
 - Change: `.pre-commit-config.yaml` with local hooks: ruff format, ruff check, mypy for `backend/`; Prettier, ESLint, tsc for `frontend/`; no test hooks. `make setup` runs `uvx pre-commit install`.
 - Done when: a commit with a formatting error is fixed or rejected by the hook; a commit with a failing test is accepted.
 - Commit: `build: run format, lint and type checks before each commit`
-- [ ] done
+- [x] done (verified 2026-10-28: a badly formatted Python file is reformatted and the commit stopped; a commit adding a failing test is accepted)
 
 ### Step 9. CI jobs for code
 

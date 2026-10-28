@@ -25,6 +25,7 @@ setup: node-version ## Install project dependencies
 	uv sync --directory backend
 	corepack enable pnpm
 	$(FRONTEND) install --frozen-lockfile
+	uvx pre-commit install
 
 dev: node-version ## API on :8000 and UI on :5173 (API_PORT, UI_PORT), both with hot reload
 	@for port in $(API_PORT) $(UI_PORT); do \
