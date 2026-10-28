@@ -97,6 +97,20 @@ describe('useChatStream', () => {
     })
   })
 
+  it('reports an error when the stream ends without an end event', async () => {
+    serveAnswer([{ type: 'text', text: 'Cut off mid' }])
+    const { result } = renderHook(() => useChatStream(), { wrapper })
+
+    act(() => {
+      result.current.ask('Anything?')
+    })
+
+    await waitFor(() => {
+      expect(result.current.answer.status).toBe('error')
+    })
+    expect(result.current.answer.text).toBe('Cut off mid')
+  })
+
   it('starts a fresh answer for a new question', async () => {
     serveAnswer([
       { type: 'text', text: 'First answer.' },
