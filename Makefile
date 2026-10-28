@@ -5,9 +5,12 @@ BACKEND := uv run --directory backend
 FRONTEND := pnpm --dir frontend
 
 # Local settings for `make dev`; see .env.example. Paths are resolved from the repository root.
--include .env
-ASSISTANT_DATA_DIR ?= data/storage
+ENV_FILE ?= .env
+-include $(ENV_FILE)
+# Required, no default (GEN-20): `make dev-preflight` stops when it is missing.
+ifdef ASSISTANT_DATA_DIR
 export ASSISTANT_DATA_DIR := $(abspath $(ASSISTANT_DATA_DIR))
+endif
 export COREPACK_ENABLE_DOWNLOAD_PROMPT := 0
 # Ports for `make dev`; override when another local service already uses one (API_PORT=8010 make dev).
 export API_PORT ?= 8000
@@ -16,7 +19,7 @@ export UI_PORT ?= 5173
 # Where `make api-client` writes the schema and generated types (ADR 0005).
 API_OUT ?= $(CURDIR)/frontend/src/api
 
-.PHONY: help setup dev check check-backend check-frontend check-api-client api-client test test-backend test-frontend node-version
+.PHONY: help setup dev dev-preflight check check-backend check-frontend check-api-client api-client test test-backend test-frontend node-version
 
 help: ## List targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
@@ -27,12 +30,7 @@ setup: node-version ## Install project dependencies
 	$(FRONTEND) install --frozen-lockfile
 	uvx pre-commit install
 
-dev: node-version ## API on :8000 and UI on :5173 (API_PORT, UI_PORT), both with hot reload
-	@for port in $(API_PORT) $(UI_PORT); do \
-	  if lsof -nP -iTCP:$$port -sTCP:LISTEN >/dev/null 2>&1; then \
-	    echo "Port $$port is already in use. Stop that process or choose another port (API_PORT, UI_PORT)."; exit 1; \
-	  fi; \
-	done
+dev: node-version dev-preflight ## API on :8000 and UI on :5173 (API_PORT, UI_PORT), both with hot reload
 	@mkdir -p "$(ASSISTANT_DATA_DIR)"
 	@trap 'kill 0' INT TERM EXIT; \
 	$(BACKEND) uvicorn assistant.app:main --factory --reload --port $(API_PORT) & \
@@ -75,5 +73,13 @@ node-version:
 	  if (process.versions.node.split(".")[0] !== want) { \
 	    console.error(`Node $${want} required (found $${process.version}). Run: nvm use`); process.exit(1) }'
 
+# Checks configuration and ports without starting anything (tested by scripts/ci/test-make.sh).
 dev-preflight:
-	@echo "not implemented"; exit 1
+	@if [ -z "$(ASSISTANT_DATA_DIR)" ]; then \
+	  echo "ASSISTANT_DATA_DIR is not set. Copy .env.example to .env, or export it."; exit 1; \
+	fi
+	@for port in $(API_PORT) $(UI_PORT); do \
+	  if lsof -nP -iTCP:$$port -sTCP:LISTEN >/dev/null 2>&1; then \
+	    echo "Port $$port is already in use. Stop that process or choose another port (API_PORT, UI_PORT)."; exit 1; \
+	  fi; \
+	done
