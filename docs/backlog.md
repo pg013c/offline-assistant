@@ -6,7 +6,7 @@ Status: `planned` → `spec` → `building` → `review` → `done`.
 
 | ID | Feature | Requirements | Milestone | Status |
 |---|---|---|---|---|
-| F-00 | Repository skeleton: backend and frontend projects, Makefile, pre-commit, CI, import contract, API contract check | NFR-06 | 1 | planned |
+| F-00 | Repository skeleton: backend and frontend projects, Makefile, pre-commit, CI, import contract, API contract check | NFR-06 | 1 | spec |
 | F-01 | Walking skeleton: upload a text file, fake chat model, streamed answer with a citation in the UI | FR-01, FR-15, FR-60 | 1 | planned |
 | F-02 | Document parsing (Docling) and structure-aware chunking with stable chunk ids | FR-01–FR-03 | 2 | planned |
 | F-03 | Multilingual embeddings, Qdrant storage, hybrid search | FR-04, FR-05, FR-07 | 2 | planned |
