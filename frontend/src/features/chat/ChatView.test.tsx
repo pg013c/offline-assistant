@@ -93,6 +93,22 @@ describe('ChatView', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
+  it('can be used from the keyboard: focus moves into the source and Escape returns it', async () => {
+    serveAnswer(FOUND)
+    renderWithQueryClient(<ChatView />)
+    await ask('How long are logs kept?')
+    const citation = await screen.findByRole('button', { name: /policy/ })
+
+    citation.focus()
+    await userEvent.keyboard('{Enter}')
+
+    const dialog = screen.getByRole('dialog', { name: 'policy' })
+    expect(within(dialog).getByRole('button', { name: 'Close' })).toHaveFocus()
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(citation).toHaveFocus()
+  })
+
   it('shows no citations when no relevant passage was found', async () => {
     serveAnswer([
       { type: 'text', text: 'No relevant passage was found in the uploaded documents.' },
