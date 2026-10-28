@@ -14,11 +14,15 @@ from assistant.adapters.keyword_index import KeywordChunkIndex
 from assistant.api.errors import register_error_handlers
 from assistant.api.routes import chat, documents, health
 from assistant.log import configure_logging
+from assistant.ports.chat_model import ChatModel
 from assistant.services.documents import DocumentService
 from assistant.services.questions import QuestionService
 from assistant.settings import Settings, load_settings
 
 API_PREFIX = "/api"
+
+# Chat model adapters by `ASSISTANT_CHAT_MODEL`; F-06 adds the OpenAI-compatible ones.
+CHAT_MODELS: dict[str, type[ChatModel]] = {"fake-extractive": FakeExtractiveChatModel}
 
 
 def operation_id(route: APIRoute) -> str:
@@ -30,7 +34,7 @@ def create_app(settings: Settings) -> FastAPI:
     """Build the HTTP application from settings."""
     store = LocalFileDocumentStore(settings.data_dir)
     index = KeywordChunkIndex()
-    model = FakeExtractiveChatModel()
+    model = CHAT_MODELS[settings.chat_model]()
     document_service = DocumentService(store, index)
     question_service = QuestionService(index, model, store)
 
