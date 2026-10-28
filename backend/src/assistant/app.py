@@ -12,7 +12,7 @@ from assistant.adapters.fakes.chat_model import FakeExtractiveChatModel
 from assistant.adapters.file_document_store import LocalFileDocumentStore
 from assistant.adapters.keyword_index import KeywordChunkIndex
 from assistant.api.errors import register_error_handlers
-from assistant.api.routes import documents, health
+from assistant.api.routes import chat, documents, health
 from assistant.log import configure_logging
 from assistant.services.documents import DocumentService
 from assistant.services.questions import QuestionService
@@ -55,6 +55,7 @@ def create_app(settings: Settings) -> FastAPI:
     register_error_handlers(app)
     app.include_router(health.router, prefix=API_PREFIX)
     app.include_router(documents.router, prefix=API_PREFIX)
+    app.include_router(chat.router, prefix=API_PREFIX)
     return app
 
 

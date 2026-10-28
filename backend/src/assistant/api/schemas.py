@@ -1,8 +1,8 @@
 """Request and response models of the HTTP API. Services never return these (PY-12)."""
 
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class HealthResponse(BaseModel):
@@ -22,3 +22,35 @@ class ErrorResponse(BaseModel):
 
     code: str
     message: str
+
+
+class ChatRequest(BaseModel):
+    question: str = Field(min_length=1, max_length=2000)
+
+
+class ChatTextEvent(BaseModel):
+    """A piece of the answer text, in order."""
+
+    type: Literal["text"]
+    text: str
+
+
+class ChatCitationEvent(BaseModel):
+    """A passage the answer is based on, quoted verbatim."""
+
+    type: Literal["citation"]
+    chunk_id: str
+    document_id: str
+    document_title: str
+    quote: str
+
+
+class ChatEndEvent(BaseModel):
+    """The last event of an answer."""
+
+    type: Literal["end"]
+    model_id: str
+    found: bool
+
+
+ChatEvent = Annotated[ChatTextEvent | ChatCitationEvent | ChatEndEvent, Field(discriminator="type")]

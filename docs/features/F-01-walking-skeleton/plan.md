@@ -95,7 +95,7 @@
 - Tests first: `backend/tests/unit/api/test_chat_api.py`: after an upload, `POST /api/chat` returns `text/event-stream` whose events parse into `text`…, `citation`…, `end` in that order; with no documents the stream has no citation; the OpenAPI schema documents `text/event-stream` and has `ChatEvent` and its variants in `components`.
 - Change: `api/schemas.py`, `api/routes/chat.py`, `app.py`, regenerated client (check that `ChatEvent` types are generated).
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 9. Document panel
 
