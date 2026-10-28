@@ -111,7 +111,7 @@
 - Tests first: `frontend/src/features/chat/useChatStream.test.tsx` with msw streaming an SSE body: text pieces accumulate in order; citations are collected; the end event sets the model and `done`; a failed request sets `error`; a new question resets the previous answer.
 - Change: `useChatStream.ts`, `frontend/package.json` (`eventsource-parser`).
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 11. Chat view and citations
 

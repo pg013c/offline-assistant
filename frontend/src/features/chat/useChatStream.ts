@@ -1,6 +1,12 @@
+import { createParser } from 'eventsource-parser'
+import { useCallback, useEffect, useReducer, useRef } from 'react'
+
+import { apiClient } from '../../api/client'
 import type { components } from '../../api/schema'
 
-export type ChatCitation = components['schemas']['ChatCitationEvent']
+type Schemas = components['schemas']
+export type ChatCitation = Schemas['ChatCitationEvent']
+type ChatEvent = Schemas['ChatTextEvent'] | ChatCitation | Schemas['ChatEndEvent']
 
 export interface ChatAnswer {
   status: 'idle' | 'streaming' | 'done' | 'error'
@@ -12,7 +18,99 @@ export interface ChatAnswer {
   error?: string
 }
 
-/** Asks a question and follows the streamed answer (FE-12). */
+type Action =
+  | { type: 'asked'; question: string }
+  | { type: 'event'; event: ChatEvent }
+  | { type: 'failed'; message: string }
+
+const IDLE: ChatAnswer = { status: 'idle', text: '', citations: [] }
+
+function reduce(answer: ChatAnswer, action: Action): ChatAnswer {
+  switch (action.type) {
+    case 'asked':
+      return { status: 'streaming', question: action.question, text: '', citations: [] }
+    case 'failed':
+      return { ...answer, status: 'error', error: action.message }
+    case 'event':
+      switch (action.event.type) {
+        case 'text':
+          return { ...answer, text: answer.text + action.event.text }
+        case 'citation':
+          return { ...answer, citations: [...answer.citations, action.event] }
+        case 'end':
+          return {
+            ...answer,
+            status: 'done',
+            modelId: action.event.model_id,
+            found: action.event.found,
+          }
+      }
+  }
+}
+
+function isChatEvent(value: unknown): value is ChatEvent {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'type' in value &&
+    (value.type === 'text' || value.type === 'citation' || value.type === 'end')
+  )
+}
+
+async function streamAnswer(
+  question: string,
+  signal: AbortSignal,
+  onEvent: (event: ChatEvent) => void,
+): Promise<void> {
+  const { response } = await apiClient.POST('/api/chat', {
+    body: { question },
+    parseAs: 'stream',
+    signal,
+  })
+  if (!response.ok || !response.body) {
+    throw new Error(`The answer failed with HTTP ${String(response.status)}`)
+  }
+  const parser = createParser({
+    onEvent: ({ data }) => {
+      const event: unknown = JSON.parse(data)
+      if (isChatEvent(event)) {
+        onEvent(event)
+      }
+    },
+  })
+  const reader = response.body.pipeThrough(new TextDecoderStream()).getReader()
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) {
+      return
+    }
+    parser.feed(value)
+  }
+}
+
+/** Asks a question and follows the streamed answer (FE-12). A new question cancels the last one. */
 export function useChatStream(): { answer: ChatAnswer; ask: (question: string) => void } {
-  throw new Error('not implemented')
+  const [answer, dispatch] = useReducer(reduce, IDLE)
+  const current = useRef<AbortController | null>(null)
+
+  useEffect(() => () => current.current?.abort(), [])
+
+  const ask = useCallback((question: string) => {
+    current.current?.abort()
+    const controller = new AbortController()
+    current.current = controller
+    dispatch({ type: 'asked', question })
+    streamAnswer(question, controller.signal, (event) => {
+      dispatch({ type: 'event', event })
+    }).catch((error: unknown) => {
+      if (!controller.signal.aborted) {
+        dispatch({
+          type: 'failed',
+          message: error instanceof Error ? error.message : String(error),
+        })
+      }
+    })
+  }, [])
+
+  return { answer, ask }
 }
