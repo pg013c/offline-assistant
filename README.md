@@ -1,5 +1,8 @@
 # Offline Assistant
 
+[![CI](https://github.com/pg013c/offline-assistant/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/pg013c/offline-assistant/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 A knowledge assistant that runs entirely on one machine. Load documents, ask by text or voice, get answers with citations, read aloud if you want. No data leaves the computer, and it keeps working with the network switched off.
 
 Built to answer three practical questions about local AI:
@@ -45,6 +48,7 @@ This repository is developed with a coding agent (Claude Code) under a written p
 - **Test first, visible in history:** every step is a `test(...)` commit followed by a `feat(...)` commit; a hook keeps tests read-only while code is written ([ADR 0009](docs/adr/0009-test-first-commits-and-merge-strategy.md)).
 - **TDD for code, evaluations for model behaviour** ([ADR 0006](docs/adr/0006-tdd-for-code-evals-for-model-behaviour.md)).
 - **Offline verified, not claimed** ([ADR 0004](docs/adr/0004-offline-first-no-egress.md)).
+- **Rules checked by CI from the first commit:** docs, links, spelling, workflow and shell lint, agent hook self-tests, and the commit rules, including "code commits never touch tests" ([ADR 0010](docs/adr/0010-continuous-integration-from-the-first-commit.md)).
 
 The agent tooling (skills, review agents, hooks) is in [`.claude/`](.claude/).
 

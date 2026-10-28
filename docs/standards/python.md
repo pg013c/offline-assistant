@@ -30,7 +30,7 @@ Applies to `backend/`. Enforced by `make check` in `backend/`.
 
 ## Layout
 
-```
+```text
 backend/
 ├── pyproject.toml
 ├── src/assistant/

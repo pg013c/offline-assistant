@@ -27,13 +27,13 @@ The phase is tracked in `.claude/state/tdd-phase` (not committed). While it cont
 
 ## Green
 
-9. Run `echo green > .claude/state/tdd-phase`.
-10. Implement the smallest change that makes the tests pass, following `docs/standards/`. Do not edit any test or dataset file. If a test is wrong, stop, explain, and with the human's agreement go back to step 3 with a separate `test(...)` commit that says why it changed.
-11. If the step changed the API, run `make api-client`.
-12. Run `make check`. Everything must pass, not only the new tests.
-13. Commit: `feat(<scope>): ...` (or `fix(<scope>): ...` for findings and bugs) with trailers. Tick `green` in the plan in the same commit.
-14. Optional: a `refactor(<scope>): ...` commit with tests unchanged and green.
-15. Run `rm -f .claude/state/tdd-phase`.
+1. Run `echo green > .claude/state/tdd-phase`.
+2. Implement the smallest change that makes the tests pass, following `docs/standards/`. Do not edit any test or dataset file. If a test is wrong, stop, explain, and with the human's agreement go back to the Red phase (step 3 there) with a separate `test(...)` commit that says why it changed.
+3. If the step changed the API, run `make api-client`.
+4. Run `make check`. Everything must pass, not only the new tests.
+5. Commit: `feat(<scope>): ...` (or `fix(<scope>): ...` for findings and bugs) with trailers. Tick `green` in the plan in the same commit.
+6. Optional: a `refactor(<scope>): ...` commit with tests unchanged and green.
+7. Run `rm -f .claude/state/tdd-phase`.
 
 ## Then
 

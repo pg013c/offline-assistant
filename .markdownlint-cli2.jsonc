@@ -1,0 +1,14 @@
+{
+  "config": {
+    "default": true,
+    // Prose is wrapped by the editor, not by hand.
+    "MD013": false,
+    // Repeated headings such as "Step 1" are expected in plan templates.
+    "MD024": { "siblings_only": true },
+    // Templates start with placeholder headings.
+    "MD041": false,
+    // Compact table separators (|---|) are used throughout.
+    "MD060": false
+  },
+  "ignores": ["**/node_modules/**", "**/.venv/**"]
+}

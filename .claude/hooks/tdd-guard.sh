@@ -5,6 +5,8 @@ set -euo pipefail
 
 root="${CLAUDE_PROJECT_DIR:-$(pwd)}"
 phase_file="$root/.claude/state/tdd-phase"
+# shellcheck source=scripts/lib/test-paths.sh
+source "$root/scripts/lib/test-paths.sh"
 
 [[ -f "$phase_file" ]] || exit 0
 [[ "$(tr -d '[:space:]' < "$phase_file")" == "green" ]] || exit 0
@@ -13,11 +15,9 @@ path="$(jq -r '.tool_input.file_path // .tool_input.notebook_path // empty')"
 [[ -n "$path" ]] || exit 0
 rel="${path#"$root"/}"
 
-case "$rel" in
-  backend/tests/*|frontend/e2e/*|evals/*|*.test.ts|*.test.tsx|*.spec.ts|*.spec.tsx|*/test_*.py|*/conftest.py)
-    echo "tdd-guard: '$rel' is a test or evaluation file and the /tdd green phase is active." >&2
-    echo "Make the code pass the tests as written. If a test is wrong, stop and go back to the red phase with a separate test(...) commit." >&2
-    exit 2
-    ;;
-esac
+if is_test_path "$rel"; then
+  echo "tdd-guard: '$rel' is a test or evaluation file and the /tdd green phase is active." >&2
+  echo "Make the code pass the tests as written. If a test is wrong, stop and go back to the red phase with a separate test(...) commit." >&2
+  exit 2
+fi
 exit 0

@@ -25,7 +25,7 @@ Applies to `frontend/`. Enforced by `make check` in `frontend/`.
 
 ## Layout
 
-```
+```text
 frontend/
 ├── src/
 │   ├── api/              generated client and schema (committed, not edited)

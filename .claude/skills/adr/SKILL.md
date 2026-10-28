@@ -4,7 +4,7 @@ description: Record an architecture decision as a numbered ADR in docs/adr/. Use
 argument-hint: <decision in a few words>
 ---
 
-# /adr <decision>
+# `/adr <decision>`
 
 Write `docs/adr/NNNN-<kebab-title>.md` from [the template](../../../docs/adr/template.md).
 

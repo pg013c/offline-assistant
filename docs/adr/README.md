@@ -24,3 +24,4 @@ Use the `/adr` skill or copy [template.md](template.md).
 | [0007](0007-native-model-serving-on-macos.md) | Native model serving on macOS | accepted |
 | [0008](0008-vite-spa-frontend.md) | Vite single-page app instead of a server-rendered framework | accepted |
 | [0009](0009-test-first-commits-and-merge-strategy.md) | Test-first commits, kept in history | accepted |
+| [0010](0010-continuous-integration-from-the-first-commit.md) | Continuous integration from the first commit | accepted |

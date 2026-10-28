@@ -24,7 +24,7 @@ Each step is one red commit and one green commit. Steps are ordered so that ever
 - [ ] red
 - [ ] green
 
-### Step 2. ...
+### Step 2. Next title
 
 ## Acceptance criteria mapping
 
