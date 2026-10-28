@@ -86,7 +86,7 @@
 - Kind: code
 - Tests first: `backend/tests/unit/api/test_documents_api.py`: upload returns `201` with id, title and chunk count and the document is listed; `415`, `413`, `422` return the standard error body and nothing is listed; uploading the same content twice returns the same id; a second app on the same data directory lists earlier documents (restart, AC-9).
 - Change: `api/schemas.py`, `api/errors.py`, `api/dependencies.py`, `api/routes/documents.py`, `app.py` (wiring, lifespan), `settings.py` (`chat_model`), `pyproject.toml` (`python-multipart`), regenerated client.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 8. Chat endpoint over SSE
