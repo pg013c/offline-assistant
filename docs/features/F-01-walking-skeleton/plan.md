@@ -55,7 +55,7 @@
 - Tests first: `backend/tests/contract/test_chat_model.py` against `FakeExtractiveChatModel`: reports `fake-extractive`; streams several pieces whose concatenation is the first two sentences of the first passage; same input gives the same output.
 - Change: `ports/chat_model.py`, `adapters/fakes/chat_model.py`.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 4. Document store
 
