@@ -62,7 +62,7 @@
 - Kind: code
 - Tests first: `backend/tests/contract/test_document_store.py` run against `FakeDocumentStore` and `LocalFileDocumentStore` (in `tmp_path`): saved documents are listed and loaded with their text; saving the same document twice keeps one; `LocalFileDocumentStore` writes only under `data_dir/documents` and a new instance on the same directory sees earlier documents.
 - Change: `ports/document_store.py`, `adapters/fakes/document_store.py`, `adapters/file_document_store.py`.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 5. Document service
