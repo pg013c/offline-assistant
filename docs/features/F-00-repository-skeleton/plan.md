@@ -38,7 +38,7 @@
 - Tests first: `backend/tests/unit/api/test_health.py`: `GET /api/health` returns 200 and `{"status": "ok", "version": <package version>}`; the OpenAPI schema lists `/api/health` with the `HealthResponse` schema. App built with `create_app` and test settings (`tmp_path` as data dir).
 - Change: `app.py` (`create_app`), `settings.py` (minimal), `api/schemas.py`, `api/routes/health.py`.
 - Done when: tests pass, `make check` green.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 3. Settings fail fast
