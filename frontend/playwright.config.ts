@@ -7,11 +7,15 @@ import { defineConfig, devices } from '@playwright/test'
 // Ports away from the development defaults, so a running `make dev` does not interfere.
 const API_PORT = process.env.E2E_API_PORT ?? '8011'
 const UI_PORT = process.env.E2E_UI_PORT ?? '5181'
-// Every run starts with an empty data directory.
-const DATA_DIR = mkdtempSync(join(tmpdir(), 'offline-assistant-e2e-'))
+// Every run starts with an empty data directory. The config is loaded by every Playwright
+// process; the environment variable makes them share one directory, removed in global teardown.
+const DATA_DIR = (process.env.E2E_DATA_DIR ??= mkdtempSync(
+  join(tmpdir(), 'offline-assistant-e2e-'),
+))
 
 export default defineConfig({
   testDir: './e2e',
+  globalTeardown: './e2e/global-teardown.ts',
   fullyParallel: false,
   forbidOnly: Boolean(process.env.CI),
   retries: 0,
