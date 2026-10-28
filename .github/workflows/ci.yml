@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Actions are pinned to commit SHAs; Dependabot keeps them current (ADR 0010).
+jobs:
+  docs:
+    name: Docs
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Markdown lint
+        uses: DavidAnson/markdownlint-cli2-action@696eb3f2509270d7b882d2aa68347bc676e7af34 # v25.0.0
+        with:
+          globs: "**/*.md"
+
+      - name: Spelling
+        uses: crate-ci/typos@7f9d0819ca1c008ade73f4b41fa9d258d48f605b # v1.51.1
+
+      - name: Internal links and anchors
+        uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
+        with:
+          args: >-
+            --offline
+            --include-fragments
+            --no-progress
+            --exclude-path docs/features/_templates
+            --exclude-path docs/adr/template.md
+            --exclude-path .github/pull_request_template.md
+            '**/*.md'
+          fail: true
+
+  tooling:
+    name: Tooling
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Lint workflows
+        uses: raven-actions/actionlint@3d39aea434753780c3b3d4a1a31c854b4dbf49d7 # v2.2.0
+
+      - name: Lint shell scripts
+        uses: ludeeus/action-shellcheck@00cae500b08a931fb5698e11e79bfbd38e612a38 # 2.0.0
+        with:
+          additional_files: .claude/hooks/tdd-guard.sh .claude/hooks/format-on-edit.sh
+        env:
+          SHELLCHECK_OPTS: -x
+
+      - name: Validate agent settings
+        run: jq empty .claude/settings.json
+
+      - name: Test agent hooks
+        run: bash scripts/ci/test-hooks.sh
+
+  commits:
+    name: Commit rules
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Check commits (Conventional Commits, test-first)
+        env:
+          EVENT: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          PUSH_AFTER: ${{ github.sha }}
+        run: |
+          if [[ "$EVENT" == pull_request ]]; then
+            bash scripts/ci/check-commits.sh "$PR_BASE" "$PR_HEAD"
+          elif [[ "$PUSH_BEFORE" =~ ^0+$ ]]; then
+            echo "First push of the branch: nothing to compare against."
+          else
+            bash scripts/ci/check-commits.sh "$PUSH_BEFORE" "$PUSH_AFTER"
+          fi
