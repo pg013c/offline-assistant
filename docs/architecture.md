@@ -85,7 +85,8 @@ Rules (ADR 0002):
 - `domain` imports nothing outside the standard library and Pydantic.
 - `services` depend on `ports` (Python `Protocol`s) and `domain`, never on `adapters`.
 - `adapters` are the only place that imports third-party model, database or parsing libraries.
-- Wiring happens in one composition root (`app.py`), driven by configuration.
+- Wiring happens in one composition root (`app.py`), driven by configuration. `settings.py`, `log.py` (structlog JSON setup) and `openapi.py` (schema export for the generated client) sit beside it, outside the layers.
+- The rules are import-linter contracts in `backend/pyproject.toml`, checked by `make check`. Every model, database or parsing library is added to the forbidden list for `domain`, `ports` and `services` together with its ADR.
 - Every port has a fake adapter. Unit tests use fakes; integration tests use real adapters.
 
 ## 4. Main flow: a question

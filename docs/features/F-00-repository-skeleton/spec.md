@@ -29,15 +29,15 @@ Every later feature needs the same foundation: a backend and a frontend project 
 
 ## Acceptance criteria
 
-- [ ] AC-1: Given a fresh clone with uv, pnpm and Node installed, when the developer runs `make setup` and then `make check`, then formatting, lint, type checks, tests and the API contract check run for both projects and pass.
-- [ ] AC-2: When a client calls `GET /api/health`, then it receives `200` with `{"status": "ok", "version": "<package version>"}`, and the endpoint appears in the OpenAPI schema with a typed response.
-- [ ] AC-3: Given a module in `services/` that imports from `adapters/`, when `make check` runs, then the import contract fails and names the forbidden import.
-- [ ] AC-4: Given the API is running, when the UI loads, then the app shell shows "API: ok" and the version; given the API is unreachable, then it shows "API: unavailable" without crashing.
-- [ ] AC-5: Given a change to an API schema without running `make api-client`, when CI runs, then the `API contract` job fails.
-- [ ] AC-6: When `make dev` runs, then the API starts on port 8000 and the UI on port 5173 with `/api` proxied to the API, both with hot reload.
-- [ ] AC-7: Given staged changes, when the developer commits, then the `pre-commit` hooks run formatting, lint and type checks and do not run the test suite.
+- [x] AC-1: Given a fresh clone with uv, pnpm and Node installed, when the developer runs `make setup` and then `make check`, then formatting, lint, type checks, tests and the API contract check run for both projects and pass. — proof: `make setup` and `make check` run clean on the reference machine (2026-10-28); the same targets run in the `Backend`, `Frontend` and `API contract` CI jobs
+- [x] AC-2: When a client calls `GET /api/health`, then it receives `200` with `{"status": "ok", "version": "<package version>"}`, and the endpoint appears in the OpenAPI schema with a typed response. — proof: `backend/tests/unit/api/test_health.py`
+- [x] AC-3: Given a module in `services/` that imports from `adapters/`, when `make check` runs, then the import contract fails and names the forbidden import. — proof: `backend/tests/architecture/test_layers.py`
+- [x] AC-4: Given the API is running, when the UI loads, then the app shell shows "API: ok" and the version; given the API is unreachable, then it shows "API: unavailable" without crashing. — proof: `frontend/src/features/status/ApiStatus.test.tsx`, `frontend/src/App.test.tsx`; checked in the browser with `make dev`
+- [x] AC-5: Given a change to an API schema without running `make api-client`, when CI runs, then the `API contract` job fails. — proof: `scripts/ci/check-api-client.sh` (CI job `API contract`); stale-client failure checked by hand, see plan step 6
+- [x] AC-6: When `make dev` runs, then the API starts on port 8000 and the UI on port 5173 with `/api` proxied to the API, both with hot reload. — proof: checked by hand with `make dev` (plan steps 5 and 7, review #9); configuration and port checks in `scripts/ci/test-make.sh`
+- [x] AC-7: Given staged changes, when the developer commits, then the `pre-commit` hooks run formatting, lint and type checks and do not run the test suite. — proof: checked by hand, see plan step 8
 - [ ] AC-8: Given a pull request, when CI runs, then `Backend`, `Frontend` and `API contract` jobs run alongside the existing jobs and pass.
-- [ ] AC-9: Missing required settings fail at startup with a message naming the variable (GEN-20, GEN-50).
+- [x] AC-9: Missing required settings fail at startup with a message naming the variable (GEN-20, GEN-50). — proof: `backend/tests/unit/test_settings.py`, `scripts/ci/test-make.sh`
 
 ### Proof of each criterion
 
