@@ -5,6 +5,7 @@ from fastapi.routing import APIRoute
 
 from assistant import __version__
 from assistant.api.routes import health
+from assistant.log import configure_logging
 from assistant.settings import Settings, load_settings
 
 API_PREFIX = "/api"
@@ -32,4 +33,5 @@ def create_app(settings: Settings) -> FastAPI:
 
 def main() -> FastAPI:
     """Application factory for uvicorn (`--factory`): settings come from the environment."""
+    configure_logging()
     return create_app(load_settings())
