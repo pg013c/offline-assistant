@@ -113,6 +113,11 @@ export interface components {
             /** Is Test Model */
             is_test_model: boolean;
         };
+        /**
+         * ChatEvent
+         * @description One event of a streamed answer: text, citation or end.
+         */
+        ChatEvent: components["schemas"]["ChatTextEvent"] | components["schemas"]["ChatCitationEvent"] | components["schemas"]["ChatEndEvent"];
         /** ChatRequest */
         ChatRequest: {
             /** Question */

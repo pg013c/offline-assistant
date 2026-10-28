@@ -143,26 +143,7 @@
                       "type": "string",
                       "contentMediaType": "application/json",
                       "contentSchema": {
-                        "oneOf": [
-                          {
-                            "$ref": "#/components/schemas/ChatTextEvent"
-                          },
-                          {
-                            "$ref": "#/components/schemas/ChatCitationEvent"
-                          },
-                          {
-                            "$ref": "#/components/schemas/ChatEndEvent"
-                          }
-                        ],
-                        "discriminator": {
-                          "propertyName": "type",
-                          "mapping": {
-                            "text": "#/components/schemas/ChatTextEvent",
-                            "citation": "#/components/schemas/ChatCitationEvent",
-                            "end": "#/components/schemas/ChatEndEvent"
-                          }
-                        },
-                        "title": "Streamitem Ask Question"
+                        "$ref": "#/components/schemas/ChatEvent"
                       }
                     },
                     "event": {
@@ -277,6 +258,29 @@
         ],
         "title": "ChatEndEvent",
         "description": "The last event of an answer."
+      },
+      "ChatEvent": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/ChatTextEvent"
+          },
+          {
+            "$ref": "#/components/schemas/ChatCitationEvent"
+          },
+          {
+            "$ref": "#/components/schemas/ChatEndEvent"
+          }
+        ],
+        "title": "ChatEvent",
+        "description": "One event of a streamed answer: text, citation or end.",
+        "discriminator": {
+          "propertyName": "type",
+          "mapping": {
+            "citation": "#/components/schemas/ChatCitationEvent",
+            "end": "#/components/schemas/ChatEndEvent",
+            "text": "#/components/schemas/ChatTextEvent"
+          }
+        }
       },
       "ChatRequest": {
         "properties": {

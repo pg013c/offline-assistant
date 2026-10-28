@@ -6,7 +6,7 @@ import type { components } from '../../api/schema'
 
 type Schemas = components['schemas']
 export type ChatCitation = Schemas['ChatCitationEvent']
-type ChatEvent = Schemas['ChatTextEvent'] | ChatCitation | Schemas['ChatEndEvent']
+type ChatEvent = Schemas['ChatEvent']
 
 export interface ChatAnswer {
   status: 'idle' | 'streaming' | 'done' | 'error'

@@ -2,7 +2,7 @@
 
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, RootModel
 
 
 class HealthResponse(BaseModel):
@@ -62,4 +62,9 @@ class ChatEndEvent(BaseModel):
     is_test_model: bool
 
 
-ChatEvent = Annotated[ChatTextEvent | ChatCitationEvent | ChatEndEvent, Field(discriminator="type")]
+class ChatEvent(
+    RootModel[
+        Annotated[ChatTextEvent | ChatCitationEvent | ChatEndEvent, Field(discriminator="type")]
+    ]
+):
+    """One event of a streamed answer: text, citation or end."""
