@@ -37,3 +37,21 @@ Decision is filled in by the human: `fix`, `backlog (F-xx)`, or `reject: <reason
 
 | # | Commits |
 |---|---|
+| 1 | `eb8a25c` test, `bbd9bd7` fix |
+| 2 | `0ca680f` test, `24f557c` fix |
+| 3 | `7b43b1c` test, `df50663` fix |
+| 4 | `427cfd5` test, `67b3f77` fix |
+| 5 | `eb8a25c` test, `bbd9bd7` fix |
+| 6 | `de362f1` test, `103bf58` fix |
+| 7 | `cfc2073` fix (exhaustive match ending in `assert_never`; checked by mypy) |
+| 8 | `ba60fbd` fix (adapter chosen from `ASSISTANT_CHAT_MODEL`; covered by existing tests) |
+| 9 | `641363d` test, `98d1960` fix |
+| 10 | `5836c17` test, `5efb959` fix (modal in browsers; journey still passes) |
+| 11 | `7d6779e` test, `cfc2073` fix |
+| 12 | `cfb6dbc` test (tightened; code already correct) |
+| 13 | `3100f80` refactor |
+| 14 | `f1606f0` fix (one directory per run, removed in global teardown; checked by counting directories) |
+| 15 | `58d4f65` docs: ADR 0014 and `testing.md` |
+| 16 | moved to [backlog follow-ups](../../backlog.md#follow-ups) for F-03 in `58d4f65` |
+| 17 | `1c672a8` build (tests in their own TypeScript project; `process` in `src/` is a type error) |
+| 18 | moved to [backlog follow-ups](../../backlog.md#follow-ups) for F-07 in `58d4f65` |
