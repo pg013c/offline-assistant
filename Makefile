@@ -2,16 +2,40 @@
 # project's own tooling: uv in backend/, pnpm in frontend/.
 
 BACKEND := uv run --directory backend
+FRONTEND := pnpm --dir frontend
 
-.PHONY: help setup check check-backend test test-backend
+# Local settings for `make dev`; see .env.example. Paths are resolved from the repository root.
+-include .env
+ASSISTANT_DATA_DIR ?= data/storage
+export ASSISTANT_DATA_DIR := $(abspath $(ASSISTANT_DATA_DIR))
+export COREPACK_ENABLE_DOWNLOAD_PROMPT := 0
+# Ports for `make dev`; override when another local service already uses one (API_PORT=8010 make dev).
+export API_PORT ?= 8000
+export UI_PORT ?= 5173
+
+.PHONY: help setup dev check check-backend check-frontend test test-backend test-frontend node-version
 
 help: ## List targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
 
-setup: ## Install project dependencies
+setup: node-version ## Install project dependencies
 	uv sync --directory backend
+	corepack enable pnpm
+	$(FRONTEND) install --frozen-lockfile
 
-check: check-backend ## Format, lint, types and tests for everything
+dev: node-version ## API on :8000 and UI on :5173 (API_PORT, UI_PORT), both with hot reload
+	@for port in $(API_PORT) $(UI_PORT); do \
+	  if lsof -nP -iTCP:$$port -sTCP:LISTEN >/dev/null 2>&1; then \
+	    echo "Port $$port is already in use. Stop that process or choose another port (API_PORT, UI_PORT)."; exit 1; \
+	  fi; \
+	done
+	@mkdir -p "$(ASSISTANT_DATA_DIR)"
+	@trap 'kill 0' INT TERM EXIT; \
+	$(BACKEND) uvicorn assistant.app:main --factory --reload --port $(API_PORT) & \
+	$(FRONTEND) dev --port $(UI_PORT) & \
+	wait
+
+check: check-backend check-frontend ## Format, lint, types and tests for everything
 
 check-backend: ## Backend: ruff format, ruff lint, mypy, layer contracts, pytest
 	$(BACKEND) ruff format --check .
@@ -20,7 +44,22 @@ check-backend: ## Backend: ruff format, ruff lint, mypy, layer contracts, pytest
 	$(BACKEND) lint-imports --no-logo
 	$(MAKE) test-backend
 
-test: test-backend ## Tests only
+check-frontend: node-version ## Frontend: prettier, eslint, tsc, vitest
+	$(FRONTEND) format:check
+	$(FRONTEND) lint
+	$(FRONTEND) typecheck
+	$(MAKE) test-frontend
+
+test: test-backend test-frontend ## Tests only
 
 test-backend: ## Backend tests
 	$(BACKEND) pytest -q
+
+# --passWithNoTests only until the first frontend test lands (F-00 step 7).
+test-frontend: ## Frontend tests
+	$(FRONTEND) test --passWithNoTests
+
+node-version:
+	@node -e 'const want = require("fs").readFileSync(".nvmrc", "utf8").trim(); \
+	  if (process.versions.node.split(".")[0] !== want) { \
+	    console.error(`Node $${want} required (found $${process.version}). Run: nvm use`); process.exit(1) }'

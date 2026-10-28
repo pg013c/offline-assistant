@@ -20,7 +20,7 @@
 - **Health:** `GET /api/health` → `HealthResponse(status: Literal["ok"], version: str)`, version from package metadata. Route in `api/routes/health.py`, response model in `api/schemas.py`. No service: there is no domain behaviour yet.
 - **Schema export:** `python -m assistant.api.openapi` prints the OpenAPI JSON. `make api-client` writes it to `frontend/src/api/openapi.json` and runs `openapi-typescript` to `frontend/src/api/schema.d.ts`. The `API contract` CI job runs `make api-client` and fails on `git diff --exit-code frontend/src/api`.
 - **Frontend:** `src/api/client.ts` creates the `openapi-fetch` client with base URL `/`. `src/features/status/useApiHealth.ts` (TanStack Query) and `src/features/status/ApiStatus.tsx` render "API: ok · v0.1.0" or "API: unavailable". `App.tsx` is the shell with a header holding `ApiStatus`. UI tests mock HTTP with msw.
-- **Makefile:** `setup` (uv sync, pnpm install, pre-commit install), `dev` (uvicorn with reload on :8000 and Vite on :5173, proxy `/api` → :8000), `check`, `test`, `api-client`, plus `check-backend` and `check-frontend` used by CI.
+- **Makefile:** `setup` (uv sync, pnpm install, pre-commit install), `dev` (uvicorn with reload on :8000 and Vite on :5173, proxy `/api` → :8000), `check`, `test`, `api-client`, plus `check-backend` and `check-frontend` used by CI. Ports are configurable with `API_PORT` and `UI_PORT`, and `make dev` stops early if a port is taken.
 
 ## Steps
 
@@ -65,7 +65,7 @@
 - Change: `frontend/` Vite React TypeScript project with packages from ADR 0011, `tsconfig` strict with `noUncheckedIndexedAccess`, ESLint flat config (typescript-eslint strict, react-hooks, jsx-a11y), Prettier, Tailwind, Vitest with jsdom and Testing Library setup, `.nvmrc` (24), Vite proxy `/api` → `http://localhost:8000`; Makefile `check-frontend` (prettier --check, eslint, tsc, vitest), `dev`, `setup`.
 - Done when: `make check` and `make dev` run (default Vite page served, API reachable through the proxy).
 - Commit: `build(frontend): scaffold Vite React project with lint, types and tests`
-- [ ] done
+- [x] done
 
 ### Step 6. Generated API client and contract check
 
