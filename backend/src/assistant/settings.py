@@ -20,7 +20,9 @@ class SettingsError(Exception):
 
 def variable_name(location: tuple[int | str, ...]) -> str:
     """The environment variable behind a validation error location."""
-    raise NotImplementedError
+    if not location:
+        return f"{ENV_PREFIX}* settings"
+    return ENV_PREFIX + "_".join(str(part) for part in location).upper()
 
 
 def load_settings() -> Settings:
@@ -30,7 +32,6 @@ def load_settings() -> Settings:
         return Settings()  # type: ignore[call-arg]
     except ValidationError as error:
         problems = "; ".join(
-            f"{ENV_PREFIX}{str(issue['loc'][0]).upper()}: {issue['msg']}"
-            for issue in error.errors()
+            f"{variable_name(issue['loc'])}: {issue['msg']}" for issue in error.errors()
         )
         raise SettingsError(f"Invalid configuration. {problems}") from error
