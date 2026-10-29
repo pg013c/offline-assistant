@@ -111,7 +111,7 @@ class ChatModel(Protocol):
     - stops at the end of the string.
 - Change: `domain/answers.py`.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 2. Port, fakes and contract
 

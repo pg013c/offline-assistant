@@ -1,8 +1,11 @@
 """What a streamed answer is made of."""
 
+import json
 import re
 from dataclasses import dataclass, field
 from typing import Any
+
+from pydantic import BaseModel, ConfigDict, ValidationError
 
 from assistant.domain.documents import ChunkLocation
 
@@ -39,9 +42,32 @@ class AnswerEnd:
 
 type AnswerEvent = AnswerText | AnswerCitation | AnswerEnd
 
-# The structured answer a language model is asked for (FR-13, AI-20): the answer first, so it
-# can stream, then the numbers of the passages it rests on, counted from 1.
-ANSWER_SCHEMA: dict[str, Any] = {}
+
+def opening_sentences(text: str, count: int = QUOTE_SENTENCES) -> str:
+    """The first `count` sentences of the text, copied verbatim."""
+    stripped = text.strip()
+    boundaries = [match.start() for match in _SENTENCE_END.finditer(stripped)]
+    if len(boundaries) < count:
+        return stripped
+    return stripped[: boundaries[count - 1]]
+
+
+def quote_from(text: str) -> str:
+    """The quote shown for a cited chunk, copied verbatim (AI-03)."""
+    return opening_sentences(text)
+
+
+class _StructuredAnswer(BaseModel):
+    """The structured answer a language model is asked for (FR-13, AI-20): the answer first,
+    so it can stream, then the numbers of the passages it rests on, counted from 1."""
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    answer: str
+    citations: list[int]
+
+
+ANSWER_SCHEMA: dict[str, Any] = _StructuredAnswer.model_json_schema()
 
 
 class InvalidAnswer(Exception):
@@ -56,26 +82,96 @@ class ModelAnswer:
 
 def parse_answer(raw: str, passage_count: int) -> ModelAnswer:
     """The validated answer, or `InvalidAnswer` saying what to correct."""
-    raise NotImplementedError
+    try:
+        decoded = json.loads(raw)
+    except json.JSONDecodeError as error:
+        raise InvalidAnswer(f"the output is not valid JSON ({error.msg})") from error
+    try:
+        answer = _StructuredAnswer.model_validate(decoded)
+    except ValidationError as error:
+        raise InvalidAnswer(
+            "the output is not a JSON object with answer and citations "
+            "(a string and a list of passage numbers)"
+        ) from error
+    if not answer.answer.strip():
+        raise InvalidAnswer("the answer is empty")
+    if not answer.citations:
+        raise InvalidAnswer("the answer cites no passage")
+    for number in answer.citations:
+        if not 1 <= number <= passage_count:
+            raise InvalidAnswer(
+                f"passage {number} does not exist; cite passages 1 to {passage_count}"
+            )
+    return ModelAnswer(text=answer.answer, cited=tuple(dict.fromkeys(answer.citations)))
+
+
+_HIGH_SURROGATES = 0xD800
+_LOW_SURROGATES = 0xDC00
+_ANSWER_START = re.compile(r'\{\s*"answer"\s*:\s*"')
+_ESCAPES = {'"': '"', "\\": "\\", "/": "/", "b": "\b", "f": "\f", "n": "\n", "r": "\r", "t": "\t"}
 
 
 class AnswerTextExtractor:
-    """Pulls the answer text out of the structured answer while it is being written."""
+    """Pulls the answer text out of the structured answer while it is being written.
+
+    The schema puts `answer` first, so its string starts the object. Escapes and surrogate
+    pairs split between chunks wait for the rest.
+    """
+
+    def __init__(self) -> None:
+        self._before = ""
+        self._pending = ""
+        self._started = False
+        self._done = False
 
     def feed(self, chunk: str) -> str:
         """The answer text decoded from this chunk; empty before and after the answer."""
-        raise NotImplementedError
+        if self._done:
+            return ""
+        if not self._started:
+            self._before += chunk
+            match = _ANSWER_START.search(self._before)
+            if not match:
+                return ""
+            self._started = True
+            chunk = self._before[match.end() :]
+            self._before = ""
+        return self._decode(self._pending + chunk)
 
-
-def opening_sentences(text: str, count: int = QUOTE_SENTENCES) -> str:
-    """The first `count` sentences of the text, copied verbatim."""
-    stripped = text.strip()
-    boundaries = [match.start() for match in _SENTENCE_END.finditer(stripped)]
-    if len(boundaries) < count:
-        return stripped
-    return stripped[: boundaries[count - 1]]
-
-
-def quote_from(text: str) -> str:
-    """The quote shown for a cited chunk, copied verbatim (AI-03)."""
-    return opening_sentences(text)
+    def _decode(self, text: str) -> str:
+        out: list[str] = []
+        position = 0
+        while position < len(text):
+            char = text[position]
+            if char == '"':
+                self._done = True
+                self._pending = ""
+                return "".join(out)
+            if char != "\\":
+                out.append(char)
+                position += 1
+                continue
+            if position + 1 >= len(text):
+                break
+            code = text[position + 1]
+            if code != "u":
+                out.append(_ESCAPES.get(code, code))
+                position += 2
+                continue
+            if position + 6 > len(text):
+                break
+            unit = int(text[position + 2 : position + 6], 16)
+            if _HIGH_SURROGATES <= unit < _LOW_SURROGATES:
+                # A high surrogate needs the low one that follows it.
+                if position + 12 > len(text):
+                    break
+                low = int(text[position + 8 : position + 12], 16)
+                out.append(
+                    chr(0x10000 + ((unit - _HIGH_SURROGATES) << 10) + (low - _LOW_SURROGATES))
+                )
+                position += 12
+                continue
+            out.append(chr(unit))
+            position += 6
+        self._pending = text[position:]
+        return "".join(out)
