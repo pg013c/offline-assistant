@@ -56,7 +56,7 @@
   - with no heading path, the indexed text is the text;
   - the chunk's own text is not changed.
 - Change: `domain/documents.py`.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 2. Section titles join the heading path

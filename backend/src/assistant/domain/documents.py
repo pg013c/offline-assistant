@@ -78,6 +78,11 @@ def title_from_filename(filename: str) -> str:
     return PurePath(filename).stem
 
 
+def indexed_text(chunk: Chunk) -> str:
+    """What the index embeds and searches for a chunk: its heading path, then its text."""
+    raise NotImplementedError
+
+
 def chunk_document(
     document_id: str, parsed: ParsedDocument, max_chars: int = MAX_CHUNK_CHARS
 ) -> list[Chunk]:
