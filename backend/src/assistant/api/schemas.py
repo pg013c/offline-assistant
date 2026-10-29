@@ -14,7 +14,12 @@ class DocumentResponse(BaseModel):
     id: str
     title: str
     filename: str
+    status: Literal["processing", "ready", "failed"]
     chunk_count: int
+    # None for formats without pages, such as text and Word files.
+    page_count: int | None
+    # Why parsing failed, for documents with status `failed`.
+    failure_reason: str | None
 
 
 class ErrorDetail(BaseModel):
@@ -43,6 +48,15 @@ class ChatTextEvent(BaseModel):
     text: str
 
 
+class CitationLocation(BaseModel):
+    """Where the cited passage is; parts the document does not have are empty."""
+
+    heading_path: list[str]
+    article: str | None
+    paragraph: str | None
+    page: int | None
+
+
 class ChatCitationEvent(BaseModel):
     """A passage the answer is based on, quoted verbatim."""
 
@@ -51,6 +65,7 @@ class ChatCitationEvent(BaseModel):
     document_id: str
     document_title: str
     quote: str
+    location: CitationLocation
 
 
 class ChatEndEvent(BaseModel):

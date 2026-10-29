@@ -1,5 +1,6 @@
 """Composition root: the only module that wires adapters into services (ADR 0002)."""
 
+import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -8,15 +9,18 @@ from fastapi import FastAPI
 from fastapi.routing import APIRoute
 
 from assistant import __version__
+from assistant.adapters.docling_parser import DoclingDocumentParser
 from assistant.adapters.fakes.chat_model import FakeExtractiveChatModel
-from assistant.adapters.fakes.ingestion_queue import InlineIngestionQueue
 from assistant.adapters.file_document_store import LocalFileDocumentStore
 from assistant.adapters.keyword_index import KeywordChunkIndex
+from assistant.adapters.routing_parser import RoutingDocumentParser
 from assistant.adapters.text_document_parser import TextDocumentParser
+from assistant.adapters.thread_ingestion_queue import ThreadIngestionQueue
 from assistant.api.errors import register_error_handlers
 from assistant.api.routes import chat, documents, health
 from assistant.log import configure_logging
 from assistant.ports.chat_model import ChatModel
+from assistant.ports.document_parser import DocumentParser
 from assistant.services.documents import DocumentService
 from assistant.services.questions import QuestionService
 from assistant.settings import Settings, load_settings
@@ -25,6 +29,15 @@ API_PREFIX = "/api"
 
 # Chat model adapters by `ASSISTANT_CHAT_MODEL`; F-06 adds the OpenAI-compatible ones.
 CHAT_MODELS: dict[str, type[ChatModel]] = {"fake-extractive": FakeExtractiveChatModel}
+
+
+def document_parser_for(settings: Settings) -> DocumentParser:
+    """Text only, or Docling for everything else; Docling fails here if its models are missing."""
+    text = TextDocumentParser()
+    if settings.document_parser == "text-only" or settings.models_dir is None:
+        return text
+    DoclingDocumentParser.ensure_ready(settings.models_dir)
+    return RoutingDocumentParser(text=text, rich=DoclingDocumentParser(settings.models_dir))
 
 
 def operation_id(route: APIRoute) -> str:
@@ -37,8 +50,9 @@ def create_app(settings: Settings) -> FastAPI:
     store = LocalFileDocumentStore(settings.data_dir)
     index = KeywordChunkIndex()
     model = CHAT_MODELS[settings.chat_model]()
-    # Until the Docling parser and the background queue are wired in (F-02 step 9).
-    document_service = DocumentService(store, index, TextDocumentParser(), InlineIngestionQueue())
+    parser = document_parser_for(settings)
+    queue = ThreadIngestionQueue()
+    document_service = DocumentService(store, index, parser, queue)
     question_service = QuestionService(index, model, store)
 
     @asynccontextmanager
@@ -46,6 +60,7 @@ def create_app(settings: Settings) -> FastAPI:
         restored = document_service.restore()
         structlog.get_logger(__name__).info("documents_restored", count=restored)
         yield
+        queue.close()
 
     app = FastAPI(
         lifespan=lifespan,
@@ -69,4 +84,7 @@ def create_app(settings: Settings) -> FastAPI:
 def main() -> FastAPI:
     """Application factory for uvicorn (`--factory`): settings come from the environment."""
     configure_logging()
+    # Models come from `make models`; a library that tries to download one fails instead.
+    os.environ["HF_HUB_OFFLINE"] = "1"
+    os.environ["TRANSFORMERS_OFFLINE"] = "1"
     return create_app(load_settings())

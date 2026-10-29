@@ -29,7 +29,8 @@ export default defineConfig({
     {
       command: `uv run --directory ../backend uvicorn assistant.app:main --factory --port ${API_PORT}`,
       url: `http://127.0.0.1:${API_PORT}/api/health`,
-      env: { ASSISTANT_DATA_DIR: DATA_DIR },
+      // Text only until the journey uploads a PDF (F-02 step 12).
+      env: { ASSISTANT_DATA_DIR: DATA_DIR, ASSISTANT_DOCUMENT_PARSER: 'text-only' },
       reuseExistingServer: false,
     },
     {

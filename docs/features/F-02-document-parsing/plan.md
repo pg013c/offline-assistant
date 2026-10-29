@@ -113,7 +113,7 @@
 - Tests first: `tests/unit/api/test_documents_api.py` with `ASSISTANT_DOCUMENT_PARSER=text-only`: upload returns `202` with `processing`, and the list shows `ready` with counts once ingested; `413`, `415`, `422` keep the standard body; `test_chat_api.py`: the citation event carries `location`; `test_settings.py` / app tests: with the Docling parser and an empty models directory, startup fails naming the model and `make models`.
 - Change: `api/schemas.py`, `api/routes/documents.py`, `api/errors.py`, `settings.py`, `app.py` (queue lifecycle in lifespan); `make api-client`.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 10. Document panel with status
 
