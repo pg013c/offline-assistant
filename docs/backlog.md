@@ -34,7 +34,7 @@ Small changes found during reviews, done as chores outside the feature that foun
 | Switch the backend test client from `httpx` to `httpx2` (Starlette deprecation warning), with a note in ADR 0011 | F-00 review #11 | planned |
 | Route tests with injected fake services instead of the file-backed composition root | F-01 review #16 | done in F-03 |
 | Use `found=false` in the UI for a proper "no answer" state | F-01 review #18 | planned for F-07 |
-| Refuse a non-local `ASSISTANT_QDRANT_URL` unless network mode is on (Compose service names allowed) | F-03 review #15 | planned for F-10 |
+| Refuse a non-local `ASSISTANT_QDRANT_URL` or `ASSISTANT_LLM_URL` unless network mode is on (Compose service names allowed) | F-03 review #15, F-06 review #13 | planned for F-10 |
 | Index each chunk with its article number and title, and keep section titles out of chunks (retrieval baseline causes 1 and 2) | F-04 baseline | became F-04a |
 | Record the highest out-of-scope similarity in the evaluation report, so the threshold margin is a measured figure | F-04a review #7 | done in F-05 |
 | Let an answer say the passages do not cover the question without citing unrelated passages (the schema requires a citation today) | F-06 answer baseline (`ref-article-83`) | planned for F-07 |
