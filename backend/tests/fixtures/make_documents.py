@@ -6,9 +6,11 @@ the Publications Office of the European Union, reused under Commission Decision
 2011/833/EU (© European Union, https://eur-lex.europa.eu/eli/reg/2024/1689/oj).
 
 Everything else is generated here. Run from `backend/`; it needs the network once, and
-pikepdf only for the password-protected file:
+pikepdf (MPL-2.0, a tool for this script only, not a project dependency) for the
+password-protected file. pdfium writes new bytes on every run, so rebuild only the files
+you change; the chunk snapshot in the parser tests guards the rest.
 
-    uv run --with pikepdf python tests/fixtures/make_documents.py
+    uv run --with pikepdf==10.17.0 python tests/fixtures/make_documents.py
 """
 
 import random

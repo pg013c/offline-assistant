@@ -42,6 +42,12 @@
 
 **Fixtures** (`backend/tests/fixtures/documents/`): EU AI Act Articles 5–6 in English and Polish as PDF pages cut from the EUR-Lex PDFs, a scan (pages rendered to an image with noise, saved as image-only PDF), a photo-like PNG, a generated DOCX with headings and a table, a password-protected PDF, a corrupt PDF, a PDF without text. A script `backend/tests/fixtures/make_documents.py` produces them; its source and the EUR-Lex URLs are committed, so they can be rebuilt.
 
+## Changes during the build
+
+- Invalid UTF-8 in a `.txt` or `.md` upload stays an upload-time `422` (`NotUtf8Text`), as in F-01, instead of becoming a parse failure: the check is cheap, and the user learns at once. `TextDocumentParser` keeps its own UTF-8 check for direct use.
+- Numbered paragraphs reach the chunker as numbered list items (Docling keeps the marker apart); the chunker treats a number as a new paragraph only inside an article.
+- Dependencies and pinned models beyond ADR 0015 are recorded in ADR 0016.
+
 ## Steps
 
 ### Step 1. Dependencies, model fetching and settings
