@@ -135,7 +135,7 @@ Two projects side by side, apart from the backend and the frontend:
   - a drop of 5 points or less passes;
   - a missing baseline passes and says it sets one.
 - Change: `evals/harness/metrics.py`, `gate.py`.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 6. Source resolution and reports
