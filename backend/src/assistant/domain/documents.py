@@ -146,13 +146,24 @@ class _Chunker:
         self._expecting_title = False
         # True between any heading and its first content: a title-like paragraph is its title.
         self._after_heading = False
+        # A title-like paragraph waits here until the next block shows whether it is a title.
+        self._pending_title: tuple[str, int | None] | None = None
 
     def add(self, block: Block) -> None:
         text = block.text.strip()
         if not text:
             return
         article = _ARTICLE.match(text)
-        if article and (block.kind == "heading" or article.end() == len(text)):
+        starts_article = article is not None and (
+            block.kind == "heading" or article.end() == len(text)
+        )
+        if self._pending_title:
+            # Content or the section's first article makes it a title; another heading does not.
+            plain_heading = (
+                block.kind == "heading" and not starts_article and not _ANNEX.match(text)
+            )
+            self._settle_title(as_title=not plain_heading)
+        if article and starts_article:
             self._start_article(article.group(1), text, block.level)
         elif block.kind == "heading" and _ANNEX.match(text):
             # A new annex is never the title of what came before it.
@@ -165,8 +176,21 @@ class _Chunker:
             self._content(block.kind, text, block.page)
 
     def finish(self) -> list[tuple[str, ChunkLocation]]:
+        if self._pending_title:
+            self._settle_title(as_title=False)
         self._flush()
         return self._pieces
+
+    def _settle_title(self, *, as_title: bool) -> None:
+        if self._pending_title is None:
+            return
+        text, page = self._pending_title
+        self._pending_title = None
+        if as_title:
+            level = self._headings[-1][0] + 1 if self._headings else 1
+            self._headings.append((level, text))
+        else:
+            self._content("paragraph", text, page)
 
     def _start_article(self, number: str, text: str, level: int | None) -> None:
         self._flush()
@@ -193,8 +217,7 @@ class _Chunker:
     def _content(self, kind: BlockKind, text: str, page: int | None) -> None:
         if self._after_heading and kind == "paragraph" and _looks_like_title(text):
             # Parsers sometimes give a section's title as a paragraph (F-04a).
-            level = self._headings[-1][0] + 1 if self._headings else 1
-            self._headings.append((level, text))
+            self._pending_title = (text, page)
             self._after_heading = self._expecting_title = False
             return
         self._after_heading = False
