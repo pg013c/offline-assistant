@@ -211,7 +211,7 @@ jobs:
         with:
           node-version-file: .nvmrc
 
-      - name: Install dependencies and Chromium
+      - name: Install dependencies, Chromium and Tesseract
         env:
           COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
         run: |
@@ -219,6 +219,19 @@ jobs:
           corepack enable pnpm
           pnpm --dir frontend install --frozen-lockfile
           pnpm --dir frontend exec playwright install --with-deps chromium
+          sudo apt-get install --yes --no-install-recommends tesseract-ocr tesseract-ocr-eng tesseract-ocr-pol
+
+      # Same cache as the Integration job.
+      - name: Restore parsing models
+        id: models
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: data/models
+          key: models-${{ hashFiles('backend/uv.lock', 'backend/scripts/download_models.py') }}
+
+      - name: Download parsing models
+        if: steps.models.outputs.cache-hit != 'true'
+        run: make models
 
       - name: Browser journeys
         run: make e2e

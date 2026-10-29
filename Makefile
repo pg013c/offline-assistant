@@ -70,7 +70,7 @@ api-client: node-version ## Regenerate the TypeScript client from the backend's 
 
 test: test-backend test-frontend ## Tests only
 
-e2e: node-version ## Browser journeys: real API with the fake model, fresh data directory
+e2e: node-version ## Browser journeys: real API with Docling and the fake model; needs `make models`
 	$(FRONTEND) e2e
 
 test-backend: ## Backend tests

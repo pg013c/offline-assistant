@@ -92,7 +92,7 @@ make test-integration
 
 `make test-integration` runs the tests with real adapters, such as the document parser; it needs `make models` and Tesseract.
 
-`make e2e` runs the browser journeys with Playwright against the real API and the test model, on a fresh data directory and ports 8011/5181. `make help` lists all targets.
+`make e2e` runs the browser journeys with Playwright against the real API, the Docling parser and the test model, on a fresh data directory and ports 8011/5181; it needs `make models` and Tesseract. `make help` lists all targets.
 
 ## Licence
 
