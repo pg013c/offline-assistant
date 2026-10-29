@@ -7,8 +7,8 @@ How each part of the system is verified ([ADR 0006](../adr/0006-tdd-for-code-eva
 | Part | Check | Tooling | Runs in |
 |---|---|---|---|
 | Domain, services, tools, retries, citation checks | unit tests, test first | pytest + fakes | `make check`, every push |
-| Adapters (Qdrant, Docling, Whisper, chat server) | integration and port contract tests | pytest, marker `integration` | `make test-integration`, CI job `Integration` ([ADR 0015](../adr/0015-document-parsing-with-docling-and-tesseract.md)) |
-| API | route tests over the ASGI app with fake services | pytest + httpx | `make check` |
+| Adapters (Qdrant, Docling, Whisper, chat server) | integration and port contract tests | pytest, marker `integration` | `make test-integration` (needs `make models` and `make qdrant`), CI job `Integration` with a Qdrant service ([ADR 0015](../adr/0015-document-parsing-with-docling-and-tesseract.md), [ADR 0017](../adr/0017-qdrant-and-bge-m3-for-hybrid-search.md)) |
+| API | route tests over the ASGI app built from fake adapters | pytest + httpx | `make check` |
 | API contract | generated client is up to date | `make api-client` + diff | `make check` |
 | Model behaviour (answers, citations, refusals, tool choice) | evaluation cases, written first | Promptfoo | `make eval`, on demand |
 | Retrieval quality | recall@k and MRR against expected chunks | Promptfoo / pytest | `make eval` |

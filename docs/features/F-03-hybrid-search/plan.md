@@ -263,7 +263,7 @@
 
 - Kind: setup (one `docs` commit)
 - Change: `docs/architecture.md` (ports, adapters, Qdrant, retrieval flow, what is implemented), README (setup with Docker and `make qdrant`, status), `testing.md` if needed, backlog follow-up #16 done.
-- [ ] green
+- [x] green
 
 ## Acceptance criteria mapping
 

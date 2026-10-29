@@ -11,7 +11,7 @@ Built to answer three practical questions about local AI:
 2. How do local models compare with a cloud model on **quality, latency, memory and cost**, measured on the same evaluation set?
 3. Can the whole thing be **installed and verified on an air-gapped machine**?
 
-> **Status:** document parsing (F-02). You can upload PDFs (including scans), Word files, photos of text, plain text or Markdown; they are parsed offline with Docling and Tesseract and split by article, paragraph and page. Answers stream with a clickable source that names its location, such as "Art. 6(1), p. 1". Retrieval is still keyword-based and the answer comes from a clearly labelled test model; embeddings and local LLMs follow in [F-03 to F-07](docs/backlog.md). Results will be published in [docs/evals/](docs/evals/).
+> **Status:** hybrid search (F-03). You can upload PDFs (including scans), Word files, photos of text, plain text or Markdown; they are parsed offline with Docling and Tesseract and split by article, paragraph and page. Questions find passages by meaning and by exact terms, across Polish and English (BGE-M3 and BM25 in Qdrant), and answers stream with a clickable source such as "Art. 6(1), p. 1". Documents can be deleted and re-indexed. The answer still comes from a clearly labelled test model; retrieval metrics and local LLMs follow in [F-04 to F-07](docs/backlog.md). Results will be published in [docs/evals/](docs/evals/).
 
 ## What it will do
 
@@ -91,9 +91,9 @@ make e2e
 make test-integration
 ```
 
-`make test-integration` runs the tests with real adapters, such as the document parser; it needs `make models` and Tesseract.
+`make test-integration` runs the tests with real adapters (Docling, BGE-M3, Qdrant); it needs `make models`, `make qdrant` and Tesseract.
 
-`make e2e` runs the browser journeys with Playwright against the real API, the Docling parser and the test model, on a fresh data directory and ports 8011/5181; it needs `make models` and Tesseract. `make help` lists all targets.
+`make e2e` runs the browser journeys with Playwright against the real API (Docling, BGE-M3, Qdrant) and the test model, on a fresh data directory, its own Qdrant collection and ports 8011/5181; it needs `make models`, `make qdrant` and Tesseract. `make help` lists all targets.
 
 ## Licence
 
