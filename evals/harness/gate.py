@@ -1,4 +1,5 @@
-"""The regression gate: no metric may get worse by more than 5 points (PRD §9)."""
+"""The gate: no metric may get worse by more than 5 points (PRD §9) or cross its floor
+(ADR 0020)."""
 
 from collections.abc import Mapping
 
@@ -33,13 +34,34 @@ def check(current: Mapping[str, float | None], baseline: Mapping[str, float | No
 
 
 # The floors and ceiling of ADR 0020, whatever the baseline says.
-FLOORS: dict[str, float] = {}
-CEILINGS: dict[str, float] = {}
+FLOORS: dict[str, float] = {
+    "answerable@3": 0.85,
+    "recall@3": 0.85,
+    "recall@10": 0.95,
+    "mrr": 0.75,
+    "out_of_scope_refused": 0.90,
+}
+CEILINGS: dict[str, float] = {"in_scope_unanswered": 0.05}
 
 
 def below_floors(current: Mapping[str, float | None]) -> list[str]:
     """One message per floored metric below its floor, above its ceiling, or missing."""
-    raise NotImplementedError
+    failures = []
+    for name, limit in {**FLOORS, **CEILINGS}.items():
+        now = current.get(name)
+        if now is None:
+            failures.append(f"{name} has no value, so its floor cannot be checked (ADR 0020)")
+        elif name in FLOORS and now < limit - 1e-9:
+            failures.append(
+                f"{name} is {_value(name, now)}, below its floor of "
+                f"{_value(name, limit)} (ADR 0020)"
+            )
+        elif name in CEILINGS and now > limit + 1e-9:
+            failures.append(
+                f"{name} is {_value(name, now)}, above its ceiling of "
+                f"{_value(name, limit)} (ADR 0020)"
+            )
+    return failures
 
 
 def gate_failures(
@@ -49,4 +71,9 @@ def gate_failures(
     floors: bool,
 ) -> list[str]:
     """Everything that fails the run: regressions, and with `floors` the ADR 0020 floors."""
-    raise NotImplementedError
+    return check(current, baseline) + (below_floors(current) if floors else [])
+
+
+def _value(name: str, value: float) -> str:
+    # MRR is a mean of reciprocal ranks, not a share.
+    return f"{value:.3f}" if name == "mrr" else f"{value * 100:.1f}"
