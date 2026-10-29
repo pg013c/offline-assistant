@@ -143,7 +143,7 @@
 
 - Kind: setup (one `docs` commit)
 - Change: `docs/architecture.md` (parser port and adapters, ingestion flow, data model), `docs/standards/testing.md` (integration tests run with `make test-integration` and in CI job `Integration`), README (setup, `make models`, licence list), backlog.
-- [ ] green
+- [x] green
 
 ## Acceptance criteria mapping
 
