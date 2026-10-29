@@ -7,7 +7,7 @@
   "properties": {
     "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
     "kind": {
-      "enum": ["single-article", "cross-language", "exact-reference", "spans-articles", "out-of-scope"]
+      "enum": ["single-article", "cross-language", "exact-reference", "spans-articles", "out-of-scope", "adversarial"]
     },
     "language": { "enum": ["en", "pl"] },
     "question": { "type": "string", "minLength": 3 },

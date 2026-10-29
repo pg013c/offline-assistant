@@ -219,7 +219,7 @@ class ChatModel(Protocol):
   - the 24 retrieval case ids with the expected answer language;
   - `adv-no-citations`.
 - Dataset tests check that every id exists in the retrieval dataset and that both languages are covered.
-- [ ] red
+- [x] red
 
 ### Step 10. Answer suite in the harness
 

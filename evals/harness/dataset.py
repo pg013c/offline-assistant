@@ -57,3 +57,8 @@ def _case(entry: dict[str, Any]) -> Case:
         behaviour=expected["behaviour"],
         sources=tuple(ExpectedSource(**source) for source in expected["sources"]),
     )
+
+
+def load_answer_cases(path: Path) -> list[Case]:
+    """The answer suite: the reused retrieval cases, then the suite's own (F-06)."""
+    raise NotImplementedError
