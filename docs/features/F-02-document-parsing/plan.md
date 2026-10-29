@@ -120,7 +120,7 @@
 - Kind: ui
 - Tests first: `DocumentPanel.test.tsx`: the input accepts PDF, DOCX, PNG, JPG, TXT, MD; a processing document shows "Processing…" and the list refetches until it is ready; a ready one shows passages and pages; a failed one shows the reason.
 - Change: `features/documents/DocumentPanel.tsx`, `useDocuments.ts`.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 11. Citation location in the chat

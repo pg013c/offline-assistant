@@ -2,7 +2,13 @@ import type { ChangeEvent, JSX } from 'react'
 
 import { useDocuments, useUploadDocument } from './useDocuments'
 
-export function DocumentPanel(): JSX.Element {
+interface DocumentPanelProps {
+  /** How often the list refreshes while a document is processing. */
+  pollIntervalMs?: number
+}
+
+export function DocumentPanel(props: DocumentPanelProps = {}): JSX.Element {
+  console.debug('not implemented', props.pollIntervalMs)
   const documents = useDocuments()
   const upload = useUploadDocument()
 
