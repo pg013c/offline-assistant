@@ -52,10 +52,15 @@ class ChunkSummary(BaseModel):
 class SearchRequest(BaseModel):
     query: str = Field(min_length=1, max_length=2000)
     limit: int = Field(default=10, ge=1, le=50)
+    # Reranked or hybrid order; by default whatever the server is configured for (F-05).
+    rerank: bool | None = None
 
 
 class SearchHit(BaseModel):
-    """A passage found for a query; `similarity` is the dense cosine similarity (0 to 1)."""
+    """A passage found for a query; `similarity` is the dense cosine similarity (0 to 1).
+
+    `rerank_score` is the reranker's score (0 to 1) when the hits were reranked, else null.
+    """
 
     chunk_id: str
     document_id: str
@@ -63,6 +68,7 @@ class SearchHit(BaseModel):
     location: "CitationLocation"
     text: str
     similarity: float
+    rerank_score: float | None
 
 
 class ChatTextEvent(BaseModel):

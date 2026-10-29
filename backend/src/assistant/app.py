@@ -11,6 +11,7 @@ from fastapi import FastAPI
 from fastapi.routing import APIRoute
 
 from assistant import __version__
+from assistant.adapters.bge_reranker import BgeReranker
 from assistant.adapters.docling_parser import DoclingDocumentParser
 from assistant.adapters.fakes.chat_model import FakeExtractiveChatModel
 from assistant.adapters.fakes.chunk_index import InMemoryChunkIndex
@@ -64,13 +65,17 @@ class Adapters:
 
 def reranker_for(settings: Settings) -> Reranker | None:
     """The pinned reranker when reranking is on; it fails here if its model is missing."""
-    raise NotImplementedError
+    if settings.reranker == "off":
+        return None
+    BgeReranker.ensure_ready(settings.models_dir)
+    return BgeReranker(settings.models_dir)
 
 
 def build_adapters(settings: Settings) -> Adapters:
     """The real adapters; each fails here, naming what is missing, if it cannot work."""
     parser = document_parser_for(settings)
     SentenceTransformerEmbedder.ensure_ready(settings.models_dir)
+    reranker = reranker_for(settings)
     embedder = SentenceTransformerEmbedder(settings.models_dir)
     index = QdrantChunkIndex.connect(
         settings.qdrant_url, embedder, prefix=settings.qdrant_collection_prefix
@@ -81,6 +86,7 @@ def build_adapters(settings: Settings) -> Adapters:
         parser=parser,
         queue=ThreadIngestionQueue(),
         chat_model=CHAT_MODELS[settings.chat_model](),
+        reranker=reranker,
     )
 
 
@@ -107,7 +113,11 @@ def create_app(settings: Settings, adapters: Adapters | None = None) -> FastAPI:
         adapters.store, adapters.index, adapters.parser, adapters.queue
     )
     question_service = QuestionService(
-        adapters.index, adapters.chat_model, adapters.store, settings.min_similarity
+        adapters.index,
+        adapters.chat_model,
+        adapters.store,
+        settings.min_similarity,
+        adapters.reranker,
     )
 
     async def restore() -> None:

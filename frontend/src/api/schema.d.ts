@@ -144,7 +144,8 @@ export interface paths {
          * Search Passages
          * @description The best-matching passages for a query, best first, without a similarity threshold.
          *
-         *     Used by the evaluation harness and for debugging retrieval.
+         *     Used by the evaluation harness and for debugging retrieval. Asking for reranking when
+         *     the server has no reranker is a 409 `reranker_off`.
          */
         post: operations["search_passages"];
         delete?: never;
@@ -307,6 +308,8 @@ export interface components {
         /**
          * SearchHit
          * @description A passage found for a query; `similarity` is the dense cosine similarity (0 to 1).
+         *
+         *     `rerank_score` is the reranker's score (0 to 1) when the hits were reranked, else null.
          */
         SearchHit: {
             /** Chunk Id */
@@ -320,6 +323,8 @@ export interface components {
             text: string;
             /** Similarity */
             similarity: number;
+            /** Rerank Score */
+            rerank_score: number | null;
         };
         /** SearchRequest */
         SearchRequest: {
@@ -330,6 +335,8 @@ export interface components {
              * @default 10
              */
             limit: number;
+            /** Rerank */
+            rerank?: boolean | null;
         };
         /** ValidationError */
         ValidationError: {
