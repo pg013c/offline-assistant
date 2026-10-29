@@ -11,8 +11,8 @@ from fastapi.routing import APIRoute
 from assistant import __version__
 from assistant.adapters.docling_parser import DoclingDocumentParser
 from assistant.adapters.fakes.chat_model import FakeExtractiveChatModel
+from assistant.adapters.fakes.chunk_index import InMemoryChunkIndex
 from assistant.adapters.file_document_store import LocalFileDocumentStore
-from assistant.adapters.keyword_index import KeywordChunkIndex
 from assistant.adapters.routing_parser import RoutingDocumentParser
 from assistant.adapters.text_document_parser import TextDocumentParser
 from assistant.adapters.thread_ingestion_queue import ThreadIngestionQueue
@@ -51,7 +51,8 @@ def operation_id(route: APIRoute) -> str:
 def create_app(settings: Settings) -> FastAPI:
     """Build the HTTP application from settings."""
     store = LocalFileDocumentStore(settings.data_dir)
-    index = KeywordChunkIndex()
+    # In memory until the Qdrant index is wired in (F-03 step 9).
+    index = InMemoryChunkIndex()
     model = CHAT_MODELS[settings.chat_model]()
     parser = document_parser_for(settings)
     queue = ThreadIngestionQueue()
