@@ -256,7 +256,7 @@
   - Playwright starts the API with `ASSISTANT_QDRANT_COLLECTION_PREFIX=e2e`;
   - `make e2e` requires Qdrant;
   - the CI job `E2E` gets the Qdrant service and the models.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 14. Documentation

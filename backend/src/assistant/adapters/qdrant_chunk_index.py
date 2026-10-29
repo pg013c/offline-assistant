@@ -34,6 +34,11 @@ def point_id(chunk_id: str) -> str:
     return str(uuid.uuid5(_POINT_NAMESPACE, chunk_id))
 
 
+def best_first(results: Sequence[ScoredChunk]) -> list[ScoredChunk]:
+    """Fused order, with ties broken by dense similarity, then by position."""
+    raise NotImplementedError
+
+
 def collection_name(prefix: str, model_id: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", model_id.lower()).strip("-")
     return f"{prefix}-{slug}-v{SCHEMA_VERSION}"
