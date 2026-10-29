@@ -149,7 +149,7 @@ Two projects side by side, apart from the backend and the frontend:
   - the Markdown table lists every metric.
 - Change: `evals/harness/resolve.py`, `report.py`.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 7. Run orchestration and Promptfoo
 
