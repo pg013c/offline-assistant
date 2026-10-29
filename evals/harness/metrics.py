@@ -55,8 +55,15 @@ def first_rank(result: CaseResult) -> int | None:
     return None
 
 
+def answerable(result: CaseResult, threshold: float) -> bool:
+    """An expected chunk is among the passages an answer would use: the first three hits
+    at or above the threshold."""
+    usable = [hit for hit in result.hits if hit.similarity >= threshold][:CITED_PASSAGES]
+    return any(hit.chunk_id in result.expected_chunk_ids for hit in usable)
+
+
 def compute(results: Sequence[CaseResult], threshold: float) -> Metrics:
-    """Recall@k and MRR over in-scope cases; refusal shares at the similarity threshold.
+    """Recall@k, MRR and answerable@3 over in-scope cases; refusal shares at the threshold.
 
     A case is "refused" when its best hit is below the threshold: the answer would then cite
     nothing.
@@ -88,6 +95,9 @@ def compute(results: Sequence[CaseResult], threshold: float) -> Metrics:
     by_name["in_scope_unanswered"] = _share(
         sum(1 for result in in_scope if refused(result)), len(in_scope)
     )
+    by_name["answerable@3"] = _share(
+        sum(1 for result in in_scope if answerable(result, threshold)), len(in_scope)
+    )
 
     missed: dict[str, str] = {}
     for result in in_scope:
@@ -99,6 +109,12 @@ def compute(results: Sequence[CaseResult], threshold: float) -> Metrics:
         elif refused(result):
             best = max((hit.similarity for hit in result.hits), default=0.0)
             missed[result.case_id] = f"best hit {best:.2f} is below the threshold {threshold:.2f}"
+        elif not answerable(result, threshold):
+            weak = result.hits[rank - 1].similarity
+            missed[result.case_id] = (
+                f"expected chunk at rank {rank} is below the threshold "
+                f"({weak:.2f} < {threshold:.2f})"
+            )
     for result in out_of_scope:
         if not refused(result):
             best = max(hit.similarity for hit in result.hits)

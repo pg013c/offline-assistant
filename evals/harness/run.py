@@ -27,7 +27,7 @@ from harness.corpus import CorpusDocument, documents, sha256
 from harness.dataset import load_cases
 from harness.gate import check
 from harness.metrics import CaseResult, compute, latency, top_out_of_scope_similarity
-from harness.promptfoo import Response, command_line, environment, responses_by_mode
+from harness.promptfoo import MODES, Response, command_line, environment, responses_by_mode
 from harness.report import ModeResult, build_report, markdown
 from harness.resolve import ChunkRef, resolve
 
@@ -90,6 +90,7 @@ def run(config: RunConfig) -> Outcome:
             document_ids = _index_corpus(api, config.corpus_dir, config.corpus)
             indexing_seconds = round(time.monotonic() - indexing_started, 1)
             chunks = _chunk_refs(api, document_ids)
+            warm_ups = {mode: warm_up(api, mode) for mode in MODES}
         cases = load_cases(config.dataset)
         expected = resolve(cases, chunks)
         responses = _search_with_promptfoo(cases, api_url, config.results_dir, started_at)
@@ -98,7 +99,7 @@ def run(config: RunConfig) -> Outcome:
         log.close()
 
     modes = {
-        mode: _score(cases, expected, by_case, config.threshold)
+        mode: _score(cases, expected, by_case, config.threshold, warm_ups[mode])
         for mode, by_case in responses.items()
     }
     metadata = {
@@ -190,27 +191,31 @@ def _reset(config: RunConfig) -> None:
 
 def api_environment(config: RunConfig, base: Mapping[str, str]) -> dict[str, str]:
     """The evaluation API's environment: the caller's, without its ASSISTANT_* settings."""
-    raise NotImplementedError
-
-
-def warm_up(api: httpx.Client, mode: str) -> float:
-    """One unmeasured search in the mode, so measured ones find the models loaded; its ms."""
-    raise NotImplementedError
-
-
-def _start_api(config: RunConfig) -> tuple[subprocess.Popen[bytes], IO[bytes]]:
-    # Only the run's own settings: nothing from a developer's ASSISTANT_* environment.
-    inherited = {
-        name: value for name, value in os.environ.items() if not name.startswith("ASSISTANT_")
-    }
-    env = {
+    inherited = {name: value for name, value in base.items() if not name.startswith("ASSISTANT_")}
+    return {
         **inherited,
         "ASSISTANT_DATA_DIR": str(config.data_dir),
         "ASSISTANT_MODELS_DIR": str(config.models_dir),
         "ASSISTANT_QDRANT_URL": config.qdrant_url,
         "ASSISTANT_QDRANT_COLLECTION_PREFIX": config.collection_prefix,
         "ASSISTANT_MIN_SIMILARITY": str(config.threshold),
+        # Both modes are measured, so the reranker must be there whatever the default is.
+        "ASSISTANT_RERANKER": "on",
     }
+
+
+def warm_up(api: httpx.Client, mode: str) -> float:
+    """One unmeasured search in the mode, so measured ones find the models loaded; its ms."""
+    started = time.monotonic()
+    api.post(
+        "/api/search", json={"query": "warm-up", "limit": 10, "rerank": mode == "reranked"}
+    ).raise_for_status()
+    return round((time.monotonic() - started) * 1000, 1)
+
+
+def _start_api(config: RunConfig) -> tuple[subprocess.Popen[bytes], IO[bytes]]:
+    # Only the run's own settings: nothing from a developer's ASSISTANT_* environment.
+    env = api_environment(config, os.environ)
     config.data_dir.mkdir(parents=True, exist_ok=True)
     config.results_dir.mkdir(parents=True, exist_ok=True)
     log = (config.results_dir / "api.log").open("wb")
@@ -317,6 +322,7 @@ def _score(
     expected: Mapping[str, frozenset[str]],
     responses: Mapping[str, Response],
     threshold: float,
+    warm_up_ms: float,
 ) -> ModeResult:
     results = [
         CaseResult(case.id, case.behaviour, expected[case.id], responses[case.id].hits)
@@ -326,6 +332,7 @@ def _score(
         metrics=compute(results, threshold),
         latency=latency([response.latency_ms for response in responses.values()]),
         out_of_scope_top_similarity=top_out_of_scope_similarity(results),
+        warm_up_ms=warm_up_ms,
     )
 
 
@@ -337,6 +344,17 @@ def _stop(server: subprocess.Popen[bytes]) -> None:
         except subprocess.TimeoutExpired:
             os.killpg(server.pid, signal.SIGKILL)
             server.wait()
+
+
+# What the API's reranker runs with on this machine, from the backend's own rules.
+RERANKER_SETTINGS = (
+    "import json, torch; "
+    "from assistant.adapters.bge_reranker import precision_for; "
+    "from assistant.services.questions import RERANK_CANDIDATES; "
+    "device = 'mps' if torch.backends.mps.is_available() else 'cpu'; "
+    "print(json.dumps({'rerank_candidates': RERANK_CANDIDATES, "
+    "'reranker_device': device, 'reranker_precision': precision_for(device)}))"
+)
 
 
 def _metadata(config: RunConfig, started_at: datetime) -> dict[str, Any]:
@@ -368,6 +386,20 @@ def _metadata(config: RunConfig, started_at: datetime) -> dict[str, Any]:
             "collection_prefix": config.collection_prefix,
             "threshold": config.threshold,
             "search_limit": 10,
+            "reranker": "on",
+            **json.loads(
+                _command(
+                    [
+                        "uv",
+                        "run",
+                        "--directory",
+                        str(ROOT / "backend"),
+                        "python",
+                        "-c",
+                        RERANKER_SETTINGS,
+                    ]
+                )
+            ),
         },
         "hardware": {
             "platform": platform.platform(),

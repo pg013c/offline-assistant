@@ -49,6 +49,7 @@ def build_report(
             "missed": dict(result.metrics.missed),
             "latency_ms": {"median": result.latency.median_ms, "p95": result.latency.p95_ms},
             "out_of_scope_top_similarity": result.out_of_scope_top_similarity,
+            "warm_up_ms": result.warm_up_ms,
         }
         for mode, result in modes.items()
     }
@@ -78,6 +79,8 @@ def markdown(report: Mapping[str, Any]) -> str:
     for label, key in (("median", "median"), ("95th percentile", "p95")):
         values = [_milliseconds(modes[mode]["latency_ms"][key]) for mode in names]
         lines.append(f"| search latency, {label} | " + " | ".join(values) + " | |")
+    warm_ups = [_milliseconds(modes[mode].get("warm_up_ms")) for mode in names]
+    lines.append("| warm-up request | " + " | ".join(warm_ups) + " | |")
     margins = [_similarity(modes[mode]["out_of_scope_top_similarity"]) for mode in names]
     lines.append("| top out-of-scope similarity | " + " | ".join(margins) + " | |")
     lines += [
