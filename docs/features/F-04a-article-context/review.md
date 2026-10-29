@@ -28,3 +28,12 @@ Decision is filled in by the human: `fix`, `backlog (F-xx)`, or `reject: <reason
 
 | # | Commits |
 |---|---|
+| 1 | `b6e61b0` test, `1b84c5b` fix (a title waits for the next block; chunker version stays 3, unreleased); measured again in `4661a17`: same metrics |
+| 2 | `b6e61b0` test (nothing queued; document ready with its version, chunks unchanged, indexed) |
+| 3 | `4661a17` docs (spec decisions 2 and 6, plan "Changes during the build") |
+| 4 | `b6e61b0` test (stored chunks differ from the new chunking and are replaced) |
+| 5 | `b6e61b0` test |
+| 6 | `4661a17` docs |
+| 7 | `4661a17` docs (source of the figures, architecture.md); recording them in the report added to the backlog for F-05 |
+| 8 | rejected |
+| 9 | `4661a17` docs (shifted ids against F-04 and the first F-04a run; F-02 snapshot unchanged) |
