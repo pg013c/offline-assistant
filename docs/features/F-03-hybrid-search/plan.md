@@ -90,6 +90,12 @@
   - Integration and E2E get a Qdrant service container;
   - the model cache key includes the new pins.
 
+## Changes during the build
+
+- Step 12 has a test commit and no green commit: the retrieval cases describe behaviour that steps 2 to 9 already built, and the default threshold of 0.5 needed no change (unrelated questions reach 0.33, relevant passages start near 0.6). The commit says so.
+- Step 13 found that Qdrant breaks reciprocal rank fusion ties arbitrarily; ties now go to the higher dense similarity.
+- `ParserNotReady` became `ModelsNotReady` once it covered the embedding model too.
+
 ## Steps
 
 ### Step 1. Dependencies, Qdrant target and settings
