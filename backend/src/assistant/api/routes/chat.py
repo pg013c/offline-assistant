@@ -7,10 +7,13 @@ from fastapi.sse import EventSourceResponse
 from assistant.api.dependencies import get_question_service
 from assistant.api.schemas import (
     ChatCitationEvent,
+    ChatDiscardEvent,
     ChatEndEvent,
+    ChatErrorEvent,
     ChatEvent,
     ChatRequest,
     ChatTextEvent,
+    ChatUsage,
     CitationLocation,
 )
 from assistant.domain.answers import (
@@ -48,14 +51,30 @@ def _to_schema(event: AnswerEvent) -> ChatEvent:
                     ),
                 )
             )
-        case AnswerEnd(model_id=model_id, found=found, is_test_model=is_test_model):
+        case AnswerDiscarded(reason=reason):
+            return ChatEvent(ChatDiscardEvent(type="discard", reason=reason))
+        case AnswerFailed(code=code, message=message):
+            return ChatEvent(ChatErrorEvent(type="error", code=code, message=message))
+        case AnswerEnd(model_id=model_id, found=found, is_test_model=is_test_model, usage=usage):
             return ChatEvent(
                 ChatEndEvent(
-                    type="end", model_id=model_id, found=found, is_test_model=is_test_model
+                    type="end",
+                    model_id=model_id,
+                    found=found,
+                    is_test_model=is_test_model,
+                    usage=(
+                        ChatUsage(
+                            prompt_tokens=usage.prompt_tokens,
+                            completion_tokens=usage.completion_tokens,
+                            first_token_ms=usage.first_token_ms,
+                            total_ms=usage.total_ms,
+                            attempts=usage.attempts,
+                        )
+                        if usage
+                        else None
+                    ),
                 )
             )
-        case AnswerDiscarded() | AnswerFailed():
-            raise NotImplementedError
         case _:
             assert_never(event)
 

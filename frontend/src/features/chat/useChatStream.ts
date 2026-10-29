@@ -46,6 +46,9 @@ function reduce(answer: ChatAnswer, action: Action): ChatAnswer {
             found: action.event.found,
             isTestModel: action.event.is_test_model,
           }
+        default:
+          // Discard and error events are handled with their UI (F-06 step 5).
+          return answer
       }
   }
 }

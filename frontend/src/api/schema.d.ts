@@ -184,8 +184,21 @@ export interface components {
             location: components["schemas"]["CitationLocation"];
         };
         /**
+         * ChatDiscardEvent
+         * @description The text sent since the last discard (or the start) is void; the retry's text follows.
+         */
+        ChatDiscardEvent: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "discard";
+            /** Reason */
+            reason: string;
+        };
+        /**
          * ChatEndEvent
-         * @description The last event of an answer.
+         * @description The last event of an answer; `usage` is null when no model answered.
          */
         ChatEndEvent: {
             /**
@@ -199,12 +212,31 @@ export interface components {
             found: boolean;
             /** Is Test Model */
             is_test_model: boolean;
+            usage: components["schemas"]["ChatUsage"] | null;
+        };
+        /**
+         * ChatErrorEvent
+         * @description The model gave no valid answer; an end event still follows.
+         */
+        ChatErrorEvent: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "error";
+            /**
+             * Code
+             * @enum {string}
+             */
+            code: "invalid_answer" | "model_unreachable" | "model_timeout";
+            /** Message */
+            message: string;
         };
         /**
          * ChatEvent
-         * @description One event of a streamed answer: text, citation or end.
+         * @description One event of a streamed answer: text, discard, error, citation or end.
          */
-        ChatEvent: components["schemas"]["ChatTextEvent"] | components["schemas"]["ChatCitationEvent"] | components["schemas"]["ChatEndEvent"];
+        ChatEvent: components["schemas"]["ChatTextEvent"] | components["schemas"]["ChatDiscardEvent"] | components["schemas"]["ChatErrorEvent"] | components["schemas"]["ChatCitationEvent"] | components["schemas"]["ChatEndEvent"];
         /** ChatRequest */
         ChatRequest: {
             /** Question */
@@ -222,6 +254,22 @@ export interface components {
             type: "text";
             /** Text */
             text: string;
+        };
+        /**
+         * ChatUsage
+         * @description What the answer cost: tokens over every attempt, and its timings in milliseconds.
+         */
+        ChatUsage: {
+            /** Prompt Tokens */
+            prompt_tokens: number;
+            /** Completion Tokens */
+            completion_tokens: number;
+            /** First Token Ms */
+            first_token_ms: number | null;
+            /** Total Ms */
+            total_ms: number;
+            /** Attempts */
+            attempts: number;
         };
         /**
          * ChunkSummary
