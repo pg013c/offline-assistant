@@ -78,3 +78,19 @@ def test_deleting_leaves_no_file_of_the_document(tmp_path: Path) -> None:
     store.delete(POLICY.id)
 
     assert list((tmp_path / "documents").iterdir()) == []
+
+
+def test_metadata_without_a_chunker_version_loads_without_one(tmp_path: Path) -> None:
+    directory = tmp_path / "documents"
+    directory.mkdir()
+    (directory / "f03.pdf").write_bytes(b"%PDF")
+    (directory / "f03.json").write_text(
+        '{"id": "f03", "title": "old", "filename": "f03.pdf", "chunk_count": 1, '
+        '"status": "ready", "page_count": 1, "failure_reason": null}',
+        encoding="utf-8",
+    )
+
+    document = LocalFileDocumentStore(tmp_path).get("f03")
+
+    assert document is not None
+    assert document.chunker_version is None

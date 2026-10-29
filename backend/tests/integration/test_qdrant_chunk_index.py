@@ -90,3 +90,9 @@ def test_another_embedding_model_gets_its_own_collection(prefix: str) -> None:
 def test_an_unreachable_qdrant_names_the_url_and_the_command() -> None:
     with pytest.raises(IndexNotReady, match=r"http://127\.0\.0\.1:9.*make qdrant"):
         QdrantChunkIndex.connect("http://127.0.0.1:9", FakeEmbedder(), prefix="unused")
+
+
+def test_collections_carry_the_indexed_text_schema_version(prefix: str) -> None:
+    index = QdrantChunkIndex.connect(QDRANT_URL, FakeEmbedder(), prefix=prefix)
+
+    assert index.collection.endswith("-v2")

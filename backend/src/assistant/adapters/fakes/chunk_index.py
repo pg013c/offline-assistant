@@ -9,7 +9,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from assistant.adapters.fakes.embedder import FakeEmbedder
-from assistant.domain.documents import Chunk
+from assistant.domain.documents import Chunk, indexed_text
 from assistant.domain.keywords import bm25_terms, tokens
 from assistant.ports.chunk_index import ScoredChunk, best_first
 from assistant.ports.embedder import Embedder
@@ -31,9 +31,10 @@ class InMemoryChunkIndex:
         self._entries: dict[str, _Entry] = {}
 
     def add(self, chunks: Sequence[Chunk]) -> None:
-        vectors = self._embedder.embed([chunk.text for chunk in chunks])
+        # The index sees each chunk with its headings; search returns the chunk itself.
+        vectors = self._embedder.embed([indexed_text(chunk) for chunk in chunks])
         for chunk, vector in zip(chunks, vectors, strict=True):
-            self._entries[chunk.id] = _Entry(chunk, vector, bm25_terms(chunk.text))
+            self._entries[chunk.id] = _Entry(chunk, vector, bm25_terms(indexed_text(chunk)))
 
     def search(self, query: str, limit: int) -> list[ScoredChunk]:
         if not tokens(query) or not self._entries:

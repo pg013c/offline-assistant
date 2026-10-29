@@ -8,7 +8,7 @@ import pytest
 
 from assistant.adapters.fakes.chunk_index import InMemoryChunkIndex
 from assistant.adapters.fakes.embedder import FakeEmbedder
-from assistant.domain.documents import Chunk
+from assistant.domain.documents import Chunk, ChunkLocation
 from assistant.ports.chunk_index import ChunkIndex
 
 QDRANT_URL = os.environ.get("ASSISTANT_QDRANT_URL", "http://127.0.0.1:6333")
@@ -118,3 +118,23 @@ def test_adding_the_same_chunks_again_does_not_duplicate_them(index: ChunkIndex)
     index.add(chunks)
 
     assert len(index.search("logs", limit=10)) == 2
+
+
+def test_a_chunk_is_found_by_the_title_of_its_article_and_returned_without_it(
+    index: ChunkIndex,
+) -> None:
+    titled = Chunk(
+        id="doc:0",
+        document_id="doc",
+        position=0,
+        text="1. Providers shall inform people.",
+        location=ChunkLocation(
+            heading_path=("Article 50", "Transparency obligations"), article="50", paragraph="1"
+        ),
+    )
+    # Without the title, the other chunk would win: it shares a word of the question.
+    index.add([titled, chunk(1, "Member states have obligations to designate authorities.")])
+
+    [first, *_] = index.search("What are the transparency obligations?", limit=2)
+
+    assert first.chunk == titled

@@ -6,6 +6,7 @@ from pathlib import PurePath
 import structlog
 
 from assistant.domain.documents import (
+    CHUNKER_VERSION,
     Chunk,
     Document,
     ParsedDocument,
@@ -34,6 +35,11 @@ NO_TEXT = "No text was found in the document."
 INGESTION_FAILED = "The document could not be processed."
 
 log = structlog.get_logger(__name__)
+
+
+def _is_current(document: Document) -> bool:
+    """Ready, with chunks cut by the chunker in use."""
+    return document.status == "ready" and document.chunker_version == CHUNKER_VERSION
 
 
 class DocumentService:
@@ -146,6 +152,7 @@ class DocumentService:
                     chunk_count=len(chunks),
                     page_count=parsed.page_count,
                     failure_reason=None,
+                    chunker_version=CHUNKER_VERSION,
                 )
             )
         log.info("document_ingested", document_id=document_id, chunks=len(chunks))
@@ -209,26 +216,29 @@ class DocumentService:
         """Bring the index in line with the store, and requeue unfinished documents.
 
         The index is derived from stored chunks: documents it lacks are added without parsing,
-        and chunks of documents that are not ready, or no longer stored, are removed. Returns
-        how many documents are searchable.
+        and chunks of documents that are not ready, no longer stored, or cut by an older
+        chunker are removed; the outdated ones are parsed again. Returns how many documents
+        are searchable.
         """
         documents = self._store.list_documents()
-        # Only ready documents may have vectors: drop those of deleted, failed or unfinished ones.
-        ready_ids = {document.id for document in documents if document.status == "ready"}
-        for stale in self._index.document_ids() - ready_ids:
+        # Only documents ready and chunked by the current chunker may have vectors: drop those
+        # of deleted, failed, unfinished or outdated ones.
+        current_ids = {document.id for document in documents if _is_current(document)}
+        for stale in self._index.document_ids() - current_ids:
             self._index.remove_document(stale)
         indexed = self._index.document_ids()
         ready = 0
         for document in documents:
-            if document.status == "ready" and document.id in indexed:
+            if _is_current(document) and document.id in indexed:
                 ready += 1
                 continue
-            chunks = self._store.load_chunks(document.id) if document.status == "ready" else []
+            chunks = self._store.load_chunks(document.id) if _is_current(document) else []
             if chunks:
                 self._index.add(chunks)
                 ready += 1
             elif document.status != "failed":
-                # Unfinished, or ready without stored chunks: parse it again.
+                # Unfinished, ready without stored chunks, or cut by an older chunker: parse it
+                # again.
                 with self._lock:
                     if document.status == "ready":
                         self._store.update(replace(document, status="processing"))

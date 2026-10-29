@@ -1,0 +1,58 @@
+# F-04a. Article context in the index
+
+- Status: approved
+- Requirements: FR-03, FR-05; AI-31; the F-04 baseline analysis (causes 1 and 2)
+- Related ADRs: 0006, 0015, 0017, 0018
+
+## Why
+
+The F-04 baseline shows the two biggest causes of missed passages. Both are in what the index sees, not in how it ranks.
+
+- **The index never sees a chunk's article number or title.** A question that names "Article 50" or "the right to data portability" cannot match the passage, because those words sit in the chunk's location, not in its text. All three exact-reference cases miss the top 10.
+- **Some section titles became chunks of their own.** The Polish "Obowiązki dostawców i podmiotów stosujących…" under "SEKCJA 3" is such a chunk. It is a near-copy of questions about duties, and it outranks the articles that answer them.
+
+This feature fixes both and measures the effect with `make eval`, before F-05 adds a reranker on top. It is a retrieval change, so it is accepted on the evaluation, not on tests alone (ADR 0006, AI-31).
+
+## Scope
+
+- **Indexed text:** each chunk is indexed (dense and BM25) as its context (the heading path, which holds the article label and title) followed by its text. What answers quote and the UI shows stays the chunk text alone.
+- **Section titles:** a short paragraph that directly follows a heading, before any other content, and does not end like a sentence becomes part of the heading path instead of a chunk, when content or the section's first article follows it.
+- **Annex titles** (added during the build): the heading after "ANNEX III" or "ZAŁĄCZNIK III" is the annex's title, and both stay in the heading path.
+- **Rebuilding:** documents chunked by an earlier version of the chunker are parsed again at startup, and the index moves to a new schema version, so no stale chunk or vector survives.
+- **Measuring:** the evaluation runs before and after the change. The new result is recorded in `docs/evals/` and becomes the baseline.
+
+## Out of scope
+
+- Reranking: F-05.
+- Changes to evaluation cases. The paragraph-level question (`pl-gdpr-portability`) is revisited only after this result, in a dataset-only commit.
+- Document titles in the context: titles are file names today. F-08 brings a document library with proper titles.
+
+## Acceptance criteria
+
+- [x] AC-1: Given a chunk under "Article 50" with the title "Transparency obligations…", then the text indexed for it begins with that article label and title, and the chunk text returned by search and cited in answers does not. Proof: `tests/unit/domain/test_indexed_text.py`; `tests/contract/test_chunk_index.py::test_a_chunk_is_found_by_the_title_of_its_article_and_returned_without_it` (in memory and Qdrant).
+- [x] AC-2: Given a heading followed by a short title-like paragraph and then the article's content, then the title becomes part of the heading path and no chunk consists of it. A short paragraph that ends like a sentence or with a comma, or follows other content, stays a chunk. Proof: `tests/unit/domain/test_structured_chunking.py`, the title tests (`test_a_title_right_after_a_heading_joins_the_heading_path`, `test_a_title_followed_by_the_sections_first_article_joins_the_heading_path`, `test_a_paragraph_that_does_not_look_like_a_title_stays_a_chunk`, `test_a_title_like_line_after_other_content_stays_a_chunk`, `test_a_title_like_line_followed_by_a_heading_stays_a_chunk`).
+- [x] AC-3: Given documents chunked by the earlier chunker, when the API starts, then they are parsed again and indexed into the new collection, and their chunk ids follow the new chunking. Proof: `tests/unit/services/test_document_service.py::test_restore_parses_again_documents_chunked_by_another_chunker` and `::test_restore_does_not_parse_documents_of_the_current_chunker`; `tests/integration/test_qdrant_chunk_index.py::test_collections_carry_the_indexed_text_schema_version`.
+- [x] AC-4: Given the evaluation corpus, when `make eval` runs, then each of the three exact-reference cases finds its expected chunk within the top 10. Proof: `make eval`, report `retrieval-20261029T135106Z.json`: `ref-article-50` rank 1, `ref-article-83` rank 8, `ref-annex-iii` rank 9 ([record](../../evals/2026-10-29-retrieval-article-context.md)).
+- [x] AC-5: Given the F-04 baseline, when `make eval` runs after the change, then no metric is more than 5 points worse, recall@3 and MRR are higher, and all out-of-scope questions still stay below the threshold. The before and after numbers are recorded in `docs/evals/`. Proof: [record](../../evals/2026-10-29-retrieval-article-context.md): recall@3 61.9 → 90.5 %, MRR 0.573 → 0.821, recall@10 81.0 → 100 %, out-of-scope 3/3 below the threshold (at most 0.38).
+- [x] AC-6: The chunk ids and locations pinned for the AI Act excerpts (F-02 snapshot) change only where the new chunking requires it, and every change is explained in its commit. Proof: `tests/integration/test_docling_parser.py::test_chunk_ids_and_locations_match_the_snapshot` passes with the snapshot unchanged.
+
+## Evaluation cases
+
+The F-04 retrieval suite (24 cases, dataset version 2) measures this feature unchanged. The cases this feature targets:
+
+| Id | Input | Expected |
+|---|---|---|
+| ref-article-50 | What does Article 50 of the AI Act require? | AI Act (EN) Art. 50 in the top 10, ideally top 3 |
+| ref-article-83 | What does Article 83 of the GDPR set out? | GDPR (EN) Art. 83 in the top 10 |
+| ref-annex-iii | What does Annex III of the AI Act list? | the Annex III passages |
+| pl-ai-deployer-duties | Jakie obowiązki mają podmioty stosujące systemy AI wysokiego ryzyka? | AI Act (PL) Art. 26 above the "SEKCJA 3" title |
+| oos-pasta (and the other out-of-scope cases) | How long should pasta boil? | still no passage over the threshold |
+
+## Decisions
+
+1. **Context format:** the heading path joined with " > ", a blank line, then the chunk text. Document titles stay out until F-08 gives documents real titles.
+2. **Section titles:** a paragraph is a title when it directly follows a heading, before any other block under it, has at most 200 characters, and does not end with `.`, `;`, `:`, `,`, `?`, `!` or `)`. It must also be followed by content or by the section's first article or annex; before another heading or at the end of a document it stays a chunk (review finding 1).
+3. **Re-parsing:** each document's chunks carry the chunker version; at startup, documents chunked by an older version are queued for parsing again.
+4. **Threshold:** stays at 0.5 unless the evaluation shows an out-of-scope question crossing it; any change is recorded with the measurement.
+5. **No new ADR:** what is indexed is a retrieval parameter within ADR 0017, recorded in `architecture.md` and judged by the evaluation (AI-31).
+6. **Annex titles** (added during the build, approved by the human on 2026-10-29): the first measurement left `ref-annex-iii` outside the top 10 because the annex title replaced "ANNEX III" in the heading path. The heading after an annex label is now its title, as for articles (chunker version 3).

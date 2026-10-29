@@ -1,4 +1,5 @@
 from collections.abc import Callable, Sequence
+from dataclasses import replace
 
 import pytest
 
@@ -6,7 +7,15 @@ from assistant.adapters.fakes.chunk_index import InMemoryChunkIndex
 from assistant.adapters.fakes.document_parser import FakeDocumentParser
 from assistant.adapters.fakes.document_store import FakeDocumentStore
 from assistant.adapters.fakes.ingestion_queue import FakeIngestionQueue
-from assistant.domain.documents import Block, Chunk, ChunkLocation, Document, ParsedDocument
+from assistant.domain.documents import (
+    CHUNKER_VERSION,
+    Block,
+    Chunk,
+    ChunkLocation,
+    Document,
+    ParsedDocument,
+    chunk_document,
+)
 from assistant.domain.errors import (
     DocumentNotFound,
     DocumentUnreadable,
@@ -485,3 +494,67 @@ def test_a_document_lists_its_stored_chunks(
 def test_listing_the_chunks_of_an_unknown_document_is_refused(service: DocumentService) -> None:
     with pytest.raises(DocumentNotFound):
         service.chunks("unknown")
+
+
+def test_ingestion_records_the_chunker_version(
+    service: DocumentService, store: FakeDocumentStore, queue: FakeIngestionQueue
+) -> None:
+    document = service.upload("policy.pdf", PDF)
+
+    queue.run_all()
+
+    ready = store.get(document.id)
+    assert ready is not None
+    assert ready.chunker_version == CHUNKER_VERSION
+
+
+@pytest.mark.parametrize("version", [None, CHUNKER_VERSION - 1])
+def test_restore_parses_again_documents_chunked_by_another_chunker(
+    store: FakeDocumentStore, queue: FakeIngestionQueue, version: int | None
+) -> None:
+    earlier = DocumentService(store, InMemoryChunkIndex(), FakeDocumentParser(PARSED), queue)
+    document = earlier.upload("policy.pdf", PDF)
+    queue.run_all()
+    stored = store.get(document.id)
+    assert stored is not None
+    # Chunks cut by the older chunker differ from what the current one cuts.
+    stale = [Chunk(id=f"{document.id}:0", document_id=document.id, position=0, text="Stale.")]
+    store.save_chunks(document.id, stale)
+    store.update(replace(stored, chunker_version=version))
+    index = InMemoryChunkIndex()
+    index.add(stale)
+    restarted = DocumentService(store, index, FakeDocumentParser(PARSED), queue)
+
+    restarted.restore()
+
+    assert index.document_ids() == set()
+    queue.run_all()
+    ready = store.get(document.id)
+    assert ready is not None
+    assert (ready.status, ready.chunker_version) == ("ready", CHUNKER_VERSION)
+    assert store.load_chunks(document.id) == chunk_document(document.id, PARSED)
+    assert "Stale." not in {hit.chunk.text for hit in index.search("Stale", limit=10)}
+    assert {hit.chunk.text for hit in index.search("logs", limit=10)} == {
+        chunk.text for chunk in chunk_document(document.id, PARSED)
+    }
+
+
+def test_restore_does_not_parse_documents_of_the_current_chunker(
+    store: FakeDocumentStore, queue: FakeIngestionQueue
+) -> None:
+    earlier = DocumentService(store, InMemoryChunkIndex(), FakeDocumentParser(PARSED), queue)
+    document = earlier.upload("policy.pdf", PDF)
+    queue.run_all()
+    chunks = store.load_chunks(document.id)
+    index = InMemoryChunkIndex()
+    restarted = DocumentService(store, index, ParserThatMustNotRun(), queue)
+
+    restarted.restore()
+
+    # Nothing is queued, so the parser that must not run is never reached.
+    assert queue.pending == 0
+    current = store.get(document.id)
+    assert current is not None
+    assert (current.status, current.chunker_version) == ("ready", CHUNKER_VERSION)
+    assert store.load_chunks(document.id) == chunks
+    assert index.document_ids() == {document.id}

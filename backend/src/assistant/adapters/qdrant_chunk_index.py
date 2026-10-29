@@ -13,12 +13,13 @@ import httpx
 from qdrant_client import QdrantClient, models
 from qdrant_client.http.exceptions import ResponseHandlingException, UnexpectedResponse
 
-from assistant.domain.documents import Chunk, ChunkLocation
+from assistant.domain.documents import Chunk, ChunkLocation, indexed_text
 from assistant.domain.keywords import bm25_terms, tokens
 from assistant.ports.chunk_index import ScoredChunk, best_first
 from assistant.ports.embedder import Embedder
 
-SCHEMA_VERSION = 1
+# 2: chunks are indexed with their heading path (F-04a).
+SCHEMA_VERSION = 2
 DENSE = "dense"
 BM25 = "bm25"
 # Each half returns this many candidates per requested result before fusion.
@@ -73,13 +74,14 @@ class QdrantChunkIndex:
     def add(self, chunks: Sequence[Chunk]) -> None:
         if not chunks:
             return
-        vectors = self._embedder.embed([chunk.text for chunk in chunks])
+        # The index sees each chunk with its headings; search returns the chunk itself.
+        vectors = self._embedder.embed([indexed_text(chunk) for chunk in chunks])
         self._client.upsert(
             self._collection,
             points=[
                 models.PointStruct(
                     id=point_id(chunk.id),
-                    vector={DENSE: vector, BM25: _sparse(bm25_terms(chunk.text))},
+                    vector={DENSE: vector, BM25: _sparse(bm25_terms(indexed_text(chunk)))},
                     payload=_payload(chunk),
                 )
                 for chunk, vector in zip(chunks, vectors, strict=True)

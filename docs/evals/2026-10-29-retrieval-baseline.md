@@ -1,6 +1,8 @@
 # Retrieval baseline, 2026-10-29
 
-The baseline of the retrieval suite (F-04) that `make eval` gates against (`retrieval-baseline.json`, PRD §9: no metric may get worse by more than 5 points). No targets yet: they are proposed in an ADR after F-05.
+> Superseded by [retrieval with article context](2026-10-29-retrieval-article-context.md) (F-04a), which `make eval` now gates against. This record is kept as the "before" of that comparison.
+
+The baseline of the retrieval suite (F-04) that `make eval` gated against (`retrieval-baseline.json`, PRD §9: no metric may get worse by more than 5 points). No targets yet: they are proposed in an ADR after F-05.
 
 It was recorded after the F-04 review, on dataset version 2 and with every run indexing the corpus from scratch. The first run, on dataset version 1, is kept below for comparison.
 
