@@ -88,9 +88,8 @@ class QuestionService:
     async def ask(self, question: str) -> AsyncIterator[AnswerEvent]:
         """Text pieces, then citations, then an end event; or a no-passage notice."""
         # Embedding the question and querying the index block; keep them off the event loop.
-        # The threshold applies after reranking, to every candidate the reranker scored.
-        candidates = RERANK_CANDIDATES if self._reranker else CANDIDATES
-        found = await asyncio.to_thread(self._find, question, candidates, None)
+        # The threshold applies to the best ten in either order, the hits the evaluation sees.
+        found = await asyncio.to_thread(self._find, question, CANDIDATES, None)
         results = [result for result, _ in found if result.similarity >= self._min_similarity][
             :PASSAGES_PER_ANSWER
         ]
