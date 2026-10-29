@@ -1,6 +1,6 @@
 # Answers with Qwen3 8B, 2026-10-29
 
-The first measurement of the answer suite (F-06): every retrieval question, plus one adversarial case, is asked through `POST /api/chat` and answered by a local LLM. It is the first answer baseline that `make eval-answers` gates against (`answer-baseline.json`, report `answers-20261029T211003Z.json`).
+The first measurement of the answer suite (F-06): every retrieval question, plus one adversarial case, is asked through `POST /api/chat` and answered by a local LLM. It is the first answer baseline that `make eval-answers` gates against: `answer-baseline.json` holds the run after the review fixes (report `answers-20261029T220004Z.json`), and the first run (report `answers-20261029T211003Z.json`) is kept below for comparison.
 
 ## Setup
 
@@ -15,22 +15,28 @@ The first measurement of the answer suite (F-06): every retrieval question, plus
 
 ## Results
 
-| Metric | Value | Cases |
+| Metric | First run | After the review | Cases |
+|---|---|---|---|
+| Answer cites an expected passage (`cites_expected`) | 86.4 % | 81.8 % | 22 |
+| Answer in the question's language (`language_match`) | 100 % | 100 % | 22 |
+| Valid on the first try (`valid_first_try`) | 100 % | 100 % | 22 |
+| Failed answers (`answer_failed`) | 0 % | 0 % | 22 |
+| Out-of-scope questions refused, no model call | 100 % | 100 % | 3 |
+
+| Performance | First run | After the review |
 |---|---|---|
-| Answer cites an expected passage (`cites_expected`) | 86.4 % | 22 |
-| Answer in the question's language (`language_match`) | 100 % | 22 |
-| Valid on the first try (`valid_first_try`) | 100 % | 22 |
-| Failed answers (`answer_failed`) | 0 % | 22 |
-| Out-of-scope questions refused, no model call | 100 % | 3 |
+| Mean attempts | 1.0 | 1.0 |
+| Time to first token, median | 866 ms | 280 ms |
+| Time to first token, 95th percentile | 1558 ms | 827 ms |
+| Tokens per second, median | 55.3 | 54.9 |
 
-| Performance | Value |
-|---|---|
-| Mean attempts | 1.0 |
-| Time to first token, median | 866 ms |
-| Time to first token, 95th percentile | 1558 ms |
-| Tokens per second, median | 55.3 |
+**The run after the review** changed the prompt templates (moved to files, with passage tags neutralised), added `max_tokens` and a deadline per attempt.
 
-**Time to first token** counts from the model call. A question first spends about 0.4 s in search and reranking (the F-05 record), so the first visible word comes after about 1.3 s (median) and 2.0 s (95th percentile). Both are within NFR-03's 3 s.
+- **`x-pl-to-en-annex-iii`:** it gives the same answer, but now cites only the Annex III passage instead of also Article 6(2). It is no longer counted as citing an expected passage. That is the one-case difference (4.5 points), within the 5-point gate.
+- **Time to first token** is lower in the second run. llama-server keeps the shared start of the prompt in its cache between requests, and timings vary from run to run on the same server, so the second run's median is not a gain from the code. The report now lists every case with its time to first token and speed.
+- **Gate sensitivity:** with 22 answer cases one case is about 4.5 points, so a single case changing does not fail the 5-point gate (review finding 23).
+
+**Time to first token** counts from the model call. A question first spends about 0.4 s in search and reranking (the F-05 record), so in the first run the first visible word came after about 1.3 s (median) and 2.0 s (95th percentile). Both are within NFR-03's 3 s.
 
 The model followed the schema every time, so no retry was needed. The **adversarial case** (`adv-no-citations`) still cited Article 6: the instruction in the question did not override the rules.
 

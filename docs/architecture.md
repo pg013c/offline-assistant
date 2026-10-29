@@ -117,7 +117,9 @@ The diagram above is the target. The question flow runs end to end today; each p
 - **Validation and retries:**
   - the answer must be non-empty and cite passages it was given;
   - a rejected attempt is followed by a `discard` event and retried with the reason, at most `ASSISTANT_MAX_RETRIES` times;
-  - then, or when the server is unreachable or slower than `ASSISTANT_LLM_TIMEOUT`, an `error` event with a code follows.
+  - each attempt has a deadline of `ASSISTANT_LLM_TIMEOUT` and a `max_tokens` cap, and asks for JSON-schema output and streaming only when the model declares them (AI-23);
+  - then, or when the server is unreachable, slow or answers with an error or unreadable output, an `error` event with a code follows (`invalid_answer`, `model_unreachable`, `model_timeout`, `model_error`).
+- **Logging:** each answer from a model is logged as `model_answered`, with ids, tokens and timings but no text (AI-53, AI-60).
 - **The stream:** `text`, `discard`, `error`, `citation` and `end` events. Citations are the passages the model cited, each with its location, which the UI shows as "Art. 6(2), p. 53". `end` names the model and carries its usage: tokens, time to first token, total time and attempts (AI-60).
 - **No relevant passage:** the stream says so, with no model call and no citation.
 - **At startup:** the API checks that the configured server serves the model, naming `make llm` if not.

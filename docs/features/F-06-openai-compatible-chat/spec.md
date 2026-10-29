@@ -21,7 +21,7 @@ Answers still come from `fake-extractive`, a test model that quotes the best pas
 - **Prompts:** the system prompt is a versioned file. It frames passages as delimited data, not instructions (AI-10, AI-30).
 - **Model and server:** one default local model, pinned exactly, fetched ahead of time, selected by configuration (FR-40, AI-40). The fake model stays available for tests and the browser journeys.
 - **Measurement:** every model call records model id, prompt and completion tokens, time to first token and total time (AI-60).
-- **Evaluation:** `make eval` gets an answer suite over `/api/chat`, run against the configured local model.
+- **Evaluation:** an answer suite over `/api/chat`, run against the configured local model by `make eval-answers` (changed during the build: `make eval` stays the retrieval suite).
 
 ## Out of scope
 
@@ -37,7 +37,7 @@ Answers still come from `fake-extractive`, a test model that quotes the best pas
 - [ ] AC-3: Given the model server is unreachable or exceeds its timeout, then the user gets a typed error event naming the server URL, and no unbounded wait or exception reaches the client.
 - [ ] AC-4: Given `ASSISTANT_CHAT_MODEL` names a configured model, then the API uses it without code changes; an unknown name or a missing model fails at startup with a message saying how to fix it.
 - [ ] AC-5: Given a stub OpenAI-compatible server, then the adapter's streaming, JSON-schema output and tool calls pass the `ChatModel` contract tests in CI.
-- [ ] AC-6: Given the evaluation corpus and the local model, when `make eval` runs the answer suite, then the report gives, per case:
+- [ ] AC-6: Given the evaluation corpus and the local model, when `make eval-answers` runs the answer suite, then the report gives, per case:
   - whether the answer cites an expected chunk;
   - whether the answer is in the question's language;
   - whether the output was valid on the first try, and the retries;

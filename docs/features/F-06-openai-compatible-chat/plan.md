@@ -266,3 +266,15 @@ class ChatModel(Protocol):
 | AC-5 contract tests against a stub server in CI | 2, 6, 7 |
 | AC-6 answer suite and first baseline | 9, 10, 11 |
 | AC-7 no model call out of scope | 3 |
+
+## Changes during the build
+
+- **Real-model test (step 6).** It is marked `integration` and skipped unless a model server answers at `ASSISTANT_LLM_URL`, instead of a separate `llm` marker (review finding 19). `make test-integration` runs it when `make llm` is up.
+- **The answer suite has its own target.** `make eval-answers` runs it; `make eval` stays the retrieval suite (review finding 15).
+- **Review fixes:**
+  - a `model_error` code;
+  - a deadline and `max_tokens` per attempt;
+  - usage on failures and a log line per model call;
+  - declared `json_schema` and `streaming` capabilities;
+  - prompt templates in files;
+  - a tool-calling contract.

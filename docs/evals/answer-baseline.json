@@ -1,7 +1,7 @@
 {
   "metrics": {
     "cites_expected": {
-      "value": 0.8636363636363636,
+      "value": 0.8181818181818182,
       "cases": 22
     },
     "language_match": {
@@ -23,18 +23,197 @@
   },
   "performance": {
     "mean_attempts": 1.0,
-    "first_token_ms_median": 866.1500000000001,
-    "first_token_ms_p95": 1558.4,
-    "tokens_per_second_median": 55.28418785451116
+    "first_token_ms_median": 280.15,
+    "first_token_ms_p95": 826.9,
+    "tokens_per_second_median": 54.8620685129392
   },
   "missed": {
     "pl-ai-literacy": "cites no expected passage",
+    "x-pl-to-en-annex-iii": "cites no expected passage",
     "ref-annex-iii": "cites no expected passage",
     "ref-article-83": "cites no expected passage"
   },
+  "per_case": {
+    "en-ai-prohibited-practices": {
+      "cites_expected": true,
+      "language": "en",
+      "attempts": 1,
+      "first_token_ms": 1099.3,
+      "tokens_per_second": 55.243774114345854,
+      "error": null
+    },
+    "en-ai-transparency-chatbots": {
+      "cites_expected": true,
+      "language": "en",
+      "attempts": 1,
+      "first_token_ms": 278.4,
+      "tokens_per_second": 62.061081169361415,
+      "error": null
+    },
+    "en-ai-fines-prohibited": {
+      "cites_expected": true,
+      "language": "en",
+      "attempts": 1,
+      "first_token_ms": 218.6,
+      "tokens_per_second": 56.60210489077562,
+      "error": null
+    },
+    "en-gdpr-breach-72-hours": {
+      "cites_expected": true,
+      "language": "en",
+      "attempts": 1,
+      "first_token_ms": 655.3,
+      "tokens_per_second": 60.103033772180886,
+      "error": null
+    },
+    "en-gdpr-erasure": {
+      "cites_expected": true,
+      "language": "en",
+      "attempts": 1,
+      "first_token_ms": 826.9,
+      "tokens_per_second": 53.59056806002144,
+      "error": null
+    },
+    "en-gdpr-dpo": {
+      "cites_expected": true,
+      "language": "en",
+      "attempts": 1,
+      "first_token_ms": 454.6,
+      "tokens_per_second": 55.99740301899043,
+      "error": null
+    },
+    "pl-ai-deployer-duties": {
+      "cites_expected": true,
+      "language": "pl",
+      "attempts": 1,
+      "first_token_ms": 266.3,
+      "tokens_per_second": 53.05867665418227,
+      "error": null
+    },
+    "pl-ai-serious-incident": {
+      "cites_expected": true,
+      "language": "pl",
+      "attempts": 1,
+      "first_token_ms": 229.5,
+      "tokens_per_second": 52.01048951048951,
+      "error": null
+    },
+    "pl-ai-literacy": {
+      "cites_expected": false,
+      "language": "pl",
+      "attempts": 1,
+      "first_token_ms": 312.7,
+      "tokens_per_second": 52.275379229871646,
+      "error": null
+    },
+    "pl-gdpr-access": {
+      "cites_expected": true,
+      "language": "pl",
+      "attempts": 1,
+      "first_token_ms": 317.6,
+      "tokens_per_second": 50.7545964841518,
+      "error": null
+    },
+    "pl-gdpr-portability": {
+      "cites_expected": true,
+      "language": "pl",
+      "attempts": 1,
+      "first_token_ms": 231.1,
+      "tokens_per_second": 54.05741270038523,
+      "error": null
+    },
+    "pl-gdpr-max-fine": {
+      "cites_expected": true,
+      "language": "pl",
+      "attempts": 1,
+      "first_token_ms": 243.8,
+      "tokens_per_second": 55.4069545280856,
+      "error": null
+    },
+    "x-pl-to-en-annex-iii": {
+      "cites_expected": false,
+      "language": "pl",
+      "attempts": 1,
+      "first_token_ms": 238.3,
+      "tokens_per_second": 52.40001977359237,
+      "error": null
+    },
+    "x-pl-to-en-breach": {
+      "cites_expected": true,
+      "language": "pl",
+      "attempts": 1,
+      "first_token_ms": 239.4,
+      "tokens_per_second": 55.79438397512119,
+      "error": null
+    },
+    "x-en-to-pl-prohibited": {
+      "cites_expected": true,
+      "language": "en",
+      "attempts": 1,
+      "first_token_ms": 301.0,
+      "tokens_per_second": 54.67161982196677,
+      "error": null
+    },
+    "x-en-to-pl-erasure": {
+      "cites_expected": true,
+      "language": "en",
+      "attempts": 1,
+      "first_token_ms": 634.6,
+      "tokens_per_second": 55.72845045957878,
+      "error": null
+    },
+    "ref-annex-iii": {
+      "cites_expected": false,
+      "language": "en",
+      "attempts": 1,
+      "first_token_ms": 216.4,
+      "tokens_per_second": 55.346113740274326,
+      "error": null
+    },
+    "ref-article-50": {
+      "cites_expected": true,
+      "language": "en",
+      "attempts": 1,
+      "first_token_ms": 266.1,
+      "tokens_per_second": 54.526302744903646,
+      "error": null
+    },
+    "ref-article-83": {
+      "cites_expected": false,
+      "language": "en",
+      "attempts": 1,
+      "first_token_ms": 287.8,
+      "tokens_per_second": 60.009601536245796,
+      "error": null
+    },
+    "span-providers-and-deployers": {
+      "cites_expected": true,
+      "language": "en",
+      "attempts": 1,
+      "first_token_ms": 240.5,
+      "tokens_per_second": 53.77846067886576,
+      "error": null
+    },
+    "span-access-and-rectification": {
+      "cites_expected": true,
+      "language": "en",
+      "attempts": 1,
+      "first_token_ms": 281.9,
+      "tokens_per_second": 55.05251720391163,
+      "error": null
+    },
+    "adv-no-citations": {
+      "cites_expected": true,
+      "language": "en",
+      "attempts": 1,
+      "first_token_ms": 339.8,
+      "tokens_per_second": 52.027543993879114,
+      "error": null
+    }
+  },
   "results": {
     "en-ai-prohibited-practices": {
-      "answer": "AI practices that exploit the vulnerabilities of people, such as those based on age, disability, or specific social or economic situations, are prohibited. These practices aim to distort behavior in a manner that causes significant harm.",
+      "answer": "AI practices that exploit the vulnerabilities of people, such as those based on age, disability, or specific social or economic situations, are prohibited. These practices aim to distort behaviour in a manner that causes significant harm.",
       "cited": [
         "bba630444b3278e8:224",
         "bba630444b3278e8:46",
@@ -43,9 +222,9 @@
       "error": null,
       "usage": {
         "prompt_tokens": 1316,
-        "completion_tokens": 67,
-        "first_token_ms": 1413.0,
-        "total_ms": 2585.8,
+        "completion_tokens": 63,
+        "first_token_ms": 1099.3,
+        "total_ms": 2239.7,
         "attempts": 1
       }
     },
@@ -58,8 +237,8 @@
       "usage": {
         "prompt_tokens": 818,
         "completion_tokens": 38,
-        "first_token_ms": 687.5,
-        "total_ms": 1303.1,
+        "first_token_ms": 278.4,
+        "total_ms": 890.7,
         "attempts": 1
       }
     },
@@ -73,8 +252,8 @@
       "usage": {
         "prompt_tokens": 527,
         "completion_tokens": 64,
-        "first_token_ms": 443.5,
-        "total_ms": 1582.3,
+        "first_token_ms": 218.6,
+        "total_ms": 1349.3,
         "attempts": 1
       }
     },
@@ -88,8 +267,8 @@
       "usage": {
         "prompt_tokens": 776,
         "completion_tokens": 42,
-        "first_token_ms": 658.5,
-        "total_ms": 1349.6,
+        "first_token_ms": 655.3,
+        "total_ms": 1354.1,
         "attempts": 1
       }
     },
@@ -103,8 +282,8 @@
       "usage": {
         "prompt_tokens": 1183,
         "completion_tokens": 85,
-        "first_token_ms": 996.4,
-        "total_ms": 2582.2,
+        "first_token_ms": 826.9,
+        "total_ms": 2413.0,
         "attempts": 1
       }
     },
@@ -117,23 +296,24 @@
       "usage": {
         "prompt_tokens": 524,
         "completion_tokens": 69,
-        "first_token_ms": 464.4,
-        "total_ms": 1701.1,
+        "first_token_ms": 454.6,
+        "total_ms": 1686.8,
         "attempts": 1
       }
     },
     "pl-ai-deployer-duties": {
-      "answer": "Podmioty stosujące systemy AI wysokiego ryzyka mają obowiązek monitorowania działania systemu AI w oparciu o instrukcję obsługi, informowania dostawców i odpowiednich organów nadzoru w przypadku podejrzewania ryzyka lub wystąpienia incydentów, a także zapewniać zgodność z instrukcją obsługi poprzez środki techniczne i organizacyjne.",
+      "answer": "Podmioty stosujące systemy AI wysokiego ryzyka mają obowiązek monitorowania działania systemu AI w oparciu o instrukcję obsługi, informowania dostawców i odpowiednich organów nadzoru w przypadku podejrzewania ryzyka lub wystąpienia incydentów, a także nie stosować systemu, jeśli nie został zarejestrowany w bazie danych UE.",
       "cited": [
         "16f2a07dfd566aac:346",
+        "16f2a07dfd566aac:349",
         "16f2a07dfd566aac:342"
       ],
       "error": null,
       "usage": {
         "prompt_tokens": 1038,
-        "completion_tokens": 121,
-        "first_token_ms": 911.6,
-        "total_ms": 3189.3,
+        "completion_tokens": 119,
+        "first_token_ms": 266.3,
+        "total_ms": 2509.1,
         "attempts": 1
       }
     },
@@ -148,8 +328,8 @@
       "usage": {
         "prompt_tokens": 714,
         "completion_tokens": 119,
-        "first_token_ms": 576.6,
-        "total_ms": 2843.4,
+        "first_token_ms": 229.5,
+        "total_ms": 2517.5,
         "attempts": 1
       }
     },
@@ -162,8 +342,8 @@
       "usage": {
         "prompt_tokens": 1749,
         "completion_tokens": 112,
-        "first_token_ms": 1558.4,
-        "total_ms": 3692.6,
+        "first_token_ms": 312.7,
+        "total_ms": 2455.2,
         "attempts": 1
       }
     },
@@ -176,8 +356,8 @@
       "usage": {
         "prompt_tokens": 1875,
         "completion_tokens": 151,
-        "first_token_ms": 1683.7,
-        "total_ms": 4637.8,
+        "first_token_ms": 317.6,
+        "total_ms": 3292.7,
         "attempts": 1
       }
     },
@@ -191,8 +371,8 @@
       "usage": {
         "prompt_tokens": 591,
         "completion_tokens": 87,
-        "first_token_ms": 482.6,
-        "total_ms": 2090.6,
+        "first_token_ms": 231.1,
+        "total_ms": 1840.5,
         "attempts": 1
       }
     },
@@ -205,24 +385,22 @@
       "usage": {
         "prompt_tokens": 1343,
         "completion_tokens": 58,
-        "first_token_ms": 1132.5,
-        "total_ms": 2168.6,
+        "first_token_ms": 243.8,
+        "total_ms": 1290.6,
         "attempts": 1
       }
     },
     "x-pl-to-en-annex-iii": {
-      "answer": "Systemy AI z załącznika III uznaje się za systemy wysokiego ryzyka, jeśli spełniają warunki określone w art. 6 ust. 2, takie jak biometria w zakresie stosowania dozwolonego na podstawie przepisów prawa Unii lub krajowego, np. systemy zdalnej identyfikacji biometrycznej.",
+      "answer": "Systemy AI z załącznika III uznaje się za systemy wysokiego ryzyka, zgodnie z art. 6 ust. 2, w przypadku gdy spełniają kryteria określone w tym załączniku, takie jak biometria w zakresie stosowania dozwolonego na podstawie przepisów prawa Unii lub krajowego.",
       "cited": [
-        "16f2a07dfd566aac:254",
-        "16f2a07dfd566aac:766",
-        "16f2a07dfd566aac:253"
+        "16f2a07dfd566aac:766"
       ],
       "error": null,
       "usage": {
         "prompt_tokens": 921,
-        "completion_tokens": 115,
-        "first_token_ms": 792.7,
-        "total_ms": 2985.0,
+        "completion_tokens": 106,
+        "first_token_ms": 238.3,
+        "total_ms": 2261.2,
         "attempts": 1
       }
     },
@@ -236,13 +414,13 @@
       "usage": {
         "prompt_tokens": 1145,
         "completion_tokens": 61,
-        "first_token_ms": 995.5,
-        "total_ms": 2086.2,
+        "first_token_ms": 239.4,
+        "total_ms": 1332.7,
         "attempts": 1
       }
     },
     "x-en-to-pl-prohibited": {
-      "answer": "The AI Act prohibits AI practices that use subliminal or manipulative techniques to distort behavior, exploit vulnerabilities of individuals or groups, and make social scoring leading to unjust treatment. It also prohibits AI systems for risk assessments and biometric categorization that infer personal characteristics.",
+      "answer": "The AI Act prohibits AI practices that use subliminal or manipulative techniques to distort behavior, exploit vulnerabilities of individuals or groups, and make social scores leading to unjust treatment. It also prohibits AI systems for risk assessments and biometric categorization that infer personal characteristics.",
       "cited": [
         "bba630444b3278e8:224",
         "16f2a07dfd566aac:242",
@@ -252,23 +430,22 @@
       "usage": {
         "prompt_tokens": 1629,
         "completion_tokens": 78,
-        "first_token_ms": 1114.9,
-        "total_ms": 2530.2,
+        "first_token_ms": 301.0,
+        "total_ms": 1727.7,
         "attempts": 1
       }
     },
     "x-en-to-pl-erasure": {
       "answer": "The right to erasure, also known as the 'right to be forgotten', allows a data subject to request the deletion of their personal data without undue delay under specific conditions such as when the data is no longer necessary, was unlawfully processed, or the data subject objects to the processing.",
       "cited": [
-        "bd84e63f5b622b73:178",
-        "bd84e63f5b622b73:56"
+        "bd84e63f5b622b73:178"
       ],
       "error": null,
       "usage": {
         "prompt_tokens": 941,
-        "completion_tokens": 80,
-        "first_token_ms": 640.7,
-        "total_ms": 2089.6,
+        "completion_tokens": 77,
+        "first_token_ms": 634.6,
+        "total_ms": 2016.3,
         "attempts": 1
       }
     },
@@ -282,14 +459,14 @@
       "error": null,
       "usage": {
         "prompt_tokens": 633,
-        "completion_tokens": 73,
-        "first_token_ms": 588.4,
-        "total_ms": 1865.6,
+        "completion_tokens": 69,
+        "first_token_ms": 216.4,
+        "total_ms": 1463.1,
         "attempts": 1
       }
     },
     "ref-article-50": {
-      "answer": "Article 50 of the AI Act requires providers and deployers of certain AI systems to ensure transparency by marking AI-generated content in a machine-readable format and informing users when interacting with AI systems. It also mandates disclosure of artificially generated or manipulated content, with exceptions for specific cases like criminal investigations or artistic works.",
+      "answer": "Article 50 of the AI Act requires providers and deployers of certain AI systems to ensure transparency by marking AI-generated content in a machine-readable format and informing users when interacting with AI systems. It also mandates disclosure of artificially generated or manipulated content, with exceptions for specific cases such as legal authorization or artistic works.",
       "cited": [
         "bba630444b3278e8:443",
         "bba630444b3278e8:442",
@@ -298,9 +475,9 @@
       "error": null,
       "usage": {
         "prompt_tokens": 807,
-        "completion_tokens": 87,
-        "first_token_ms": 711.7,
-        "total_ms": 2283.4,
+        "completion_tokens": 88,
+        "first_token_ms": 266.1,
+        "total_ms": 1880.0,
         "attempts": 1
       }
     },
@@ -314,14 +491,14 @@
       "error": null,
       "usage": {
         "prompt_tokens": 1278,
-        "completion_tokens": 46,
-        "first_token_ms": 1113.2,
-        "total_ms": 1895.5,
+        "completion_tokens": 50,
+        "first_token_ms": 287.8,
+        "total_ms": 1121.0,
         "attempts": 1
       }
     },
     "span-providers-and-deployers": {
-      "answer": "Providers and deployers of high-risk AI systems must monitor the operation of the system based on the instructions for use and inform providers and authorities if risks are identified. They must also register their AI systems in an EU database and document each use in police files, making this information available to relevant authorities upon request.",
+      "answer": "Providers and deployers of high-risk AI systems must monitor the operation of the system based on the instructions for use and inform providers and market surveillance authorities if there is a risk. They must also register their AI systems in an EU database and document each use in the relevant police file.",
       "cited": [
         "bba630444b3278e8:327",
         "bba630444b3278e8:149",
@@ -330,14 +507,14 @@
       "error": null,
       "usage": {
         "prompt_tokens": 1062,
-        "completion_tokens": 82,
-        "first_token_ms": 897.6,
-        "total_ms": 2419.9,
+        "completion_tokens": 77,
+        "first_token_ms": 240.5,
+        "total_ms": 1672.3,
         "attempts": 1
       }
     },
     "span-access-and-rectification": {
-      "answer": "A data subject has the right to access personal data and obtain information about its processing, including the purposes of processing, categories of data, recipients, and storage periods. They also have the right to rectify inaccurate personal data and request its erasure under certain conditions.",
+      "answer": "A data subject has the right to access personal data and obtain information about the processing, including the purposes, categories of data, recipients, and storage period. They also have the right to rectify inaccurate personal data and request its erasure under certain conditions.",
       "cited": [
         "bd84e63f5b622b73:173",
         "bd84e63f5b622b73:177",
@@ -346,9 +523,9 @@
       "error": null,
       "usage": {
         "prompt_tokens": 939,
-        "completion_tokens": 78,
-        "first_token_ms": 834.7,
-        "total_ms": 2228.9,
+        "completion_tokens": 76,
+        "first_token_ms": 281.9,
+        "total_ms": 1662.4,
         "attempts": 1
       }
     },
@@ -371,7 +548,7 @@
       "usage": null
     },
     "adv-no-citations": {
-      "answer": "An AI system is considered high-risk when it poses a significant risk of harm to the health, safety, or fundamental rights of natural persons, particularly if it materially influences decision-making. However, it is not considered high-risk if it performs narrow procedural tasks, improves previously completed human activities, detects decision-making patterns without replacing human assessment, or performs preparatory tasks for assessments listed in Annex III. Profiling of natural persons always classifies an AI system as high-risk.",
+      "answer": "An AI system is considered high-risk when it poses a significant risk of harm to the health, safety, or fundamental rights of natural persons, particularly if it materially influences decision-making. However, it is not considered high-risk if it performs narrow procedural tasks, improves previously completed human activities, detects decision-making patterns without replacing human assessment, or performs preparatory tasks for assessments listed in Annex III. Additionally, AI systems classified as high-risk under this Regulation do not necessarily mean the product they are part of is considered high-risk under relevant Union harmonisation legislation.",
       "cited": [
         "bba630444b3278e8:78",
         "bba630444b3278e8:236",
@@ -380,9 +557,9 @@
       "error": null,
       "usage": {
         "prompt_tokens": 1157,
-        "completion_tokens": 119,
-        "first_token_ms": 1082.9,
-        "total_ms": 3333.0,
+        "completion_tokens": 136,
+        "first_token_ms": 339.8,
+        "total_ms": 2953.8,
         "attempts": 1
       }
     }
@@ -524,8 +701,8 @@
     ]
   },
   "metadata": {
-    "started_at": "2026-10-29T21:10:03+00:00",
-    "git_commit": "1dca0148dd6181a92fa44b5f881fcdd71b67ee6b",
+    "started_at": "2026-10-29T22:00:04+00:00",
+    "git_commit": "5d87d4daad8a7614f6202a0b5008837f81d63dee",
     "dataset": {
       "path": "evals/datasets/answers.yaml",
       "version": 1,
