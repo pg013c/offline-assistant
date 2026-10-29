@@ -170,20 +170,11 @@ class OpenAICompatibleChat:
                             tally.first_token = time.monotonic()
                         yield TextDelta(text)
         except httpx.TimeoutException as error:
-            raise _Unanswered(
-                ModelFailed(
-                    "model_timeout",
-                    f"The model server at {url} did not answer within "
-                    f"{self._server.timeout_seconds:g} s.",
-                )
-            ) from error
+            raise _Unanswered(_timed_out(url, self._server.timeout_seconds)) from error
         except httpx.TransportError as error:
-            raise _Unanswered(
-                ModelFailed(
-                    "model_unreachable",
-                    f"No model server answers at {url}. Start it with make llm.",
-                )
-            ) from error
+            raise _Unanswered(_unreachable(url)) from error
+        except ValueError as error:
+            raise _Unanswered(_not_json(url)) from error
 
     async def call_tools(
         self, messages: Sequence[Message], tools: Sequence[ToolSpec]
@@ -257,7 +248,10 @@ class OpenAICompatibleChat:
             raise _Unanswered(_unreachable(url)) from error
         if response.status_code != httpx.codes.OK:
             raise _Unanswered(_error_status(url, response))
-        message: dict[str, Any] = response.json()["choices"][0]["message"]
+        try:
+            message: dict[str, Any] = response.json()["choices"][0]["message"]
+        except (ValueError, KeyError, IndexError, TypeError) as error:
+            raise _Unanswered(_not_json(url)) from error
         return message
 
     def _body(self, messages: list[dict[str, str]]) -> dict[str, Any]:
@@ -331,9 +325,15 @@ def _timed_out(url: str, seconds: float) -> ModelFailed:
     )
 
 
+def _not_json(url: str) -> ModelFailed:
+    return ModelFailed(
+        "model_error", f"The model server at {url} sent a response that is not valid JSON."
+    )
+
+
 def _error_status(url: str, response: httpx.Response) -> ModelFailed:
     return ModelFailed(
-        "model_unreachable",
+        "model_error",
         f"The model server at {url} answered {response.status_code}: {response.text[:200]}",
     )
 

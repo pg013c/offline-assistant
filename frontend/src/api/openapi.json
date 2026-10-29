@@ -508,7 +508,8 @@
             "enum": [
               "invalid_answer",
               "model_unreachable",
-              "model_timeout"
+              "model_timeout",
+              "model_error"
             ],
             "title": "Code"
           },

@@ -71,6 +71,8 @@ function errorMessage(code: ChatErrorCode, message: string): string {
       return `The language model is not reachable. ${message}`
     case 'model_timeout':
       return `The language model took too long to answer. ${message}`
+    case 'model_error':
+      return `The model server failed to answer. ${message}`
   }
 }
 

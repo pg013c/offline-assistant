@@ -57,7 +57,13 @@ def _ensure_served(url: str, served_model: str, transport: httpx.BaseTransport |
         raise ChatModelNotReady(
             f"No model server answers at {url} (ASSISTANT_LLM_URL). Start it with make llm."
         ) from error
-    served = [model["id"] for model in response.json().get("data", [])]
+    try:
+        served = [model["id"] for model in response.json()["data"]]
+    except (ValueError, KeyError, TypeError) as error:
+        raise ChatModelNotReady(
+            f"The server at {url} (ASSISTANT_LLM_URL) does not list models like an "
+            "OpenAI-compatible server. Start the model server with make llm."
+        ) from error
     if served_model not in served:
         raise ChatModelNotReady(
             f"The model server at {url} does not serve {served_model}; it serves "
