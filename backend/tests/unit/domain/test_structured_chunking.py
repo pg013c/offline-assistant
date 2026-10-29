@@ -135,3 +135,105 @@ def test_blank_blocks_are_dropped() -> None:
     document = parsed(paragraph("  "), paragraph(" Text. "))
 
     assert [chunk.text for chunk in chunk_document("doc", document)] == ["Text."]
+
+
+def article_6(word: str = "Article") -> ParsedDocument:
+    return parsed(
+        heading("CHAPTER III", level=1, page=52),
+        heading(f"{word} 6", level=2, page=53),
+        heading("Classification rules for high-risk AI systems", level=2, page=53),
+        paragraph("1. An AI system shall be considered high-risk where:", page=53),
+        list_item("(a) it is a safety component;", page=53),
+        paragraph("(b) it requires a conformity assessment.", page=54),
+        paragraph("2. AI systems referred to in Annex III shall be considered high-risk.", page=54),
+        paragraph("The first subparagraph shall not apply where the risk is low.", page=54),
+        page_count=60,
+    )
+
+
+def test_numbered_paragraphs_of_an_article_are_chunks_labelled_with_article_and_paragraph() -> None:
+    chunks = chunk_document("doc", article_6())
+
+    assert [
+        (chunk.location.article, chunk.location.paragraph, chunk.location.page) for chunk in chunks
+    ] == [("6", "1", 53), ("6", "2", 54)]
+    assert chunks[0].text == (
+        "1. An AI system shall be considered high-risk where:\n"
+        "(a) it is a safety component;\n"
+        "(b) it requires a conformity assessment."
+    )
+    assert chunks[1].text.endswith("shall not apply where the risk is low.")
+    assert chunks[0].location.heading_path == (
+        "CHAPTER III",
+        "Article 6",
+        "Classification rules for high-risk AI systems",
+    )
+
+
+def test_polish_articles_are_recognised() -> None:
+    chunks = chunk_document("doc", article_6("Artykuł"))
+
+    assert [(chunk.location.article, chunk.location.paragraph) for chunk in chunks] == [
+        ("6", "1"),
+        ("6", "2"),
+    ]
+
+
+def test_an_article_number_in_a_paragraph_starts_the_article() -> None:
+    document = parsed(
+        paragraph("Art. 12"),
+        paragraph("1. Records shall be kept."),
+        paragraph("Article 13a"),
+        paragraph("1. Transparency is required."),
+    )
+
+    chunks = chunk_document("doc", document)
+
+    assert [(chunk.location.article, chunk.location.paragraph, chunk.text) for chunk in chunks] == [
+        ("12", "1", "1. Records shall be kept."),
+        ("13a", "1", "1. Transparency is required."),
+    ]
+
+
+def test_an_article_without_numbered_paragraphs_is_one_chunk() -> None:
+    document = parsed(
+        heading("Article 3"),
+        paragraph("This Regulation applies to providers."),
+        paragraph("It also applies to deployers."),
+    )
+
+    chunks = chunk_document("doc", document)
+
+    assert [(chunk.location.article, chunk.location.paragraph, chunk.text) for chunk in chunks] == [
+        ("3", None, "This Regulation applies to providers.\nIt also applies to deployers."),
+    ]
+
+
+def test_no_chunk_holds_text_from_two_articles() -> None:
+    document = parsed(
+        heading("Article 1"),
+        paragraph("Short subject matter."),
+        heading("Article 2"),
+        paragraph("Short scope."),
+        heading("SECTION 2", level=1),
+        paragraph("Text after the articles."),
+    )
+
+    chunks = chunk_document("doc", document)
+
+    assert [(chunk.location.article, chunk.text) for chunk in chunks] == [
+        ("1", "Short subject matter."),
+        ("2", "Short scope."),
+        (None, "Text after the articles."),
+    ]
+    assert chunks[2].location.heading_path == ("SECTION 2",)
+
+
+def test_a_long_numbered_paragraph_is_split_and_keeps_its_labels() -> None:
+    sentences = " ".join(f"Obligation {n} applies to providers." for n in range(30))
+    document = parsed(heading("Article 16"), paragraph(f"1. {sentences}"))
+
+    chunks = chunk_document("doc", document, max_chars=200)
+
+    assert len(chunks) > 1
+    assert {(chunk.location.article, chunk.location.paragraph) for chunk in chunks} == {("16", "1")}
