@@ -126,7 +126,7 @@ class ChatModel(Protocol):
     - `fake-extractive` cites passage 1;
     - a scripted fake replays attempts, failures and usage for service tests.
 - Change: `ports/chat_model.py`, `adapters/fakes/chat_model.py`.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 3. Service uses the model's citations, retries and failures

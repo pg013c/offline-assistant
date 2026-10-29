@@ -3,7 +3,7 @@
 import json
 import re
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, ValidationError
 
@@ -41,6 +41,49 @@ class AnswerEnd:
 
 
 type AnswerEvent = AnswerText | AnswerCitation | AnswerEnd
+
+
+@dataclass(frozen=True, slots=True)
+class Usage:
+    """What one answer cost: tokens over every attempt, and its timings (AI-60)."""
+
+    prompt_tokens: int
+    completion_tokens: int
+    first_token_ms: float | None
+    total_ms: float
+    attempts: int
+
+
+@dataclass(frozen=True, slots=True)
+class TextDelta:
+    """A piece of the answer text, as the model writes it."""
+
+    text: str
+
+
+@dataclass(frozen=True, slots=True)
+class AttemptDiscarded:
+    """The text streamed since the last attempt began is void; a retry follows."""
+
+    reason: str
+
+
+@dataclass(frozen=True, slots=True)
+class Answered:
+    answer: "ModelAnswer"
+    usage: Usage
+
+
+type ModelFailure = Literal["invalid_answer", "model_unreachable", "model_timeout"]
+
+
+@dataclass(frozen=True, slots=True)
+class ModelFailed:
+    code: ModelFailure
+    detail: str
+
+
+type ModelEvent = TextDelta | AttemptDiscarded | Answered | ModelFailed
 
 
 def opening_sentences(text: str, count: int = QUOTE_SENTENCES) -> str:
