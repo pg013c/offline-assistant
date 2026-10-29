@@ -86,6 +86,8 @@ def test_close_stops_after_the_running_job_and_drops_the_queued_ones() -> None:
     assert started.wait(WAIT_SECONDS)
     closing = threading.Thread(target=queue.close)
     closing.start()
+    # Let close ask the worker to stop before the running job ends.
+    closing.join(0.05)
     release.set()
     closing.join(WAIT_SECONDS)
 
