@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+from collections.abc import Callable
 from typing import Any
 
 import httpx
@@ -60,7 +61,9 @@ class StubServer:
         return completion(self._messages.pop(0))
 
 
-def model(server: StubServer, *, tools: bool = True, max_retries: int = 2) -> OpenAICompatibleChat:
+def model(
+    server: Callable[[httpx.Request], httpx.Response], *, tools: bool = True, max_retries: int = 2
+) -> OpenAICompatibleChat:
     return OpenAICompatibleChat(
         model_id="qwen3-8b",
         server=LlmServer(
@@ -178,3 +181,13 @@ def test_a_model_not_declared_able_to_call_tools_is_refused_before_any_request()
         turn(model(server, tools=False))
 
     assert server.requests == []
+
+
+def test_a_completion_body_that_is_not_json_is_a_model_error() -> None:
+    def server(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, text="<html>proxy error</html>")
+
+    result = turn(model(server))
+
+    assert isinstance(result, ModelFailed)
+    assert result.code == "model_error"

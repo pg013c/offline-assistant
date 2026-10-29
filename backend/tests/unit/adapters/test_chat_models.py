@@ -63,3 +63,15 @@ def test_the_llm_is_pinned_as_adr_0021_says_and_kept_apart_from_make_models() ->
     }
     assert QWEN3_8B in LLM_MODELS
     assert QWEN3_8B not in PINNED_MODELS
+
+
+@pytest.mark.parametrize(
+    "body",
+    [b"<html>not a model server</html>", b'{"data": [{"name": "no id"}]}', b'"just a string"'],
+)
+def test_a_server_that_does_not_list_models_fails_with_the_command(body: bytes) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=body)
+
+    with pytest.raises(ChatModelNotReady, match="make llm"):
+        chat_model_for(settings("qwen3-8b"), transport=httpx.MockTransport(handler))

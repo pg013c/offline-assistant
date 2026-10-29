@@ -172,14 +172,29 @@ def test_a_slow_server_times_out() -> None:
     ]
 
 
-@pytest.mark.parametrize("status", [404, 500])
-def test_an_error_status_is_reported_with_it(status: int) -> None:
+@pytest.mark.parametrize("status", [400, 404, 500])
+def test_an_error_status_is_a_model_error_with_it(status: int) -> None:
     def server(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(status, text="model not found")
+        return httpx.Response(status, text="the request exceeds the available context size")
 
     events = answer(model(server))
 
     assert len(events) == 1
     assert isinstance(events[0], ModelFailed)
-    assert events[0].code == "model_unreachable"
+    assert events[0].code == "model_error"
     assert str(status) in events[0].detail
+    assert "context size" in events[0].detail
+
+
+def test_a_stream_line_that_is_not_json_is_a_model_error_and_ends_the_answer() -> None:
+    def server(request: httpx.Request) -> httpx.Response:
+        start = {"choices": [{"delta": {"content": '{"answer": "Six'}}]}
+        body = f"data: {json.dumps(start)}\n\ndata: <html>oops\n\n".encode()
+        return httpx.Response(200, content=body)
+
+    events = answer(model(server))
+
+    outcome = events[-1]
+    assert isinstance(outcome, ModelFailed)
+    assert outcome.code == "model_error"
+    assert "not valid JSON" in outcome.detail

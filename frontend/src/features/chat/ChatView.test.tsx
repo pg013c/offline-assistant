@@ -170,6 +170,11 @@ describe('ChatView', () => {
       /not reachable.*127\.0\.0\.1:8080/i,
     ],
     ['model_timeout', 'The model server took over 60 s.', /took too long.*60 s/i],
+    [
+      'model_error',
+      'The model server at http://127.0.0.1:8080 answered 400: context size exceeded',
+      /model server failed.*400/i,
+    ],
   ])('explains a %s error', async (code, message, shown) => {
     serveAnswer([
       { type: 'error', code, message },
