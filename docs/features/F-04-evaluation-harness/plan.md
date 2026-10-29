@@ -148,7 +148,7 @@ Two projects side by side, apart from the backend and the frontend:
   - the report holds metrics with counts, missed cases and the metadata fields of AI-61;
   - the Markdown table lists every metric.
 - Change: `evals/harness/resolve.py`, `report.py`.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 7. Run orchestration and Promptfoo
