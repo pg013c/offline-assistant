@@ -15,10 +15,13 @@ from assistant.domain.documents import Chunk
 from assistant.ports.chat_model import ChatModel
 from assistant.ports.chunk_index import ChunkIndex
 from assistant.ports.document_store import DocumentStore
+from assistant.ports.reranker import Reranker
 
 PASSAGES_PER_ANSWER = 3
 # Candidates fetched before the similarity filter, so weak hits do not crowd out good ones.
 CANDIDATES = 10
+# Hybrid candidates the reranker scores (F-05).
+RERANK_CANDIDATES = 30
 
 
 @dataclass(frozen=True, slots=True)
@@ -28,6 +31,7 @@ class FoundPassage:
     chunk: Chunk
     document_title: str
     similarity: float
+    rerank_score: float | None = None
 
 
 class QuestionService:
@@ -39,6 +43,7 @@ class QuestionService:
         model: ChatModel,
         store: DocumentStore,
         min_similarity: float,
+        reranker: Reranker | None = None,
     ) -> None:
         """`min_similarity` is the dense similarity a passage needs to be used (F-03).
 
@@ -50,8 +55,11 @@ class QuestionService:
         self._model = model
         self._store = store
 
-    async def search(self, query: str, limit: int) -> list[FoundPassage]:
+    async def search(
+        self, query: str, limit: int, rerank: bool | None = None
+    ) -> list[FoundPassage]:
         """The index's best passages for the query, best first, without any threshold."""
+        raise NotImplementedError
         found = await asyncio.to_thread(self._index.search, query, limit)
         titles: dict[str, str] = {}
         for result in found:

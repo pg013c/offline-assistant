@@ -128,7 +128,7 @@
   - **Refusal:** an out-of-scope question is refused even when the reranker scores a passage high, because the dense threshold decides.
   - **No reranker:** asking for reranking raises `RerankerOff`.
 - Change: `services/questions.py`, `domain/errors.py`.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 4. Setting, composition and API

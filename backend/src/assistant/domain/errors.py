@@ -27,3 +27,7 @@ class DocumentUnreadable(Exception):
 
 class DocumentNotFound(Exception):
     """No document has this id."""
+
+
+class RerankerOff(Exception):
+    """Reranking was asked for, but no reranker is configured."""
