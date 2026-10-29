@@ -56,21 +56,21 @@ Decision is filled in by the human: `fix`, `backlog (F-xx)`, or `reject: <reason
 | 3 | `1e17cbd` test, `daf03e3` fix (deadline per attempt, `max_tokens` 1024) |
 | 4 | `5d4f27d` test, `08bc5ee` fix (usage on failures and tool turns; `model_answered` log line) |
 | 5 | `5d4f27d` test, `08bc5ee` fix (`json_schema` and `streaming` flags); a server URL per model goes with F-09 |
-| 6 | `f71a34e` test, `e5dd7f4` fix (`prompts/answer_user.md`, `prompts/retry.md`) |
-| 7 | `f71a34e` test, `e5dd7f4` fix (passage tags in document text are broken up) |
+| 6 | `eaa20b5` test, `f6b1417` fix (`prompts/answer_user.md`, `prompts/retry.md`) |
+| 7 | `eaa20b5` test, `f6b1417` fix (passage tags in document text are broken up) |
 | 8 | `a07e5d4` test, `d813969` fix (`model_error` in the domain, API and UI) |
 | 9 | `d813969` fix (shared message helpers) |
-| 10 | `f71a34e` test, `e5dd7f4` fix (`ScriptedToolCallingModel`, `tests/contract/test_tool_calling_model.py`) |
+| 10 | `eaa20b5` test, `f6b1417` fix (`ScriptedToolCallingModel`, `tests/contract/test_tool_calling_model.py`) |
 | 11 | `1e17cbd` test, `daf03e3` fix |
-| 12 | `16b9a1d` build |
+| 12 | `a53d26b` build |
 | 13 | backlog: the F-10 item for local service URLs now names `ASSISTANT_LLM_URL` (`bdf77b0`) |
-| 14 | `98a8de8` test, `5d87d4d` fix (per-case table in the report and the record) |
+| 14 | `0133691` test, `6e854ae` fix (per-case table in the report and the record) |
 | 15 | docs commit (spec scope and AC-6 name `make eval-answers`) |
-| 16 | `98a8de8` test, `5d87d4d` fix (shared words left out; letters decide a tie) |
-| 17 | `98a8de8` test(eval) |
-| 18 | `98a8de8` test |
+| 16 | `0133691` test, `6e854ae` fix (shared words left out; letters decide a tie) |
+| 17 | `0133691` test(eval) |
+| 18 | `0133691` test |
 | 19 | docs commit (plan, "Changes during the build") |
 | 20 | docs commit (`.env.example` states why it differs from the code default) |
-| 21 | `5d87d4d` fix (`make llm` takes the model path from its pin) |
+| 21 | `6e854ae` fix (`make llm` takes the model path from its pin) |
 | 22 | `a07e5d4` test, `d813969` fix |
 | 23 | docs commit (gate sensitivity in the evaluation record) |
