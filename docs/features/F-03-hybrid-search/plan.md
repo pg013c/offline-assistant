@@ -233,7 +233,7 @@
   - an API error is shown.
 - Change: `features/documents/useDocuments.ts`, `DocumentPanel.tsx`.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 12. Retrieval cases on the AI Act excerpts
 
