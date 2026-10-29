@@ -5,8 +5,9 @@ description = "Offline Assistant backend: local LLM agent, RAG with citations an
 license = "MIT"
 requires-python = ">=3.13"
 dependencies = [
-    "docling-slim[format-docx,format-pdf,models-local]>=2.144.0",
+    "docling-slim[convert-core,format-docx,format-pdf,models-local]>=2.144.0",
     "fastapi>=0.162.0",
+    "opencv-python-headless>=4.6,<5",
     "pydantic>=2.14.1",
     "pydantic-settings>=2.16.2",
     "python-multipart>=0.0.32",
@@ -42,6 +43,11 @@ select = ["E", "F", "I", "B", "UP", "SIM", "RUF", "PL", "S", "ASYNC"]
 strict = true
 python_version = "3.13"
 files = ["src", "tests"]
+
+# pypdfium2 ships no type information; pikepdf is only used to build test fixtures.
+[[tool.mypy.overrides]]
+module = ["pypdfium2", "pypdfium2.*", "pikepdf"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
