@@ -92,10 +92,22 @@ allow_indirect_imports = true
 # (Qdrant, Docling, Whisper, ...) is added here in the same change as the ADR that introduces it.
 [[tool.importlinter.contracts]]
 id = "framework-free-core"
-name = "Domain, ports and services do not import the web framework or settings"
+name = "Domain, ports and services do not import the web framework, settings or model libraries"
 type = "forbidden"
 source_modules = ["assistant.domain", "assistant.ports", "assistant.services"]
-forbidden_modules = ["fastapi", "starlette", "uvicorn", "pydantic_settings"]
+forbidden_modules = [
+    "fastapi",
+    "starlette",
+    "uvicorn",
+    "pydantic_settings",
+    # Document parsing (ADR 0015).
+    "docling",
+    "docling_core",
+    "docling_ibm_models",
+    "pypdfium2",
+    "torch",
+    "cv2",
+]
 
 [[tool.importlinter.contracts]]
 id = "logging-free-domain"
