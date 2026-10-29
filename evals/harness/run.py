@@ -4,25 +4,26 @@ The run starts its own API on its own port, data directory and Qdrant collection
 development data is never touched, and stops it at the end.
 """
 
+import hashlib
 import json
 import os
 import platform
 import shutil
 import signal
+import socket
 import subprocess
 import sys
 import time
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from hashlib import sha256
 from pathlib import Path
-from typing import Any
+from typing import IO, Any
 
 import httpx
 import yaml
 
-from harness.corpus import CorpusDocument, documents
+from harness.corpus import CorpusDocument, documents, sha256
 from harness.dataset import load_cases
 from harness.gate import check
 from harness.metrics import CaseResult, compute
@@ -35,6 +36,9 @@ PROMPTFOO_CONFIG = ROOT / "evals" / "promptfoo" / "retrieval.yaml"
 BASELINE = ROOT / "docs" / "evals" / "retrieval-baseline.json"
 STARTUP_SECONDS = 180
 INGESTION_SECONDS = 1800
+PROMPTFOO_SECONDS = 600
+# The similarity threshold the suite measures at; the app's default (F-03).
+EVAL_THRESHOLD = 0.5
 POLL_SECONDS = 1.0
 
 
@@ -70,26 +74,37 @@ class Outcome:
 
 
 def run(config: RunConfig) -> Outcome:
-    """One evaluation run; the API it starts is stopped whatever happens."""
+    """One evaluation run from an empty index; the API it starts is stopped whatever happens."""
     started_at = datetime.now(UTC)
+    corpus = verify_corpus(config.corpus_dir, config.corpus)
+    ensure_port_free(config.port)
+    _reset(config)
     api_url = f"http://127.0.0.1:{config.port}"
-    server = _start_api(config)
+    server, log = _start_api(config)
     try:
         _wait_until_healthy(api_url, server)
         with httpx.Client(base_url=api_url, timeout=60) as api:
-            document_ids = _index_corpus(api, config.corpus_dir)
+            indexing_started = time.monotonic()
+            document_ids = _index_corpus(api, config.corpus_dir, config.corpus)
+            indexing_seconds = round(time.monotonic() - indexing_started, 1)
             chunks = _chunk_refs(api, document_ids)
         cases = load_cases(config.dataset)
         expected = resolve(cases, chunks)
         hits = _search_with_promptfoo(cases, api_url, config.results_dir, started_at)
     finally:
         _stop(server)
+        log.close()
 
     results = [
         CaseResult(case.id, case.behaviour, expected[case.id], hits[case.id]) for case in cases
     ]
     metrics = compute(results, config.threshold)
-    report = build_report(metrics, _metadata(config, started_at), config.threshold, expected)
+    metadata = {
+        **_metadata(config, started_at),
+        "corpus": corpus,
+        "indexing_seconds": indexing_seconds,
+    }
+    report = build_report(metrics, metadata, config.threshold, expected)
     baseline = (
         json.loads(config.baseline.read_text(encoding="utf-8"))["metrics"]
         if config.baseline.exists()
@@ -109,26 +124,75 @@ def run(config: RunConfig) -> Outcome:
 
 def verify_corpus(corpus_dir: Path, pins: Sequence[CorpusDocument]) -> dict[str, str]:
     """File name -> SHA-256 of every pinned corpus file, each checked against its pin."""
-    raise NotImplementedError
+    if not pins:
+        raise CorpusError("the corpus has no files")
+    verified: dict[str, str] = {}
+    for document in pins:
+        path = corpus_dir / document.file
+        if not path.exists():
+            raise CorpusError(f"{document.file} is missing in {corpus_dir}; run `make eval-corpus`")
+        actual = sha256(path)
+        if actual != document.sha256:
+            raise CorpusError(
+                f"{document.file} differs from the pinned SHA-256; run `make eval-corpus`"
+            )
+        verified[document.file] = actual
+    return verified
 
 
 def ensure_port_free(port: int) -> None:
-    raise NotImplementedError
+    """Refuse to start when something listens on the port: the run must not use another API."""
+    with socket.socket() as probe:
+        if probe.connect_ex(("127.0.0.1", port)) == 0:
+            raise PortInUse(
+                f"port {port} is already in use; stop that process or set EVAL_API_PORT"
+            )
 
 
 def drop_collections(qdrant: httpx.Client, prefix: str) -> None:
-    """Delete the collections a run with this prefix created."""
-    raise NotImplementedError
+    """Delete the collections a run with this prefix created, and no others."""
+    listed = qdrant.get("/collections").json()["result"]["collections"]
+    for name in (item["name"] for item in listed):
+        if name.startswith(f"{prefix}-"):
+            qdrant.delete(f"/collections/{name}").raise_for_status()
 
 
 def default_config(env: Mapping[str, str]) -> RunConfig:
-    """The configuration of `make eval`, independent of the development settings."""
-    raise NotImplementedError
+    """The configuration of `make eval`, independent of the development settings.
+
+    The threshold is fixed here, and Qdrant is the one `make qdrant` starts, so a developer's
+    `.env` cannot change what a run measures.
+    """
+    return RunConfig(
+        corpus=tuple(documents()),
+        corpus_dir=Path(env.get("EVAL_CORPUS_DIR", ROOT / "data" / "eval-corpus")),
+        dataset=ROOT / "evals" / "datasets" / "retrieval.yaml",
+        baseline=BASELINE,
+        results_dir=ROOT / "evals" / "results",
+        data_dir=ROOT / "data" / "eval",
+        models_dir=Path(env.get("ASSISTANT_MODELS_DIR", ROOT / "data" / "models")),
+        qdrant_url=env.get("EVAL_QDRANT_URL")
+        or f"http://127.0.0.1:{env.get('QDRANT_PORT', '6333')}",
+        collection_prefix="eval",
+        port=int(env.get("EVAL_API_PORT", "8021")),
+        threshold=EVAL_THRESHOLD,
+    )
 
 
-def _start_api(config: RunConfig) -> subprocess.Popen[bytes]:
+def _reset(config: RunConfig) -> None:
+    """Start from an empty data directory and collection, so the run indexes the current code."""
+    shutil.rmtree(config.data_dir, ignore_errors=True)
+    with httpx.Client(base_url=config.qdrant_url, timeout=30) as qdrant:
+        drop_collections(qdrant, config.collection_prefix)
+
+
+def _start_api(config: RunConfig) -> tuple[subprocess.Popen[bytes], IO[bytes]]:
+    # Only the run's own settings: nothing from a developer's ASSISTANT_* environment.
+    inherited = {
+        name: value for name, value in os.environ.items() if not name.startswith("ASSISTANT_")
+    }
     env = {
-        **os.environ,
+        **inherited,
         "ASSISTANT_DATA_DIR": str(config.data_dir),
         "ASSISTANT_MODELS_DIR": str(config.models_dir),
         "ASSISTANT_QDRANT_URL": config.qdrant_url,
@@ -139,7 +203,7 @@ def _start_api(config: RunConfig) -> subprocess.Popen[bytes]:
     config.results_dir.mkdir(parents=True, exist_ok=True)
     log = (config.results_dir / "api.log").open("wb")
     # A session of its own, so stopping the API stops only what this run started.
-    return subprocess.Popen(  # noqa: S603 (fixed command)
+    server = subprocess.Popen(  # noqa: S603 (fixed command)
         [
             _executable("uv"),
             "run",
@@ -156,6 +220,7 @@ def _start_api(config: RunConfig) -> subprocess.Popen[bytes]:
         stderr=subprocess.STDOUT,
         start_new_session=True,
     )
+    return server, log
 
 
 def _wait_until_healthy(api_url: str, server: subprocess.Popen[bytes]) -> None:
@@ -172,13 +237,13 @@ def _wait_until_healthy(api_url: str, server: subprocess.Popen[bytes]) -> None:
     raise RuntimeError(f"the API did not start within {STARTUP_SECONDS} s")
 
 
-def _index_corpus(api: httpx.Client, corpus_dir: Path) -> dict[str, str]:
-    """Upload the corpus files present and wait until all are ready; title -> document id."""
+def _index_corpus(
+    api: httpx.Client, corpus_dir: Path, pins: Sequence[CorpusDocument]
+) -> dict[str, str]:
+    """Upload the corpus and wait until every file is ready; title -> document id."""
     ids: dict[str, str] = {}
-    for document in documents():
+    for document in pins:
         path = corpus_dir / document.file
-        if not path.exists():
-            continue
         response = api.post(
             "/api/documents", files={"file": (path.name, path.read_bytes(), "application/pdf")}
         )
@@ -187,11 +252,11 @@ def _index_corpus(api: httpx.Client, corpus_dir: Path) -> dict[str, str]:
     deadline = time.monotonic() + INGESTION_SECONDS
     while time.monotonic() < deadline:
         listed = {item["id"]: item for item in api.get("/api/documents").json()}
-        statuses = {listed[document_id]["status"] for document_id in ids.values()}
-        failed = [item for item in listed.values() if item["status"] == "failed"]
+        corpus = [listed[document_id] for document_id in ids.values()]
+        failed = [item for item in corpus if item["status"] == "failed"]
         if failed:
             raise RuntimeError(f"corpus documents failed to index: {failed}")
-        if statuses == {"ready"}:
+        if all(item["status"] == "ready" for item in corpus):
             return ids
         time.sleep(POLL_SECONDS)
     raise RuntimeError(f"the corpus was not indexed within {INGESTION_SECONDS} s")
@@ -245,6 +310,7 @@ def _search_with_promptfoo(
         ],
         env=environment(os.environ, api_url),
         check=True,
+        timeout=PROMPTFOO_SECONDS,
     )
     return hits_by_case(json.loads(output.read_text(encoding="utf-8")))
 
@@ -267,7 +333,7 @@ def _metadata(config: RunConfig, started_at: datetime) -> dict[str, Any]:
         "dataset": {
             "path": str(config.dataset.relative_to(ROOT)),
             "version": yaml.safe_load(dataset)["version"],
-            "sha256": sha256(dataset).hexdigest(),
+            "sha256": hashlib.sha256(dataset).hexdigest(),
         },
         "models": json.loads(
             _command(
@@ -317,19 +383,7 @@ def _executable(name: str) -> str:
 
 def main() -> None:
     """`make eval`: the retrieval suite on the full corpus, with the recorded baseline."""
-    config = RunConfig(
-        corpus=tuple(documents()),
-        corpus_dir=Path(os.environ.get("EVAL_CORPUS_DIR", ROOT / "data" / "eval-corpus")),
-        dataset=ROOT / "evals" / "datasets" / "retrieval.yaml",
-        baseline=BASELINE,
-        results_dir=ROOT / "evals" / "results",
-        data_dir=ROOT / "data" / "eval",
-        models_dir=Path(os.environ.get("ASSISTANT_MODELS_DIR", ROOT / "data" / "models")),
-        qdrant_url=os.environ.get("ASSISTANT_QDRANT_URL", "http://127.0.0.1:6333"),
-        collection_prefix="eval",
-        port=int(os.environ.get("EVAL_API_PORT", "8021")),
-        threshold=float(os.environ.get("ASSISTANT_MIN_SIMILARITY", "0.5")),
-    )
+    config = default_config(os.environ)
     outcome = run(config)
     print(outcome.report_markdown.read_text(encoding="utf-8"))
     print(f"Report: {outcome.report_json}")
