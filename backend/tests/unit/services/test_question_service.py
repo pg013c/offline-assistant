@@ -4,7 +4,7 @@ from collections.abc import Sequence
 
 import pytest
 
-from assistant.adapters.fakes.chat_model import FakeExtractiveChatModel
+from assistant.adapters.fakes.chat_model import FakeExtractiveChatModel, ScriptedChatModel
 from assistant.adapters.fakes.chunk_index import InMemoryChunkIndex
 from assistant.adapters.fakes.document_store import FakeDocumentStore
 from assistant.adapters.fakes.ingestion_queue import InlineIngestionQueue
@@ -12,9 +12,18 @@ from assistant.adapters.text_document_parser import TextDocumentParser
 from assistant.domain.answers import (
     NO_RELEVANT_PASSAGE,
     AnswerCitation,
+    AnswerDiscarded,
+    Answered,
     AnswerEnd,
     AnswerEvent,
+    AnswerFailed,
     AnswerText,
+    AttemptDiscarded,
+    ModelAnswer,
+    ModelEvent,
+    ModelFailed,
+    TextDelta,
+    Usage,
 )
 from assistant.domain.documents import Chunk, ChunkLocation, Document, indexed_text
 from assistant.domain.errors import RerankerOff
@@ -442,3 +451,90 @@ def test_with_a_reranker_answers_use_only_its_top_ten_like_the_evaluation() -> N
     events = ask(questions, "Anything?")
 
     assert events[0] == AnswerText(text=NO_RELEVANT_PASSAGE)
+
+
+THREE_PASSAGES = [
+    hit(0, "Providers keep logs.", 0.8),
+    hit(1, "Logs are kept for six months.", 0.7),
+    hit(2, "Authorities may inspect logs.", 0.6),
+]
+USAGE = Usage(
+    prompt_tokens=200, completion_tokens=30, first_token_ms=420.0, total_ms=1500.0, attempts=1
+)
+
+
+def scripted(*events: ModelEvent) -> tuple[QuestionService, ScriptedChatModel]:
+    model = ScriptedChatModel(list(events))
+    return QuestionService(FixedIndex(THREE_PASSAGES), model, FakeDocumentStore(), 0.5), model
+
+
+def test_citations_follow_the_passages_the_model_cites_in_its_order() -> None:
+    questions, _ = scripted(
+        TextDelta("Kept six months."),
+        Answered(ModelAnswer(text="Kept six months.", cited=(2, 1, 2)), USAGE),
+    )
+
+    events = ask(questions, "How long are logs kept?")
+
+    assert [e.citation.chunk_id for e in events if isinstance(e, AnswerCitation)] == [
+        "doc:1",
+        "doc:0",
+    ]
+
+
+def test_a_discarded_attempt_is_passed_on_before_the_retry() -> None:
+    questions, _ = scripted(
+        TextDelta("Wrong."),
+        AttemptDiscarded("passage 9 does not exist; cite passages 1 to 3"),
+        TextDelta("Right."),
+        Answered(ModelAnswer(text="Right.", cited=(1,)), USAGE),
+    )
+
+    events = ask(questions, "How long are logs kept?")
+
+    assert events[:3] == [
+        AnswerText(text="Wrong."),
+        AnswerDiscarded(reason="passage 9 does not exist; cite passages 1 to 3"),
+        AnswerText(text="Right."),
+    ]
+
+
+def test_a_failed_model_ends_the_answer_with_a_typed_failure_and_no_citation() -> None:
+    questions, _ = scripted(
+        ModelFailed("model_unreachable", "No model server answers at http://127.0.0.1:8080."),
+    )
+
+    events = ask(questions, "How long are logs kept?")
+
+    assert (
+        AnswerFailed(
+            code="model_unreachable", message="No model server answers at http://127.0.0.1:8080."
+        )
+        in events
+    )
+    assert not any(isinstance(event, AnswerCitation) for event in events)
+    end = events[-1]
+    assert isinstance(end, AnswerEnd)
+    assert end.usage is None
+
+
+def test_the_end_event_carries_the_models_usage() -> None:
+    questions, _ = scripted(
+        TextDelta("Kept."), Answered(ModelAnswer(text="Kept.", cited=(1,)), USAGE)
+    )
+
+    end = ask(questions, "How long are logs kept?")[-1]
+
+    assert isinstance(end, AnswerEnd)
+    assert end.usage == USAGE
+
+
+def test_an_out_of_scope_question_never_reaches_the_model() -> None:
+    model = ScriptedChatModel([TextDelta("Should not appear.")])
+    weak = FixedIndex([hit(0, "Pasta.", 0.2)])
+    questions = QuestionService(weak, model, FakeDocumentStore(), 0.5)
+
+    events = ask(questions, "How long should pasta boil?")
+
+    assert events[0] == AnswerText(text=NO_RELEVANT_PASSAGE)
+    assert model.calls == 0

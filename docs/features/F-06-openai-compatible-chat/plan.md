@@ -139,7 +139,7 @@ class ChatModel(Protocol):
   - **Usage:** it reaches `AnswerEnd`.
   - **Out of scope:** no model call is made (AC-7).
 - Change: `services/questions.py`, `domain/answers.py`.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 4. Stream events in the API

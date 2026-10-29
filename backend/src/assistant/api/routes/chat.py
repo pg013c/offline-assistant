@@ -13,7 +13,14 @@ from assistant.api.schemas import (
     ChatTextEvent,
     CitationLocation,
 )
-from assistant.domain.answers import AnswerCitation, AnswerEnd, AnswerEvent, AnswerText
+from assistant.domain.answers import (
+    AnswerCitation,
+    AnswerDiscarded,
+    AnswerEnd,
+    AnswerEvent,
+    AnswerFailed,
+    AnswerText,
+)
 from assistant.services.questions import QuestionService
 
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -47,6 +54,8 @@ def _to_schema(event: AnswerEvent) -> ChatEvent:
                     type="end", model_id=model_id, found=found, is_test_model=is_test_model
                 )
             )
+        case AnswerDiscarded() | AnswerFailed():
+            raise NotImplementedError
         case _:
             assert_never(event)
 

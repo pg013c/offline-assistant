@@ -34,13 +34,29 @@ class AnswerCitation:
 
 
 @dataclass(frozen=True, slots=True)
+class AnswerDiscarded:
+    """The text sent since the last attempt began is void; the retry's text follows."""
+
+    reason: str
+
+
+@dataclass(frozen=True, slots=True)
+class AnswerFailed:
+    """The model gave no valid answer; the stream still ends."""
+
+    code: "ModelFailure"
+    message: str
+
+
+@dataclass(frozen=True, slots=True)
 class AnswerEnd:
     model_id: str
     found: bool
     is_test_model: bool
+    usage: "Usage | None" = None
 
 
-type AnswerEvent = AnswerText | AnswerCitation | AnswerEnd
+type AnswerEvent = AnswerText | AnswerDiscarded | AnswerFailed | AnswerCitation | AnswerEnd
 
 
 @dataclass(frozen=True, slots=True)
