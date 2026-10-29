@@ -11,7 +11,8 @@ How each part of the system is verified ([ADR 0006](../adr/0006-tdd-for-code-eva
 | API | route tests over the ASGI app built from fake adapters | pytest + httpx | `make check` |
 | API contract | generated client is up to date | `make api-client` + diff | `make check` |
 | Model behaviour (answers, citations, refusals, tool choice) | evaluation cases, written first | Promptfoo | `make eval`, on demand |
-| Retrieval quality | recall@k and MRR against expected chunks | Promptfoo / pytest | `make eval` |
+| Retrieval quality | recall@3, recall@10, MRR and refusal shares against expected sources, gated against the baseline in `docs/evals/` | Promptfoo collects, Python scores (ADR 0018) | `make eval` (needs `make models`, `make qdrant`, `make eval-corpus`), on demand |
+| Evaluation harness | unit tests of metrics, gate, resolution, reports; one end-to-end run on the F-02 excerpts | pytest | `make check-evals` (in `make check`), `make test-integration` |
 | UI logic and state | component and hook tests | Vitest + Testing Library | `make check` |
 | UI journeys | 1–3 golden paths against the real API with the test model ([ADR 0014](../adr/0014-browser-journeys-against-the-real-api.md)) | Playwright | `make e2e`, CI job `E2E` |
 | Offline guarantee | end-to-end suite with networking disabled | Docker Compose | `make offline-check` (from F-10) |

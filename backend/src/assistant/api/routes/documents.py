@@ -4,7 +4,12 @@ from fastapi import APIRouter, Depends, UploadFile, status
 from fastapi.concurrency import run_in_threadpool
 
 from assistant.api.dependencies import get_document_service
-from assistant.api.schemas import DocumentResponse, ErrorResponse
+from assistant.api.schemas import (
+    ChunkSummary,
+    CitationLocation,
+    DocumentResponse,
+    ErrorResponse,
+)
 from assistant.domain.documents import Document
 from assistant.services.documents import MAX_UPLOAD_BYTES, DocumentService
 
@@ -72,3 +77,24 @@ async def reindex_document(document_id: str, documents: Documents) -> DocumentRe
     """Parse and index a document again; it is `processing` until it is `ready` or `failed`."""
     document = await run_in_threadpool(documents.reindex, document_id)
     return _response(document)
+
+
+@router.get(
+    "/{document_id}/chunks",
+    responses={status.HTTP_404_NOT_FOUND: {"model": ErrorResponse}},
+)
+def list_document_chunks(document_id: str, documents: Documents) -> list[ChunkSummary]:
+    """The passages of a document with their locations, in order."""
+    return [
+        ChunkSummary(
+            chunk_id=chunk.id,
+            position=chunk.position,
+            location=CitationLocation(
+                heading_path=list(chunk.location.heading_path),
+                article=chunk.location.article,
+                paragraph=chunk.location.paragraph,
+                page=chunk.location.page,
+            ),
+        )
+        for chunk in documents.chunks(document_id)
+    ]

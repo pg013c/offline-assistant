@@ -464,3 +464,24 @@ def test_restore_removes_vectors_of_documents_that_are_not_ready(
     service.restore()
 
     assert index.document_ids() == set()
+
+
+def test_a_document_lists_its_stored_chunks(
+    service: DocumentService, queue: FakeIngestionQueue
+) -> None:
+    document = service.upload("policy.pdf", PDF)
+    queue.run_all()
+
+    chunks = service.chunks(document.id)
+
+    assert [
+        (chunk.position, chunk.location.article, chunk.location.paragraph) for chunk in chunks
+    ] == [
+        (0, "12", "1"),
+        (1, "12", "2"),
+    ]
+
+
+def test_listing_the_chunks_of_an_unknown_document_is_refused(service: DocumentService) -> None:
+    with pytest.raises(DocumentNotFound):
+        service.chunks("unknown")

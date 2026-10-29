@@ -6,6 +6,7 @@ from pathlib import PurePath
 import structlog
 
 from assistant.domain.documents import (
+    Chunk,
     Document,
     ParsedDocument,
     chunk_document,
@@ -193,6 +194,12 @@ class DocumentService:
         self._queue.submit(job)
         # The queue may already have finished the job.
         return self._store.get(document_id) or processing
+
+    def chunks(self, document_id: str) -> list[Chunk]:
+        """The stored chunks of a document, in order."""
+        if self._store.get(document_id) is None:
+            raise DocumentNotFound(document_id)
+        return self._store.load_chunks(document_id)
 
     def list_documents(self) -> list[Document]:
         """All stored documents."""

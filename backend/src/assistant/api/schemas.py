@@ -41,6 +41,30 @@ class ChatRequest(BaseModel):
     question: str = Field(min_length=1, max_length=2000)
 
 
+class ChunkSummary(BaseModel):
+    """A passage of a document: its id and where it is, without its text."""
+
+    chunk_id: str
+    position: int
+    location: "CitationLocation"
+
+
+class SearchRequest(BaseModel):
+    query: str = Field(min_length=1, max_length=2000)
+    limit: int = Field(default=10, ge=1, le=50)
+
+
+class SearchHit(BaseModel):
+    """A passage found for a query; `similarity` is the dense cosine similarity (0 to 1)."""
+
+    chunk_id: str
+    document_id: str
+    document_title: str
+    location: "CitationLocation"
+    text: str
+    similarity: float
+
+
 class ChatTextEvent(BaseModel):
     """A piece of the answer text, in order."""
 

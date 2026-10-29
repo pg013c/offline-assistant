@@ -112,6 +112,14 @@ The diagram above is the target. The question flow runs end to end today; each p
 
 **Answers.** The chat endpoint streams `text`, `citation` and `end` events. A citation carries the chunk location, which the UI shows as "Art. 6(2), p. 53", or the nearest heading and page. With no passage over the threshold the stream says so and has no citation.
 
+**Evaluation** (`evals/`, ADR 0018). `make eval` starts its own API with:
+
+- data directory `data/eval`;
+- Qdrant collection prefix `eval`;
+- port 8021.
+
+It uploads the pinned corpus (AI Act and GDPR, English and Polish) and resolves each case's expected sources, written as document and article, to chunk ids through `GET /api/documents/{id}/chunks`. Promptfoo then queries `POST /api/search` for every case. Python computes recall@k, MRR and the refusal shares at the similarity threshold, writes a report with the run metadata, and fails when a metric is more than 5 points worse than `docs/evals/retrieval-baseline.json`. The API it started is stopped at the end.
+
 ## 4. Main flow: a question
 
 ```mermaid
@@ -163,7 +171,7 @@ Chunk identity is stable across re-ingestion of the same file (derived from docu
 ## 7. Offline boundary
 
 - No component downloads anything at runtime. Models are fetched by an explicit `make models` step, which is the only step that needs the network, and can be replaced by copying from removable media.
-- Telemetry is disabled in every component that has it (Qdrant, Langfuse, Hugging Face libraries, Ollama, Docling).
+- Telemetry is disabled in every component that has it (Qdrant, Langfuse, Hugging Face libraries, Ollama, Docling, Promptfoo). Promptfoo also runs without update checks or sharing, and writes results only to the run's files (`--no-write`).
 - CI runs the end-to-end suite with container networking disabled (NFR-01).
 
 ## 8. Repository layout

@@ -23,7 +23,7 @@ from assistant.adapters.sentence_transformer_embedder import SentenceTransformer
 from assistant.adapters.text_document_parser import TextDocumentParser
 from assistant.adapters.thread_ingestion_queue import ThreadIngestionQueue
 from assistant.api.errors import register_error_handlers
-from assistant.api.routes import chat, documents, health
+from assistant.api.routes import chat, documents, health, search
 from assistant.log import configure_logging
 from assistant.ports.chat_model import ChatModel
 from assistant.ports.chunk_index import ChunkIndex
@@ -131,6 +131,7 @@ def create_app(settings: Settings, adapters: Adapters | None = None) -> FastAPI:
     app.include_router(health.router, prefix=API_PREFIX)
     app.include_router(documents.router, prefix=API_PREFIX)
     app.include_router(chat.router, prefix=API_PREFIX)
+    app.include_router(search.router, prefix=API_PREFIX)
     return app
 
 

@@ -91,6 +91,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/documents/{document_id}/chunks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Document Chunks
+         * @description The passages of a document with their locations, in order.
+         */
+        get: operations["list_document_chunks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/chat": {
         parameters: {
             query?: never;
@@ -105,6 +125,28 @@ export interface paths {
          * @description Answer a question from the uploaded documents as Server-Sent Events.
          */
         post: operations["ask_question"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Search Passages
+         * @description The best-matching passages for a query, best first, without a similarity threshold.
+         *
+         *     Used by the evaluation harness and for debugging retrieval.
+         */
+        post: operations["search_passages"];
         delete?: never;
         options?: never;
         head?: never;
@@ -181,6 +223,17 @@ export interface components {
             text: string;
         };
         /**
+         * ChunkSummary
+         * @description A passage of a document: its id and where it is, without its text.
+         */
+        ChunkSummary: {
+            /** Chunk Id */
+            chunk_id: string;
+            /** Position */
+            position: number;
+            location: components["schemas"]["CitationLocation"];
+        };
+        /**
          * CitationLocation
          * @description Where the cited passage is; parts the document does not have are empty.
          */
@@ -250,6 +303,33 @@ export interface components {
             status: "ok";
             /** Version */
             version: string;
+        };
+        /**
+         * SearchHit
+         * @description A passage found for a query; `similarity` is the dense cosine similarity (0 to 1).
+         */
+        SearchHit: {
+            /** Chunk Id */
+            chunk_id: string;
+            /** Document Id */
+            document_id: string;
+            /** Document Title */
+            document_title: string;
+            location: components["schemas"]["CitationLocation"];
+            /** Text */
+            text: string;
+            /** Similarity */
+            similarity: number;
+        };
+        /** SearchRequest */
+        SearchRequest: {
+            /** Query */
+            query: string;
+            /**
+             * Limit
+             * @default 10
+             */
+            limit: number;
         };
         /** ValidationError */
         ValidationError: {
@@ -442,6 +522,46 @@ export interface operations {
             };
         };
     };
+    list_document_chunks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChunkSummary"][];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     ask_question: {
         parameters: {
             query?: never;
@@ -462,6 +582,39 @@ export interface operations {
                 };
                 content: {
                     "text/event-stream": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_passages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SearchRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchHit"][];
                 };
             };
             /** @description Validation Error */

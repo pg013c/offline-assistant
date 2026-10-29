@@ -1,0 +1,139 @@
+# Retrieval evaluation cases (F-04, TEST-20/21). Expected sources are written by location and
+# resolved to chunk ids at run time. Documents are the corpus files in evals/corpus.json:
+# ai-act-en, ai-act-pl (Regulation (EU) 2024/1689), gdpr-en, gdpr-pl (Regulation (EU) 2016/679).
+# Edit cases only in commits of their own, never together with the code they evaluate (TEST-22).
+version: 2
+cases:
+  # English, one article.
+  - id: en-ai-prohibited-practices
+    kind: single-article
+    language: en
+    question: Which AI practices are prohibited, such as systems that exploit the vulnerabilities of people?
+    expected: {behaviour: answer, sources: [{document: ai-act-en, article: "5", paragraph: "1"}]}
+  - id: en-ai-transparency-chatbots
+    kind: single-article
+    language: en
+    question: What must providers do so that people know they are interacting with an AI system?
+    expected: {behaviour: answer, sources: [{document: ai-act-en, article: "50", paragraph: "1"}]}
+  - id: en-ai-fines-prohibited
+    kind: single-article
+    language: en
+    question: What fines apply for using a prohibited AI practice?
+    expected: {behaviour: answer, sources: [{document: ai-act-en, article: "99", paragraph: "3"}]}
+  - id: en-gdpr-breach-72-hours
+    kind: single-article
+    language: en
+    question: Within how many hours must a controller notify a personal data breach to the supervisory authority?
+    expected: {behaviour: answer, sources: [{document: gdpr-en, article: "33", paragraph: "1"}]}
+  - id: en-gdpr-erasure
+    kind: single-article
+    language: en
+    question: When does a data subject have the right to have personal data erased?
+    expected: {behaviour: answer, sources: [{document: gdpr-en, article: "17", paragraph: "1"}]}
+  - id: en-gdpr-dpo
+    kind: single-article
+    language: en
+    question: When must a controller designate a data protection officer?
+    expected: {behaviour: answer, sources: [{document: gdpr-en, article: "37", paragraph: "1"}]}
+
+  # Polish, one article.
+  - id: pl-ai-deployer-duties
+    kind: single-article
+    language: pl
+    question: Jakie obowiązki mają podmioty stosujące systemy AI wysokiego ryzyka?
+    expected: {behaviour: answer, sources: [{document: ai-act-pl, article: "26"}]}
+  - id: pl-ai-serious-incident
+    kind: single-article
+    language: pl
+    question: Kiedy dostawca systemu AI wysokiego ryzyka musi zgłosić poważny incydent?
+    expected: {behaviour: answer, sources: [{document: ai-act-pl, article: "73", paragraph: "1"}]}
+  - id: pl-ai-literacy
+    kind: single-article
+    language: pl
+    question: Jakie kompetencje w zakresie AI powinien mieć personel dostawców i podmiotów stosujących?
+    expected: {behaviour: answer, sources: [{document: ai-act-pl, article: "4"}]}
+  - id: pl-gdpr-access
+    kind: single-article
+    language: pl
+    question: Do jakich informacji o przetwarzaniu swoich danych ma dostęp osoba, której dane dotyczą?
+    expected: {behaviour: answer, sources: [{document: gdpr-pl, article: "15", paragraph: "1"}]}
+  - id: pl-gdpr-portability
+    kind: single-article
+    language: pl
+    question: Na czym polega prawo do przenoszenia danych?
+    expected: {behaviour: answer, sources: [{document: gdpr-pl, article: "20", paragraph: "1"}]}
+  - id: pl-gdpr-max-fine
+    kind: single-article
+    language: pl
+    question: Jaka jest najwyższa administracyjna kara pieniężna za naruszenie podstawowych zasad przetwarzania?
+    expected: {behaviour: answer, sources: [{document: gdpr-pl, article: "83", paragraph: "5"}]}
+
+  # Across languages. The corpus holds both language versions of each act, so the same article
+  # in either language is a correct source; what these cases test is that a question finds the
+  # article although its wording differs from the text in the other language (version 2).
+  - id: x-pl-to-en-annex-iii
+    kind: cross-language
+    language: pl
+    question: Które systemy AI z załącznika III uznaje się za systemy wysokiego ryzyka?
+    expected: {behaviour: answer, sources: [{document: ai-act-en, article: "6", paragraph: "2"}, {document: ai-act-pl, article: "6", paragraph: "2"}]}
+  - id: x-pl-to-en-breach
+    kind: cross-language
+    language: pl
+    question: W jakim terminie administrator zgłasza naruszenie ochrony danych osobowych organowi nadzorczemu?
+    expected: {behaviour: answer, sources: [{document: gdpr-en, article: "33", paragraph: "1"}, {document: gdpr-pl, article: "33", paragraph: "1"}]}
+  - id: x-en-to-pl-prohibited
+    kind: cross-language
+    language: en
+    question: Which AI practices are prohibited under the AI Act?
+    expected: {behaviour: answer, sources: [{document: ai-act-pl, article: "5", paragraph: "1"}, {document: ai-act-en, article: "5", paragraph: "1"}]}
+  - id: x-en-to-pl-erasure
+    kind: cross-language
+    language: en
+    question: What is the right to erasure of personal data?
+    expected: {behaviour: answer, sources: [{document: gdpr-pl, article: "17", paragraph: "1"}, {document: gdpr-en, article: "17", paragraph: "1"}]}
+
+  # Exact references.
+  - id: ref-annex-iii
+    kind: exact-reference
+    language: en
+    question: What does Annex III of the AI Act list?
+    expected: {behaviour: answer, sources: [{document: ai-act-en, heading: High-risk AI systems referred to in Article 6(2)}]}
+  - id: ref-article-50
+    kind: exact-reference
+    language: en
+    question: What does Article 50 of the AI Act require?
+    expected: {behaviour: answer, sources: [{document: ai-act-en, article: "50"}]}
+  - id: ref-article-83
+    kind: exact-reference
+    language: en
+    question: What does Article 83 of the GDPR set out?
+    expected: {behaviour: answer, sources: [{document: gdpr-en, article: "83"}]}
+
+  # Questions spanning articles: any of the expected sources counts.
+  - id: span-providers-and-deployers
+    kind: spans-articles
+    language: en
+    question: What must providers and deployers of high-risk AI systems each do?
+    expected: {behaviour: answer, sources: [{document: ai-act-en, article: "16"}, {document: ai-act-en, article: "26"}]}
+  - id: span-access-and-rectification
+    kind: spans-articles
+    language: en
+    question: Which rights does a data subject have to access and to rectify personal data?
+    expected: {behaviour: answer, sources: [{document: gdpr-en, article: "15"}, {document: gdpr-en, article: "16"}]}
+
+  # Out of scope: nothing in the corpus answers them.
+  - id: oos-pasta
+    kind: out-of-scope
+    language: en
+    question: How long should pasta boil?
+    expected: {behaviour: refuse, sources: []}
+  - id: oos-weather-krakow
+    kind: out-of-scope
+    language: pl
+    question: Jaka będzie jutro pogoda w Krakowie?
+    expected: {behaviour: refuse, sources: []}
+  - id: oos-world-cup
+    kind: out-of-scope
+    language: en
+    question: Who won the 2018 football World Cup?
+    expected: {behaviour: refuse, sources: []}

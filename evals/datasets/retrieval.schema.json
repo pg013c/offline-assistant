@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Retrieval evaluation case (TEST-20)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "kind", "language", "question", "expected"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+    "kind": {
+      "enum": ["single-article", "cross-language", "exact-reference", "spans-articles", "out-of-scope"]
+    },
+    "language": { "enum": ["en", "pl"] },
+    "question": { "type": "string", "minLength": 3 },
+    "expected": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["behaviour", "sources"],
+      "properties": {
+        "behaviour": { "enum": ["answer", "refuse"] },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["document"],
+            "properties": {
+              "document": { "enum": ["ai-act-en", "ai-act-pl", "gdpr-en", "gdpr-pl"] },
+              "article": { "type": "string", "pattern": "^[0-9]+[a-z]?$" },
+              "paragraph": { "type": "string", "pattern": "^[0-9]+[a-z]?$" },
+              "heading": { "type": "string", "minLength": 3 }
+            },
+            "oneOf": [{ "required": ["article"] }, { "required": ["heading"] }],
+            "dependentRequired": { "paragraph": ["article"] }
+          }
+        }
+      },
+      "if": { "properties": { "behaviour": { "const": "refuse" } } },
+      "then": { "properties": { "sources": { "maxItems": 0 } } },
+      "else": { "properties": { "sources": { "minItems": 1 } } }
+    }
+  }
+}

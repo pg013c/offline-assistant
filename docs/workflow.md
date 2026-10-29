@@ -16,7 +16,7 @@ The process has one aim: every change should be easy to trust. That means a writ
 | `features/F-xx-*/spec.md` | What one feature must do, acceptance criteria | Before implementation; frozen once approved |
 | `features/F-xx-*/plan.md` | How the feature is built, step by step | Before implementation; steps ticked off during it |
 | `features/F-xx-*/review.md` | Review findings and their resolution | During review |
-| [evals/](evals/) | Published evaluation results | After an evaluation run that changes a baseline |
+| [evals/](evals/) | Published evaluation results and the baseline `make eval` gates against | After an evaluation run that changes a baseline |
 
 Order at the start of the project: PRD → architecture → foundational ADRs → standards → backlog. After that, ADRs are written when a decision comes up, not in advance.
 
