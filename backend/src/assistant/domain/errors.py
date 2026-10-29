@@ -6,7 +6,7 @@ class DocumentRejected(Exception):
 
 
 class UnsupportedFileType(DocumentRejected):
-    """Only plain text and Markdown are accepted (F-01)."""
+    """The file is not one of the accepted types: PDF, DOCX, PNG, JPG, text or Markdown."""
 
 
 class FileTooLarge(DocumentRejected):

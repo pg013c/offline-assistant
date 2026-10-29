@@ -23,7 +23,7 @@ from assistant.ports.chat_model import ChatModel
 from assistant.ports.document_parser import DocumentParser
 from assistant.services.documents import DocumentService
 from assistant.services.questions import QuestionService
-from assistant.settings import Settings, load_settings
+from assistant.settings import Settings, SettingsError, load_settings
 
 API_PREFIX = "/api"
 
@@ -34,8 +34,11 @@ CHAT_MODELS: dict[str, type[ChatModel]] = {"fake-extractive": FakeExtractiveChat
 def document_parser_for(settings: Settings) -> DocumentParser:
     """Text only, or Docling for everything else; Docling fails here if its models are missing."""
     text = TextDocumentParser()
-    if settings.document_parser == "text-only" or settings.models_dir is None:
+    if settings.document_parser == "text-only":
         return text
+    if settings.models_dir is None:
+        # Settings validation rejects this; fail rather than quietly read text only.
+        raise SettingsError("ASSISTANT_MODELS_DIR is required by the Docling document parser")
     DoclingDocumentParser.ensure_ready(settings.models_dir)
     return RoutingDocumentParser(text=text, rich=DoclingDocumentParser(settings.models_dir))
 
