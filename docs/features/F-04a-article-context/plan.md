@@ -93,7 +93,7 @@
   - `test_qdrant_chunk_index.py`: the collection name ends in `-v2`;
   - the F-02 snapshot (`test_docling_parser.py`) is re-checked, and updated in a commit of its own if the new chunking moves any id (AC-6).
 - Change: `adapters/qdrant_chunk_index.py`, `adapters/fakes/chunk_index.py`.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 5. Measure and record
