@@ -96,7 +96,7 @@
 - Kind: code
 - Tests first: `tests/unit/services/test_question_service.py`: the citation has the cited chunk's location.
 - Change: `domain/answers.py`, `services/questions.py`.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 8. Docling parser and fixtures

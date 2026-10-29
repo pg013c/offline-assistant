@@ -122,3 +122,17 @@ def test_without_a_shared_word_no_relevant_passage_is_reported(
 
     assert not any(isinstance(event, AnswerCitation) for event in events)
     assert events[-1] == AnswerEnd(model_id="fake-extractive", found=False, is_test_model=True)
+
+
+def test_citations_carry_the_location_of_their_chunk(
+    services: tuple[DocumentService, QuestionService], store: FakeDocumentStore
+) -> None:
+    documents, questions = services
+    document = documents.upload("policy.md", b"# Logs\n\n" + POLICY)
+
+    events = ask(questions, "Who may inspect the logs?")
+
+    [citation] = [event.citation for event in events if isinstance(event, AnswerCitation)]
+    cited = next(chunk for chunk in store.load_chunks(document.id) if chunk.id == citation.chunk_id)
+    assert citation.location == cited.location
+    assert citation.location.heading_path == ("Logs",)
