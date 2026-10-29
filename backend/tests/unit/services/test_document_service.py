@@ -1,4 +1,4 @@
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 
 import pytest
 
@@ -361,3 +361,61 @@ def test_restore_adds_only_missing_documents_and_drops_deleted_ones(
 
     assert index.document_ids() == {indexed.id, missing.id}
     assert set(index.added) == {missing.id}
+
+
+class ParserThatActsMidway:
+    """Runs an action, as another request would, while the document is being parsed."""
+
+    def __init__(self) -> None:
+        self.during_parse: list[Callable[[], object]] = []
+        self.calls = 0
+
+    def parse(self, filename: str, content: bytes) -> ParsedDocument:
+        self.calls += 1
+        if self.during_parse:
+            self.during_parse.pop(0)()
+        return PARSED
+
+
+def test_a_document_deleted_while_it_is_parsed_stays_deleted(
+    store: FakeDocumentStore, index: InMemoryChunkIndex, queue: FakeIngestionQueue
+) -> None:
+    parser = ParserThatActsMidway()
+    service = DocumentService(store, index, parser, queue)
+    document = service.upload("policy.pdf", PDF)
+    parser.during_parse.append(lambda: service.delete(document.id))
+
+    queue.run_all()
+
+    assert store.get(document.id) is None
+    assert store.load_chunks(document.id) == []
+    assert index.document_ids() == set()
+
+
+def test_a_document_reindexed_while_it_is_parsed_is_parsed_again_and_indexed_once(
+    store: FakeDocumentStore, index: InMemoryChunkIndex, queue: FakeIngestionQueue
+) -> None:
+    parser = ParserThatActsMidway()
+    service = DocumentService(store, index, parser, queue)
+    document = service.upload("policy.pdf", PDF)
+    parser.during_parse.append(lambda: service.reindex(document.id))
+
+    queue.run_all()
+
+    ready = store.get(document.id)
+    assert ready is not None
+    assert ready.status == "ready"
+    assert parser.calls == 2
+    assert len(index.search("inspect", limit=10)) == 1
+
+
+def test_a_deleted_document_is_not_written_back_as_failed(
+    store: FakeDocumentStore, index: InMemoryChunkIndex, queue: FakeIngestionQueue
+) -> None:
+    service = DocumentService(store, index, BrokenParser(), queue)
+    document = service.upload("policy.pdf", PDF)
+    service.delete(document.id)
+
+    queue.run_all()
+
+    assert store.get(document.id) is None
