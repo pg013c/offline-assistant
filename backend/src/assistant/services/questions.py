@@ -1,3 +1,4 @@
+import asyncio
 from collections.abc import AsyncIterator
 
 from assistant.domain.answers import (
@@ -35,11 +36,9 @@ class QuestionService:
 
     async def ask(self, question: str) -> AsyncIterator[AnswerEvent]:
         """Text pieces, then citations, then an end event; or a no-passage notice."""
-        results = [
-            result
-            for result in self._index.search(question, limit=PASSAGES_PER_ANSWER)
-            if result.similarity >= self._min_similarity
-        ]
+        # Embedding the question and querying the index block; keep them off the event loop.
+        found = await asyncio.to_thread(self._index.search, question, PASSAGES_PER_ANSWER)
+        results = [result for result in found if result.similarity >= self._min_similarity]
         if not results:
             yield AnswerText(text=NO_RELEVANT_PASSAGE)
             yield AnswerEnd(

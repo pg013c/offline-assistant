@@ -1,5 +1,6 @@
 """Composition root: the only module that wires adapters into services (ADR 0002)."""
 
+import asyncio
 import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -102,12 +103,17 @@ def create_app(settings: Settings, adapters: Adapters | None = None) -> FastAPI:
         adapters.index, adapters.chat_model, adapters.store, settings.min_similarity
     )
 
+    async def restore() -> None:
+        # Refilling an empty index embeds every stored chunk; the API answers meanwhile.
+        restored = await asyncio.to_thread(document_service.restore)
+        structlog.get_logger(__name__).info("documents_restored", count=restored)
+
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-        restored = document_service.restore()
-        structlog.get_logger(__name__).info("documents_restored", count=restored)
+        restoring = asyncio.create_task(restore())
         yield
         adapters.queue.close()
+        await restoring
 
     app = FastAPI(
         lifespan=lifespan,
