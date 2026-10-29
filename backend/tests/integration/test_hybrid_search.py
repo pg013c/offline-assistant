@@ -76,9 +76,11 @@ def test_an_english_question_finds_article_6_of_the_polish_text(polish: QdrantCh
 
 
 def test_an_exact_term_ranks_a_chunk_containing_it_first(english: QdrantChunkIndex) -> None:
-    [first, *_] = english.search("Which AI systems does Annex III refer to?", limit=3)
+    first, *others = english.search("Which AI systems does Annex III refer to?", limit=3)
 
     assert "Annex III" in first.chunk.text
+    # It wins through the keyword half: another chunk is closer in meaning (AC-3).
+    assert any(other.similarity > first.similarity for other in others)
 
 
 @pytest.mark.parametrize("question", ["How long should pasta boil?", "Jak długo gotować makaron?"])
