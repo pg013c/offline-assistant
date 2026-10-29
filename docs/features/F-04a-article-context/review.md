@@ -12,15 +12,15 @@ Severity: **blocker** (must fix before merge), **major** (should fix in this fea
 
 | # | Severity | Where | Finding | Standard | Decision |
 |---|---|---|---|---|---|
-| 1 | major | `domain/documents.py:194-199`, `:238-244` | A title-like paragraph becomes a title even when no content follows it under its heading. Followed by another heading, it disappears from the index: "Main Street 5, 00-001 Warsaw" under "Address" yields no chunk. A Markdown file with one heading and one short line yields no chunks at all and would fail. | FR-03, AC-2 | |
-| 2 | major | `tests/unit/services/test_document_service.py:542-553` | The test that documents of the current chunker are not parsed again cannot fail: the parser's assertion is caught by the service, and the only check holds either way. | TEST-01, AC-3 | |
-| 3 | minor | `plan.md` steps 4a and 5, `spec.md` | The annex rule (chunker version 3) was added after the first measurement failed AC-4. The human approved it in the session, but the decision is not recorded in the repository, and the spec's scope and decisions do not mention annexes. | workflow | |
-| 4 | minor | `test_document_service.py:518-539` | The re-parse test feeds the same blocks before and after, so it would pass even if stale stored chunks were re-indexed under the new version; "chunk ids follow the new chunking" is not tested. | AC-3 | |
-| 5 | minor | `domain/documents.py:157-161` | The case of an annex label directly after an article heading (it must not become the article's title) is not tested. | TEST-09 | |
-| 6 | minor | `docs/evals/2026-10-29-retrieval-baseline.md:3, :48` | The superseded F-04 record still calls itself the baseline `make eval` gates against. | – | |
-| 7 | note | `docs/evals/2026-10-29-retrieval-article-context.md:32`, `docs/architecture.md` | The out-of-scope similarity figures (0.38, 0.33) are not in any result file, and architecture.md still says 0.33. | AI-61 | |
-| 8 | note | `spec.md` | Acceptance criteria are not ticked and the mapping to proofs is only in the plan (done at ship time). | TEST-09 | |
-| 9 | note | `docs/evals/retrieval-baseline.json` `expected` | Several expected chunk ids shifted because title chunks were removed, and the unchanged F-02 snapshot re-check is not stated anywhere. | AC-6 | |
+| 1 | major | `domain/documents.py:194-199`, `:238-244` | A title-like paragraph becomes a title even when no content follows it under its heading. Followed by another heading, it disappears from the index: "Main Street 5, 00-001 Warsaw" under "Address" yields no chunk. A Markdown file with one heading and one short line yields no chunks at all and would fail. | FR-03, AC-2 | fix: a paragraph is a title only when content or the section's first article or annex follows it; otherwise it stays a chunk. Re-measure. |
+| 2 | major | `tests/unit/services/test_document_service.py:542-553` | The test that documents of the current chunker are not parsed again cannot fail: the parser's assertion is caught by the service, and the only check holds either way. | TEST-01, AC-3 | fix |
+| 3 | minor | `plan.md` steps 4a and 5, `spec.md` | The annex rule (chunker version 3) was added after the first measurement failed AC-4. The human approved it in the session, but the decision is not recorded in the repository, and the spec's scope and decisions do not mention annexes. | workflow | fix |
+| 4 | minor | `test_document_service.py:518-539` | The re-parse test feeds the same blocks before and after, so it would pass even if stale stored chunks were re-indexed under the new version; "chunk ids follow the new chunking" is not tested. | AC-3 | fix |
+| 5 | minor | `domain/documents.py:157-161` | The case of an annex label directly after an article heading (it must not become the article's title) is not tested. | TEST-09 | fix |
+| 6 | minor | `docs/evals/2026-10-29-retrieval-baseline.md:3, :48` | The superseded F-04 record still calls itself the baseline `make eval` gates against. | – | fix |
+| 7 | note | `docs/evals/2026-10-29-retrieval-article-context.md:32`, `docs/architecture.md` | The out-of-scope similarity figures (0.38, 0.33) are not in any result file, and architecture.md still says 0.33. | AI-61 | fix: state where the figures come from and correct architecture.md; recording the top out-of-scope similarity as a metric goes to F-05, which measures the threshold |
+| 8 | note | `spec.md` | Acceptance criteria are not ticked and the mapping to proofs is only in the plan (done at ship time). | TEST-09 | reject: `/ship` ticks the criteria with their proofs by design |
+| 9 | note | `docs/evals/retrieval-baseline.json` `expected` | Several expected chunk ids shifted because title chunks were removed, and the unchanged F-02 snapshot re-check is not stated anywhere. | AC-6 | fix |
 
 Decision is filled in by the human: `fix`, `backlog (F-xx)`, or `reject: <reason>`.
 
