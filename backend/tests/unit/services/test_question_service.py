@@ -15,7 +15,7 @@ from assistant.domain.answers import (
     AnswerEvent,
     AnswerText,
 )
-from assistant.domain.documents import Chunk
+from assistant.domain.documents import Chunk, Document
 from assistant.ports.chunk_index import ScoredChunk
 from assistant.services.documents import DocumentService
 from assistant.services.questions import QuestionService
@@ -228,3 +228,29 @@ def test_a_relevant_passage_ranked_below_three_weak_ones_is_still_cited() -> Non
 
     [citation] = [event.citation for event in events if isinstance(event, AnswerCitation)]
     assert citation.chunk_id == "doc:3"
+
+
+def test_search_returns_passages_best_first_with_titles_and_similarity() -> None:
+    store = FakeDocumentStore()
+    store.save_upload(
+        Document(id="doc", title="AI Act", filename="ai-act.pdf", chunk_count=2, status="ready"),
+        b"%PDF",
+    )
+    index = FixedIndex([hit(1, "Providers keep logs.", 0.7), hit(0, "Unrelated text.", 0.2)])
+    questions = QuestionService(index, FakeExtractiveChatModel(), store, 0.5)
+
+    found = asyncio.run(questions.search("Do providers keep logs?", limit=2))
+
+    assert [(p.chunk.id, p.document_title, p.similarity) for p in found] == [
+        ("doc:1", "AI Act", 0.7),
+        ("doc:0", "AI Act", 0.2),
+    ]
+
+
+def test_search_honours_the_limit() -> None:
+    index = FixedIndex([hit(n, f"Passage {n}.", 0.9 - n / 10) for n in range(5)])
+    questions = QuestionService(index, FakeExtractiveChatModel(), FakeDocumentStore(), 0.5)
+
+    found = asyncio.run(questions.search("Passage?", limit=3))
+
+    assert [p.chunk.id for p in found] == ["doc:0", "doc:1", "doc:2"]

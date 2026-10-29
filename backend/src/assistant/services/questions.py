@@ -1,5 +1,6 @@
 import asyncio
 from collections.abc import AsyncIterator
+from dataclasses import dataclass
 
 from assistant.domain.answers import (
     NO_RELEVANT_PASSAGE,
@@ -10,6 +11,7 @@ from assistant.domain.answers import (
     Citation,
     quote_from,
 )
+from assistant.domain.documents import Chunk
 from assistant.ports.chat_model import ChatModel
 from assistant.ports.chunk_index import ChunkIndex
 from assistant.ports.document_store import DocumentStore
@@ -17,6 +19,15 @@ from assistant.ports.document_store import DocumentStore
 PASSAGES_PER_ANSWER = 3
 # Candidates fetched before the similarity filter, so weak hits do not crowd out good ones.
 CANDIDATES = 10
+
+
+@dataclass(frozen=True, slots=True)
+class FoundPassage:
+    """A passage found for a query, with its document's title."""
+
+    chunk: Chunk
+    document_title: str
+    similarity: float
 
 
 class QuestionService:
@@ -38,6 +49,10 @@ class QuestionService:
         self._index = index
         self._model = model
         self._store = store
+
+    async def search(self, query: str, limit: int) -> list[FoundPassage]:
+        """The index's best passages for the query, best first, without any threshold."""
+        raise NotImplementedError
 
     async def ask(self, question: str) -> AsyncIterator[AnswerEvent]:
         """Text pieces, then citations, then an end event; or a no-passage notice."""
