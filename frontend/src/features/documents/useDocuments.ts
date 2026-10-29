@@ -6,10 +6,16 @@ import type { components } from '../../api/schema'
 export type DocumentSummary = components['schemas']['DocumentResponse']
 
 const DOCUMENTS_KEY = ['documents'] as const
+const POLL_INTERVAL_MS = 2000
 
-export function useDocuments() {
+/** The document list; it refreshes while any document is still being parsed. */
+export function useDocuments(pollIntervalMs: number = POLL_INTERVAL_MS) {
   return useQuery({
     queryKey: DOCUMENTS_KEY,
+    refetchInterval: (query) =>
+      query.state.data?.some((document) => document.status === 'processing')
+        ? pollIntervalMs
+        : false,
     queryFn: async (): Promise<DocumentSummary[]> => {
       const { data, response } = await apiClient.GET('/api/documents')
       if (data === undefined) {

@@ -1,15 +1,31 @@
 import type { ChangeEvent, JSX } from 'react'
 
-import { useDocuments, useUploadDocument } from './useDocuments'
+import { type DocumentSummary, useDocuments, useUploadDocument } from './useDocuments'
 
 interface DocumentPanelProps {
   /** How often the list refreshes while a document is processing. */
   pollIntervalMs?: number
 }
 
-export function DocumentPanel(props: DocumentPanelProps = {}): JSX.Element {
-  console.debug('not implemented', props.pollIntervalMs)
-  const documents = useDocuments()
+// Extensions and media types the API accepts (F-02).
+const ACCEPTED_FILES = [
+  '.pdf',
+  '.docx',
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.txt',
+  '.md',
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'image/png',
+  'image/jpeg',
+  'text/plain',
+  'text/markdown',
+].join(',')
+
+export function DocumentPanel({ pollIntervalMs }: DocumentPanelProps = {}): JSX.Element {
+  const documents = useDocuments(pollIntervalMs)
   const upload = useUploadDocument()
 
   function onFileChosen(event: ChangeEvent<HTMLInputElement>) {
@@ -27,10 +43,10 @@ export function DocumentPanel(props: DocumentPanelProps = {}): JSX.Element {
       </h2>
 
       <label className="flex flex-col gap-1 text-sm">
-        <span>Upload a document (.txt or .md)</span>
+        <span>Upload a document (PDF, Word, image or text)</span>
         <input
           type="file"
-          accept=".txt,.md,text/plain,text/markdown"
+          accept={ACCEPTED_FILES}
           onChange={onFileChosen}
           disabled={upload.isPending}
           className="text-sm"
@@ -56,13 +72,34 @@ export function DocumentPanel(props: DocumentPanelProps = {}): JSX.Element {
           {documents.data.map((document) => (
             <li key={document.id} className="rounded border border-gray-200 px-3 py-2">
               <p className="text-sm font-medium">{document.title}</p>
-              <p className="text-xs text-gray-500">
-                {document.filename} · {document.chunk_count} passages
-              </p>
+              <DocumentStatus document={document} />
             </li>
           ))}
         </ul>
       )}
     </section>
   )
+}
+
+function DocumentStatus({ document }: { document: DocumentSummary }): JSX.Element {
+  switch (document.status) {
+    case 'processing':
+      return <p className="text-xs text-gray-500">{document.filename} · Processing…</p>
+    case 'failed':
+      return (
+        <p className="text-xs text-red-700">
+          Could not be read: {document.failure_reason ?? 'unknown reason'}
+        </p>
+      )
+    case 'ready':
+      return (
+        <p className="text-xs text-gray-500">
+          {[
+            document.filename,
+            `${String(document.chunk_count)} passages`,
+            ...(document.page_count === null ? [] : [`${String(document.page_count)} pages`]),
+          ].join(' · ')}
+        </p>
+      )
+  }
 }
