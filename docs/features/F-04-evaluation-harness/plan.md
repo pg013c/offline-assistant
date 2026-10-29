@@ -121,7 +121,7 @@ Two projects side by side, apart from the backend and the frontend:
   - at least three cases are out of scope, and they expect `refuse` with no sources.
 - Done when: the cases are reviewed against the corpus text; step 7 also checks that every source resolves.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 5. Metrics and regression gate
 
