@@ -26,13 +26,15 @@ import yaml
 from harness.corpus import CorpusDocument, documents, sha256
 from harness.dataset import load_cases
 from harness.gate import check
-from harness.metrics import CaseResult, compute
+from harness.metrics import CaseResult, compute, latency, top_out_of_scope_similarity
 from harness.promptfoo import command_line, environment, hits_by_case
-from harness.report import build_report, markdown
+from harness.report import ModeResult, build_report, markdown
 from harness.resolve import ChunkRef, resolve
 
 ROOT = Path(__file__).parents[2]
 PROMPTFOO_CONFIG = ROOT / "evals" / "promptfoo" / "retrieval.yaml"
+# The mode the API runs by default; the gate compares it with the baseline.
+GATED_MODE = "reranked"
 BASELINE = ROOT / "docs" / "evals" / "retrieval-baseline.json"
 STARTUP_SECONDS = 180
 INGESTION_SECONDS = 1800
@@ -104,7 +106,8 @@ def run(config: RunConfig) -> Outcome:
         "corpus": corpus,
         "indexing_seconds": indexing_seconds,
     }
-    report = build_report(metrics, metadata, config.threshold, expected)
+    gated = ModeResult(metrics, latency([]), top_out_of_scope_similarity(results))
+    report = build_report({GATED_MODE: gated}, GATED_MODE, metadata, config.threshold, expected)
     baseline = (
         json.loads(config.baseline.read_text(encoding="utf-8"))["metrics"]
         if config.baseline.exists()

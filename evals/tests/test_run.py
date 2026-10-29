@@ -14,7 +14,7 @@ import httpx
 import pytest
 
 from harness.corpus import documents
-from harness.run import RunConfig, run
+from harness.run import GATED_MODE, RunConfig, run
 
 pytestmark = pytest.mark.integration
 
@@ -91,6 +91,12 @@ def test_a_run_indexes_the_corpus_scores_the_cases_and_writes_a_report(config: R
     assert report["metrics"]["recall@3"]["cases"] == 2
     assert report["metrics"]["out_of_scope_refused"]["cases"] == 1
     assert outcome.report_markdown.read_text(encoding="utf-8").startswith("| Metric |")
+    assert report["gated_mode"] == GATED_MODE == "reranked"
+    assert set(report["modes"]) == {"reranked", "hybrid"}
+    for mode in report["modes"].values():
+        assert mode["metrics"]["recall@3"]["cases"] == 2
+        assert mode["latency_ms"]["median"] > 0
+        assert mode["out_of_scope_top_similarity"] is not None
     assert outcome.gate_failures == []
     # The API it started is gone, and no other collection was touched.
     with socket.socket() as probe:

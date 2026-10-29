@@ -2,6 +2,7 @@
 
 import json
 from collections.abc import Mapping
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +21,14 @@ class PromptfooError(Exception):
 
 
 EVALS_PROJECT = Path(__file__).parents[1]
+# Provider labels in the suite: search with the reranker and without it (F-05).
+MODES = ("reranked", "hybrid")
+
+
+@dataclass(frozen=True)
+class Response:
+    hits: tuple[Hit, ...]
+    latency_ms: float
 
 
 def command_line(pnpm: Path, suite: Path, tests: Path, output: Path) -> list[str]:
@@ -65,3 +74,8 @@ def hits_by_case(results: Mapping[str, Any]) -> dict[str, tuple[Hit, ...]]:
             for passage in passages
         )
     return found
+
+
+def responses_by_mode(results: Mapping[str, Any]) -> dict[str, dict[str, Response]]:
+    """Ranked hits and latency per mode and case id, from Promptfoo's JSON output."""
+    raise NotImplementedError

@@ -1,6 +1,14 @@
 import pytest
 
-from harness.metrics import CaseResult, Hit, compute, first_rank
+from harness.metrics import (
+    CaseResult,
+    Hit,
+    Latency,
+    compute,
+    first_rank,
+    latency,
+    top_out_of_scope_similarity,
+)
 
 
 def result(
@@ -86,3 +94,28 @@ def test_in_scope_cases_below_the_threshold_are_listed_as_missed() -> None:
     metrics = compute(results, threshold=0.5)
 
     assert metrics.missed == {"weak-but-first": "best hit 0.40 is below the threshold 0.50"}
+
+
+def test_latency_has_a_median_and_a_95th_percentile() -> None:
+    values = [float(n) for n in range(10, 210, 10)]  # 10 .. 200, 20 values
+
+    assert latency(values) == Latency(median_ms=105.0, p95_ms=190.0)
+
+
+def test_latency_of_no_requests_is_unknown() -> None:
+    assert latency([]) == Latency(median_ms=None, p95_ms=None)
+
+
+def test_the_top_out_of_scope_similarity_is_the_best_hit_of_any_refuse_case() -> None:
+    results = [
+        CaseResult("in", "answer", frozenset({"d:1"}), (Hit("d:1", 0.9),)),
+        CaseResult("oos-a", "refuse", frozenset(), (Hit("d:2", 0.31), Hit("d:3", 0.12))),
+        CaseResult("oos-b", "refuse", frozenset(), (Hit("d:4", 0.38),)),
+        CaseResult("oos-c", "refuse", frozenset(), ()),
+    ]
+
+    assert top_out_of_scope_similarity(results) == 0.38
+
+
+def test_without_out_of_scope_hits_the_top_similarity_is_unknown() -> None:
+    assert top_out_of_scope_similarity([]) is None

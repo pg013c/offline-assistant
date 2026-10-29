@@ -34,6 +34,12 @@ class Metrics:
         return self.by_name[name]
 
 
+@dataclass(frozen=True)
+class Latency:
+    median_ms: float | None
+    p95_ms: float | None
+
+
 RECALL_AT = (3, 10)
 # A found passage counts as missed below this rank (the answer uses three passages).
 CITED_PASSAGES = 3
@@ -100,3 +106,13 @@ def compute(results: Sequence[CaseResult], threshold: float) -> Metrics:
 
 def _share(count: int, total: int) -> Metric:
     return Metric(value=count / total if total else None, cases=total)
+
+
+def latency(values_ms: Sequence[float]) -> Latency:
+    """Median and 95th percentile (nearest rank) of request latencies."""
+    raise NotImplementedError
+
+
+def top_out_of_scope_similarity(results: Sequence[CaseResult]) -> float | None:
+    """The best similarity any out-of-scope case reached: the margin below the threshold."""
+    raise NotImplementedError

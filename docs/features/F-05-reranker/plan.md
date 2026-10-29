@@ -163,7 +163,7 @@
     - the Markdown shows both modes side by side.
   - **Gate:** it reads only the gated mode's metrics.
 - Change: `evals/promptfoo/retrieval.yaml`, `evals/harness/{promptfoo,metrics,report,run}.py`.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 6. Measure and record
