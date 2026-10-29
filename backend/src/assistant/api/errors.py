@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 
 from assistant.api.schemas import ErrorDetail, ErrorResponse
 from assistant.domain.errors import (
+    DocumentNotFound,
     DocumentRejected,
     FileTooLarge,
     NotUtf8Text,
@@ -36,6 +37,11 @@ async def _document_rejected(_: Request, error: Exception) -> JSONResponse:
     return JSONResponse(status_code=status_code, content=body.model_dump())
 
 
+async def _document_not_found(_: Request, error: Exception) -> JSONResponse:
+    body = ErrorResponse(code="document_not_found", message=f"No document has the id {error}.")
+    return JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content=body.model_dump())
+
+
 async def _invalid_request(_: Request, error: Exception) -> JSONResponse:
     issues = error.errors() if isinstance(error, RequestValidationError) else []
     body = ErrorResponse(
@@ -57,4 +63,5 @@ async def _invalid_request(_: Request, error: Exception) -> JSONResponse:
 def register_error_handlers(app: FastAPI) -> None:
     """Install the handlers for every error the API can report."""
     app.add_exception_handler(DocumentRejected, _document_rejected)
+    app.add_exception_handler(DocumentNotFound, _document_not_found)
     app.add_exception_handler(RequestValidationError, _invalid_request)

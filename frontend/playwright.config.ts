@@ -33,7 +33,13 @@ export default defineConfig({
     {
       command: `uv run --directory ../backend uvicorn assistant.app:main --factory --port ${API_PORT}`,
       url: `http://127.0.0.1:${API_PORT}/api/health`,
-      env: { ASSISTANT_DATA_DIR: DATA_DIR, ASSISTANT_MODELS_DIR: MODELS_DIR },
+      env: {
+        ASSISTANT_DATA_DIR: DATA_DIR,
+        ASSISTANT_MODELS_DIR: MODELS_DIR,
+        // A collection of its own: restore on the empty data directory clears it, and must not
+        // clear the one `make dev` uses.
+        ASSISTANT_QDRANT_COLLECTION_PREFIX: 'e2e',
+      },
       reuseExistingServer: false,
     },
     {

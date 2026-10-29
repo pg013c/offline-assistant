@@ -1,8 +1,10 @@
 """Composition root: the only module that wires adapters into services (ADR 0002)."""
 
+import asyncio
 import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
 
 import structlog
 from fastapi import FastAPI
@@ -11,19 +13,26 @@ from fastapi.routing import APIRoute
 from assistant import __version__
 from assistant.adapters.docling_parser import DoclingDocumentParser
 from assistant.adapters.fakes.chat_model import FakeExtractiveChatModel
+from assistant.adapters.fakes.chunk_index import InMemoryChunkIndex
+from assistant.adapters.fakes.document_store import FakeDocumentStore
+from assistant.adapters.fakes.ingestion_queue import InlineIngestionQueue
 from assistant.adapters.file_document_store import LocalFileDocumentStore
-from assistant.adapters.keyword_index import KeywordChunkIndex
+from assistant.adapters.qdrant_chunk_index import QdrantChunkIndex
 from assistant.adapters.routing_parser import RoutingDocumentParser
+from assistant.adapters.sentence_transformer_embedder import SentenceTransformerEmbedder
 from assistant.adapters.text_document_parser import TextDocumentParser
 from assistant.adapters.thread_ingestion_queue import ThreadIngestionQueue
 from assistant.api.errors import register_error_handlers
 from assistant.api.routes import chat, documents, health
 from assistant.log import configure_logging
 from assistant.ports.chat_model import ChatModel
+from assistant.ports.chunk_index import ChunkIndex
 from assistant.ports.document_parser import DocumentParser
+from assistant.ports.document_store import DocumentStore
+from assistant.ports.ingestion_queue import IngestionQueue
 from assistant.services.documents import DocumentService
 from assistant.services.questions import QuestionService
-from assistant.settings import Settings, SettingsError, load_settings
+from assistant.settings import Settings, load_settings
 
 API_PREFIX = "/api"
 
@@ -36,11 +45,47 @@ def document_parser_for(settings: Settings) -> DocumentParser:
     text = TextDocumentParser()
     if settings.document_parser == "text-only":
         return text
-    if settings.models_dir is None:
-        # Settings validation rejects this; fail rather than quietly read text only.
-        raise SettingsError("ASSISTANT_MODELS_DIR is required by the Docling document parser")
     DoclingDocumentParser.ensure_ready(settings.models_dir)
     return RoutingDocumentParser(text=text, rich=DoclingDocumentParser(settings.models_dir))
+
+
+@dataclass(frozen=True)
+class Adapters:
+    """Everything the services need from outside; `build_adapters` wires the real ones."""
+
+    store: DocumentStore
+    index: ChunkIndex
+    parser: DocumentParser
+    queue: IngestionQueue
+    chat_model: ChatModel
+
+
+def build_adapters(settings: Settings) -> Adapters:
+    """The real adapters; each fails here, naming what is missing, if it cannot work."""
+    parser = document_parser_for(settings)
+    SentenceTransformerEmbedder.ensure_ready(settings.models_dir)
+    embedder = SentenceTransformerEmbedder(settings.models_dir)
+    index = QdrantChunkIndex.connect(
+        settings.qdrant_url, embedder, prefix=settings.qdrant_collection_prefix
+    )
+    return Adapters(
+        store=LocalFileDocumentStore(settings.data_dir),
+        index=index,
+        parser=parser,
+        queue=ThreadIngestionQueue(),
+        chat_model=CHAT_MODELS[settings.chat_model](),
+    )
+
+
+def schema_adapters() -> Adapters:
+    """Adapters that need nothing outside the process, for exporting the OpenAPI schema."""
+    return Adapters(
+        store=FakeDocumentStore(),
+        index=InMemoryChunkIndex(),
+        parser=TextDocumentParser(),
+        queue=InlineIngestionQueue(),
+        chat_model=FakeExtractiveChatModel(),
+    )
 
 
 def operation_id(route: APIRoute) -> str:
@@ -48,22 +93,27 @@ def operation_id(route: APIRoute) -> str:
     return route.name
 
 
-def create_app(settings: Settings) -> FastAPI:
-    """Build the HTTP application from settings."""
-    store = LocalFileDocumentStore(settings.data_dir)
-    index = KeywordChunkIndex()
-    model = CHAT_MODELS[settings.chat_model]()
-    parser = document_parser_for(settings)
-    queue = ThreadIngestionQueue()
-    document_service = DocumentService(store, index, parser, queue)
-    question_service = QuestionService(index, model, store)
+def create_app(settings: Settings, adapters: Adapters | None = None) -> FastAPI:
+    """Build the HTTP application from settings, with the real adapters unless given others."""
+    adapters = adapters or build_adapters(settings)
+    document_service = DocumentService(
+        adapters.store, adapters.index, adapters.parser, adapters.queue
+    )
+    question_service = QuestionService(
+        adapters.index, adapters.chat_model, adapters.store, settings.min_similarity
+    )
+
+    async def restore() -> None:
+        # Refilling an empty index embeds every stored chunk; the API answers meanwhile.
+        restored = await asyncio.to_thread(document_service.restore)
+        structlog.get_logger(__name__).info("documents_restored", count=restored)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-        restored = document_service.restore()
-        structlog.get_logger(__name__).info("documents_restored", count=restored)
+        restoring = asyncio.create_task(restore())
         yield
-        queue.close()
+        adapters.queue.close()
+        await restoring
 
     app = FastAPI(
         lifespan=lifespan,

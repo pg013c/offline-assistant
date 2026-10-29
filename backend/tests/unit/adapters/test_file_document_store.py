@@ -68,3 +68,13 @@ def test_metadata_without_a_status_loads_as_processing(tmp_path: Path) -> None:
 
     assert document is not None
     assert document.status == "processing"
+
+
+def test_deleting_leaves_no_file_of_the_document(tmp_path: Path) -> None:
+    store = LocalFileDocumentStore(tmp_path)
+    store.save_upload(POLICY, b"%PDF policy")
+    store.save_chunks(POLICY.id, CHUNKS)
+
+    store.delete(POLICY.id)
+
+    assert list((tmp_path / "documents").iterdir()) == []

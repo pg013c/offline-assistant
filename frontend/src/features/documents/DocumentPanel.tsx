@@ -1,6 +1,12 @@
-import type { ChangeEvent, JSX } from 'react'
+import { useState, type ChangeEvent, type JSX } from 'react'
 
-import { type DocumentSummary, useDocuments, useUploadDocument } from './useDocuments'
+import {
+  type DocumentSummary,
+  useDeleteDocument,
+  useDocuments,
+  useReindexDocument,
+  useUploadDocument,
+} from './useDocuments'
 
 interface DocumentPanelProps {
   /** How often the list refreshes while a document is processing. */
@@ -27,6 +33,9 @@ const ACCEPTED_FILES = [
 export function DocumentPanel({ pollIntervalMs }: DocumentPanelProps = {}): JSX.Element {
   const documents = useDocuments(pollIntervalMs)
   const upload = useUploadDocument()
+  const remove = useDeleteDocument()
+  const reindex = useReindexDocument()
+  const actionError = remove.error ?? reindex.error
 
   function onFileChosen(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
@@ -57,6 +66,11 @@ export function DocumentPanel({ pollIntervalMs }: DocumentPanelProps = {}): JSX.
           {upload.error.message}
         </p>
       )}
+      {actionError && (
+        <p role="alert" className="text-sm text-red-700">
+          {actionError.message}
+        </p>
+      )}
 
       {documents.isPending && <p className="text-sm text-gray-500">Loading documents…</p>}
       {documents.isError && (
@@ -73,6 +87,15 @@ export function DocumentPanel({ pollIntervalMs }: DocumentPanelProps = {}): JSX.
             <li key={document.id} className="rounded border border-gray-200 px-3 py-2">
               <p className="text-sm font-medium">{document.title}</p>
               <DocumentStatus document={document} />
+              <DocumentActions
+                document={document}
+                onDelete={() => {
+                  remove.mutate(document)
+                }}
+                onReindex={() => {
+                  reindex.mutate(document)
+                }}
+              />
             </li>
           ))}
         </ul>
@@ -102,4 +125,67 @@ function DocumentStatus({ document }: { document: DocumentSummary }): JSX.Elemen
         </p>
       )
   }
+}
+
+interface DocumentActionsProps {
+  document: DocumentSummary
+  onDelete: () => void
+  onReindex: () => void
+}
+
+/** Re-index, and delete after an inline confirmation. */
+function DocumentActions({ document, onDelete, onReindex }: DocumentActionsProps): JSX.Element {
+  const [confirming, setConfirming] = useState(false)
+  const button = 'rounded border border-gray-300 px-2 py-0.5 text-xs'
+
+  if (confirming) {
+    return (
+      <div className="mt-2 flex items-center gap-2 text-xs">
+        <span>Delete {document.title}?</span>
+        <button
+          type="button"
+          aria-label={`Confirm deleting ${document.title}`}
+          onClick={() => {
+            setConfirming(false)
+            onDelete()
+          }}
+          className={`${button} border-red-300 text-red-700`}
+        >
+          Delete
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setConfirming(false)
+          }}
+          className={button}
+        >
+          Cancel
+        </button>
+      </div>
+    )
+  }
+  return (
+    <div className="mt-2 flex gap-2">
+      <button
+        type="button"
+        aria-label={`Re-index ${document.title}`}
+        disabled={document.status === 'processing'}
+        onClick={onReindex}
+        className={button}
+      >
+        Re-index
+      </button>
+      <button
+        type="button"
+        aria-label={`Delete ${document.title}`}
+        onClick={() => {
+          setConfirming(true)
+        }}
+        className={button}
+      >
+        Delete
+      </button>
+    </div>
+  )
 }

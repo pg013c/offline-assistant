@@ -1,13 +1,14 @@
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 
 import pytest
 
+from assistant.adapters.fakes.chunk_index import InMemoryChunkIndex
 from assistant.adapters.fakes.document_parser import FakeDocumentParser
 from assistant.adapters.fakes.document_store import FakeDocumentStore
 from assistant.adapters.fakes.ingestion_queue import FakeIngestionQueue
-from assistant.adapters.keyword_index import KeywordChunkIndex
 from assistant.domain.documents import Block, Chunk, ChunkLocation, Document, ParsedDocument
 from assistant.domain.errors import (
+    DocumentNotFound,
     DocumentUnreadable,
     FileTooLarge,
     NotUtf8Text,
@@ -42,8 +43,8 @@ def store() -> FakeDocumentStore:
 
 
 @pytest.fixture
-def index() -> KeywordChunkIndex:
-    return KeywordChunkIndex()
+def index() -> InMemoryChunkIndex:
+    return InMemoryChunkIndex()
 
 
 @pytest.fixture
@@ -53,7 +54,7 @@ def queue() -> FakeIngestionQueue:
 
 @pytest.fixture
 def service(
-    store: FakeDocumentStore, index: KeywordChunkIndex, queue: FakeIngestionQueue
+    store: FakeDocumentStore, index: InMemoryChunkIndex, queue: FakeIngestionQueue
 ) -> DocumentService:
     parser = FakeDocumentParser(PARSED, unreadable={"locked.pdf": "The PDF is password-protected."})
     return DocumentService(store, index, parser, queue)
@@ -77,7 +78,7 @@ def test_upload_stores_the_file_and_returns_it_as_processing(
 def test_ingestion_makes_the_document_ready_and_searchable(
     service: DocumentService,
     store: FakeDocumentStore,
-    index: KeywordChunkIndex,
+    index: InMemoryChunkIndex,
     queue: FakeIngestionQueue,
 ) -> None:
     document = service.upload("AI Act.pdf", PDF)
@@ -100,7 +101,7 @@ def test_ingestion_makes_the_document_ready_and_searchable(
 def test_an_unreadable_file_fails_with_its_reason_and_nothing_is_searchable(
     service: DocumentService,
     store: FakeDocumentStore,
-    index: KeywordChunkIndex,
+    index: InMemoryChunkIndex,
     queue: FakeIngestionQueue,
 ) -> None:
     document = service.upload("locked.pdf", PDF)
@@ -115,7 +116,7 @@ def test_an_unreadable_file_fails_with_its_reason_and_nothing_is_searchable(
 
 
 def test_an_unexpected_parser_error_fails_the_document_without_internals(
-    store: FakeDocumentStore, index: KeywordChunkIndex, queue: FakeIngestionQueue
+    store: FakeDocumentStore, index: InMemoryChunkIndex, queue: FakeIngestionQueue
 ) -> None:
     service = DocumentService(store, index, BrokenParser(), queue)
     document = service.upload("policy.pdf", PDF)
@@ -146,7 +147,7 @@ def test_other_file_types_are_rejected_and_nothing_is_stored(
 
 
 def test_files_over_the_size_limit_are_rejected(
-    store: FakeDocumentStore, index: KeywordChunkIndex, queue: FakeIngestionQueue
+    store: FakeDocumentStore, index: InMemoryChunkIndex, queue: FakeIngestionQueue
 ) -> None:
     service = DocumentService(store, index, FakeDocumentParser(PARSED), queue, max_upload_bytes=10)
 
@@ -190,9 +191,9 @@ def test_documents_lists_what_is_stored(service: DocumentService) -> None:
 
 
 def test_restore_indexes_stored_chunks_without_parsing_and_resubmits_unfinished_files(
-    store: FakeDocumentStore, index: KeywordChunkIndex, queue: FakeIngestionQueue
+    store: FakeDocumentStore, index: InMemoryChunkIndex, queue: FakeIngestionQueue
 ) -> None:
-    earlier = DocumentService(store, KeywordChunkIndex(), FakeDocumentParser(PARSED), queue)
+    earlier = DocumentService(store, InMemoryChunkIndex(), FakeDocumentParser(PARSED), queue)
     ready = earlier.upload("ready.pdf", PDF)
     queue.run_all()
     unfinished = earlier.upload("unfinished.pdf", PDF + b"2")
@@ -208,7 +209,7 @@ def test_restore_indexes_stored_chunks_without_parsing_and_resubmits_unfinished_
     assert unfinished.status == "processing"
 
 
-class FailingIndex(KeywordChunkIndex):
+class FailingIndex(InMemoryChunkIndex):
     def add(self, chunks: Sequence[Chunk]) -> None:
         raise OSError("disk full")
 
@@ -241,7 +242,7 @@ def test_a_failure_after_parsing_fails_the_document(
 
 
 def test_uploading_a_failed_document_again_retries_it(
-    store: FakeDocumentStore, index: KeywordChunkIndex, queue: FakeIngestionQueue
+    store: FakeDocumentStore, index: InMemoryChunkIndex, queue: FakeIngestionQueue
 ) -> None:
     parser = FlakyParser()
     service = DocumentService(store, index, parser, queue)
@@ -259,7 +260,7 @@ def test_uploading_a_failed_document_again_retries_it(
 
 
 def test_ingesting_a_document_that_is_not_processing_changes_nothing(
-    service: DocumentService, index: KeywordChunkIndex, queue: FakeIngestionQueue
+    service: DocumentService, index: InMemoryChunkIndex, queue: FakeIngestionQueue
 ) -> None:
     document = service.upload("policy.pdf", PDF)
     queue.run_all()
@@ -270,7 +271,7 @@ def test_ingesting_a_document_that_is_not_processing_changes_nothing(
 
 
 def test_restore_requeues_a_ready_document_without_stored_chunks(
-    store: FakeDocumentStore, index: KeywordChunkIndex, queue: FakeIngestionQueue
+    store: FakeDocumentStore, index: InMemoryChunkIndex, queue: FakeIngestionQueue
 ) -> None:
     # Documents stored by F-01 have metadata but no chunks file.
     store.save_upload(
@@ -287,3 +288,179 @@ def test_restore_requeues_a_ready_document_without_stored_chunks(
     assert document is not None
     assert document.status == "ready"
     assert len(index.search("inspect", limit=5)) == 1
+
+
+class CountingIndex(InMemoryChunkIndex):
+    def __init__(self) -> None:
+        super().__init__()
+        self.added: list[str] = []
+
+    def add(self, chunks: Sequence[Chunk]) -> None:
+        self.added.extend(chunk.document_id for chunk in chunks)
+        super().add(chunks)
+
+
+def test_deleting_a_document_removes_it_from_store_and_index(
+    service: DocumentService,
+    store: FakeDocumentStore,
+    index: InMemoryChunkIndex,
+    queue: FakeIngestionQueue,
+) -> None:
+    document = service.upload("policy.pdf", PDF)
+    queue.run_all()
+
+    service.delete(document.id)
+
+    assert store.get(document.id) is None
+    assert index.document_ids() == set()
+
+
+def test_deleting_or_reindexing_an_unknown_document_is_refused(service: DocumentService) -> None:
+    with pytest.raises(DocumentNotFound):
+        service.delete("unknown")
+    with pytest.raises(DocumentNotFound):
+        service.reindex("unknown")
+
+
+def test_reindexing_parses_the_document_again_and_keeps_its_chunk_ids(
+    service: DocumentService,
+    store: FakeDocumentStore,
+    index: InMemoryChunkIndex,
+    queue: FakeIngestionQueue,
+) -> None:
+    document = service.upload("policy.pdf", PDF)
+    queue.run_all()
+    before = [chunk.id for chunk in store.load_chunks(document.id)]
+
+    reindexing = service.reindex(document.id)
+
+    assert reindexing.status == "processing"
+    assert index.document_ids() == set()
+    queue.run_all()
+    ready = store.get(document.id)
+    assert ready is not None
+    assert ready.status == "ready"
+    assert [chunk.id for chunk in store.load_chunks(document.id)] == before
+    assert index.document_ids() == {document.id}
+
+
+def test_restore_adds_only_missing_documents_and_drops_deleted_ones(
+    store: FakeDocumentStore, queue: FakeIngestionQueue
+) -> None:
+    earlier = DocumentService(store, InMemoryChunkIndex(), FakeDocumentParser(PARSED), queue)
+    indexed = earlier.upload("indexed.pdf", PDF)
+    missing = earlier.upload("missing.pdf", PDF + b"2")
+    queue.run_all()
+    index = CountingIndex()
+    index.add(store.load_chunks(indexed.id))
+    index.add([Chunk(id="ghost:0", document_id="ghost", position=0, text="Deleted.")])
+    index.added.clear()
+    restarted = DocumentService(store, index, ParserThatMustNotRun(), queue)
+
+    restarted.restore()
+
+    assert index.document_ids() == {indexed.id, missing.id}
+    assert set(index.added) == {missing.id}
+
+
+class ParserThatActsMidway:
+    """Runs an action, as another request would, while the document is being parsed."""
+
+    def __init__(self) -> None:
+        self.during_parse: list[Callable[[], object]] = []
+        self.calls = 0
+
+    def parse(self, filename: str, content: bytes) -> ParsedDocument:
+        self.calls += 1
+        if self.during_parse:
+            self.during_parse.pop(0)()
+        return PARSED
+
+
+def test_a_document_deleted_while_it_is_parsed_stays_deleted(
+    store: FakeDocumentStore, index: InMemoryChunkIndex, queue: FakeIngestionQueue
+) -> None:
+    parser = ParserThatActsMidway()
+    service = DocumentService(store, index, parser, queue)
+    document = service.upload("policy.pdf", PDF)
+    parser.during_parse.append(lambda: service.delete(document.id))
+
+    queue.run_all()
+
+    assert store.get(document.id) is None
+    assert store.load_chunks(document.id) == []
+    assert index.document_ids() == set()
+
+
+def test_a_document_reindexed_while_it_is_parsed_is_parsed_again_and_indexed_once(
+    store: FakeDocumentStore, index: InMemoryChunkIndex, queue: FakeIngestionQueue
+) -> None:
+    parser = ParserThatActsMidway()
+    service = DocumentService(store, index, parser, queue)
+    document = service.upload("policy.pdf", PDF)
+    parser.during_parse.append(lambda: service.reindex(document.id))
+
+    queue.run_all()
+
+    ready = store.get(document.id)
+    assert ready is not None
+    assert ready.status == "ready"
+    assert parser.calls == 2
+    assert len(index.search("inspect", limit=10)) == 1
+
+
+def test_a_deleted_document_is_not_written_back_as_failed(
+    store: FakeDocumentStore, index: InMemoryChunkIndex, queue: FakeIngestionQueue
+) -> None:
+    service = DocumentService(store, index, BrokenParser(), queue)
+    document = service.upload("policy.pdf", PDF)
+    service.delete(document.id)
+
+    queue.run_all()
+
+    assert store.get(document.id) is None
+
+
+class PartlyWritingIndex(InMemoryChunkIndex):
+    """Stores the chunks, then reports a failure, as a timed-out write that was applied."""
+
+    def add(self, chunks: Sequence[Chunk]) -> None:
+        super().add(chunks)
+        raise OSError("timed out")
+
+
+def test_a_document_that_failed_while_indexing_leaves_no_vectors(
+    store: FakeDocumentStore, queue: FakeIngestionQueue
+) -> None:
+    index = PartlyWritingIndex()
+    service = DocumentService(store, index, FakeDocumentParser(PARSED), queue)
+    document = service.upload("policy.pdf", PDF)
+
+    queue.run_all()
+
+    failed = store.get(document.id)
+    assert failed is not None
+    assert failed.status == "failed"
+    assert index.document_ids() == set()
+
+
+def test_restore_removes_vectors_of_documents_that_are_not_ready(
+    store: FakeDocumentStore, index: InMemoryChunkIndex, queue: FakeIngestionQueue
+) -> None:
+    store.save_upload(
+        Document(
+            id="bad",
+            title="bad",
+            filename="bad.pdf",
+            chunk_count=0,
+            status="failed",
+            failure_reason="The PDF is password-protected.",
+        ),
+        PDF,
+    )
+    index.add([Chunk(id="bad:0", document_id="bad", position=0, text="Stale vectors.")])
+    service = DocumentService(store, index, FakeDocumentParser(PARSED), queue)
+
+    service.restore()
+
+    assert index.document_ids() == set()

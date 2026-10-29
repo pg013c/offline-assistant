@@ -33,3 +33,8 @@ class FakeDocumentStore:
 
     def get(self, document_id: str) -> Document | None:
         return self._documents.get(document_id)
+
+    def delete(self, document_id: str) -> None:
+        self._documents.pop(document_id, None)
+        self._originals.pop(document_id, None)
+        self._chunks.pop(document_id, None)

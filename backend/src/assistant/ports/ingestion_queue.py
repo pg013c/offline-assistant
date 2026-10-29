@@ -8,3 +8,7 @@ class IngestionQueue(Protocol):
     def submit(self, job: Callable[[], None]) -> None:
         """Queue a job; it runs after the jobs submitted before it."""
         ...
+
+    def close(self) -> None:
+        """Stop running jobs; called when the app shuts down."""
+        ...

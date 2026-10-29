@@ -11,7 +11,7 @@ Built to answer three practical questions about local AI:
 2. How do local models compare with a cloud model on **quality, latency, memory and cost**, measured on the same evaluation set?
 3. Can the whole thing be **installed and verified on an air-gapped machine**?
 
-> **Status:** document parsing (F-02). You can upload PDFs (including scans), Word files, photos of text, plain text or Markdown; they are parsed offline with Docling and Tesseract and split by article, paragraph and page. Answers stream with a clickable source that names its location, such as "Art. 6(1), p. 1". Retrieval is still keyword-based and the answer comes from a clearly labelled test model; embeddings and local LLMs follow in [F-03 to F-07](docs/backlog.md). Results will be published in [docs/evals/](docs/evals/).
+> **Status:** hybrid search (F-03). You can upload PDFs (including scans), Word files, photos of text, plain text or Markdown; they are parsed offline with Docling and Tesseract and split by article, paragraph and page. Questions find passages by meaning and by exact terms, across Polish and English (BGE-M3 and BM25 in Qdrant), and answers stream with a clickable source such as "Art. 6(1), p. 1". Documents can be deleted and re-indexed. The answer still comes from a clearly labelled test model; retrieval metrics and local LLMs follow in [F-04 to F-07](docs/backlog.md). Results will be published in [docs/evals/](docs/evals/).
 
 ## What it will do
 
@@ -60,15 +60,16 @@ MacBook Pro 14", Apple M5 Pro, 64 GB unified memory. A Linux + NVIDIA profile wi
 
 Development setup. Docker packaging and the offline install guide arrive with F-10 and F-12.
 
-Prerequisites: [uv](https://docs.astral.sh/uv/), Node 24 (`nvm use` reads `.nvmrc`), GNU Make, and [Tesseract](https://tesseract-ocr.github.io/) with English and Polish data for OCR (`brew install tesseract tesseract-lang` on macOS, `apt install tesseract-ocr tesseract-ocr-pol` on Debian/Ubuntu). pnpm comes through Corepack.
+Prerequisites: [uv](https://docs.astral.sh/uv/), Node 24 (`nvm use` reads `.nvmrc`), GNU Make, [Docker](https://docs.docker.com/) for Qdrant, and [Tesseract](https://tesseract-ocr.github.io/) with English and Polish data for OCR (`brew install tesseract tesseract-lang` on macOS, `apt install tesseract-ocr tesseract-ocr-pol` on Debian/Ubuntu). pnpm comes through Corepack.
 
 ```bash
 cp .env.example .env
 make setup
 make models
+make qdrant
 ```
 
-`make models` downloads the document parsing models (about 500 MB, pinned by commit and checked by hash) into `ASSISTANT_MODELS_DIR`. It is the only step that needs the network; nothing is downloaded at runtime ([ADR 0004](docs/adr/0004-offline-first-no-egress.md)).
+`make models` downloads the models (about 2.6 GB: document parsing and embeddings, pinned by commit and checked by hash) into `ASSISTANT_MODELS_DIR`. It is the only step that needs the network; nothing is downloaded at runtime ([ADR 0004](docs/adr/0004-offline-first-no-egress.md)). `make qdrant` starts the vector database in Docker, pinned by digest, with telemetry off and data under `ASSISTANT_DATA_DIR/qdrant` ([ADR 0017](docs/adr/0017-qdrant-and-bge-m3-for-hybrid-search.md)).
 
 ```bash
 make dev
@@ -90,9 +91,9 @@ make e2e
 make test-integration
 ```
 
-`make test-integration` runs the tests with real adapters, such as the document parser; it needs `make models` and Tesseract.
+`make test-integration` runs the tests with real adapters (Docling, BGE-M3, Qdrant); it needs `make models`, `make qdrant` and Tesseract.
 
-`make e2e` runs the browser journeys with Playwright against the real API, the Docling parser and the test model, on a fresh data directory and ports 8011/5181; it needs `make models` and Tesseract. `make help` lists all targets.
+`make e2e` runs the browser journeys with Playwright against the real API (Docling, BGE-M3, Qdrant) and the test model, on a fresh data directory, its own Qdrant collection and ports 8011/5181; it needs `make models`, `make qdrant` and Tesseract. `make help` lists all targets.
 
 ## Licence
 
@@ -109,3 +110,7 @@ Code: [MIT](LICENSE). Models, tools and datasets keep their own licences:
 | [SciPy](https://scipy.org/) | OCR region detection in Docling | BSD-3-Clause |
 | [pypdfium2](https://github.com/pypdfium2-team/pypdfium2) (PDFium) | PDF text and page checks | Apache-2.0 or BSD-3-Clause |
 | [huggingface_hub](https://github.com/huggingface/huggingface_hub) | `make models` downloads | Apache-2.0 |
+| [Qdrant](https://qdrant.tech/) server and [qdrant-client](https://github.com/qdrant/qdrant-client) | vector and keyword search | Apache-2.0 |
+| [BGE-M3](https://huggingface.co/BAAI/bge-m3) | multilingual embeddings | MIT |
+| [sentence-transformers](https://www.sbert.net/) | runs the embedding model | Apache-2.0 |
+| [scikit-learn](https://scikit-learn.org/) | dependency of sentence-transformers | BSD-3-Clause |

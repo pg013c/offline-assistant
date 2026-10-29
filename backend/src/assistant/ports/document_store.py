@@ -31,6 +31,10 @@ class DocumentStore(Protocol):
         """The stored chunks of a document; empty before it is parsed."""
         ...
 
+    def delete(self, document_id: str) -> None:
+        """Remove the document and everything stored for it; unknown ids are ignored."""
+        ...
+
     def get(self, document_id: str) -> Document | None:
         """The stored document with this id, or None."""
         ...

@@ -2,7 +2,8 @@
 
 Layout: tests/unit (fakes only, no I/O), tests/integration (real adapters, marker
 `integration`), tests/contract (one suite per port), tests/architecture (layer rules).
-The fixtures below build API apps that read text only and wait for background ingestion.
+The fixtures below build API apps from fake adapters, so route tests need no models, no
+Qdrant and no disk, and wait for ingestion to finish.
 """
 
 import time
@@ -13,10 +14,15 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from assistant.app import create_app
+from assistant.adapters.fakes.chat_model import FakeExtractiveChatModel
+from assistant.adapters.fakes.chunk_index import InMemoryChunkIndex
+from assistant.adapters.fakes.document_store import FakeDocumentStore
+from assistant.adapters.fakes.ingestion_queue import InlineIngestionQueue
+from assistant.adapters.text_document_parser import TextDocumentParser
+from assistant.app import Adapters, create_app
 from assistant.settings import Settings
 
-# Ingestion runs on a worker thread; text documents settle within milliseconds.
+# Ingestion may run on a worker thread; text documents settle within milliseconds.
 SETTLE_TIMEOUT_SECONDS = 5.0
 
 
@@ -26,10 +32,25 @@ type Settle = Callable[[TestClient, str], dict[str, Any]]
 
 @pytest.fixture
 def client_for() -> ClientFor:
-    """Apps that read text only, so API tests need no parsing models."""
+    """Apps on fake adapters; apps built for the same directory share a store, as after a
+    restart, and start with an empty index."""
+    stores: dict[Path, FakeDocumentStore] = {}
 
     def build(data_dir: Path) -> TestClient:
-        return TestClient(create_app(Settings(data_dir=data_dir, document_parser="text-only")))
+        settings = Settings(
+            data_dir=data_dir,
+            models_dir=data_dir / "models",
+            # The in-memory index returns only passages sharing a word with the question.
+            min_similarity=0,
+        )
+        adapters = Adapters(
+            store=stores.setdefault(data_dir, FakeDocumentStore()),
+            index=InMemoryChunkIndex(),
+            parser=TextDocumentParser(),
+            queue=InlineIngestionQueue(),
+            chat_model=FakeExtractiveChatModel(),
+        )
+        return TestClient(create_app(settings, adapters))
 
     return build
 

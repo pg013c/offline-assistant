@@ -1,4 +1,5 @@
 import threading
+from collections.abc import Callable
 from dataclasses import replace
 from pathlib import PurePath
 
@@ -6,11 +7,13 @@ import structlog
 
 from assistant.domain.documents import (
     Document,
+    ParsedDocument,
     chunk_document,
     document_id_for,
     title_from_filename,
 )
 from assistant.domain.errors import (
+    DocumentNotFound,
     DocumentUnreadable,
     FileTooLarge,
     NotUtf8Text,
@@ -48,9 +51,11 @@ class DocumentService:
         self._parser = parser
         self._queue = queue
         self._max_upload_bytes = max_upload_bytes
-        # Uploads arrive on several threads; checking for a stored document and storing a new
-        # one must not interleave.
+        # Uploads, deletes and ingestion jobs run on several threads; their reads and writes
+        # of one document must not interleave.
         self._lock = threading.Lock()
+        # The latest ingestion job queued for each document; older jobs write nothing.
+        self._generations: dict[str, int] = {}
 
     def upload(self, filename: str, content: bytes) -> Document:
         """Validate and store an upload, and queue its ingestion; known files return as stored."""
@@ -85,74 +90,155 @@ class DocumentService:
                     status="processing",
                 )
                 self._store.save_upload(document, content)
-            self._queue_ingestion(document_id)
+            job = self._new_job(document_id)
+        self._queue.submit(job)
         # The queue may already have finished the job.
         return self._store.get(document_id) or document
 
     def ingest(self, document_id: str) -> None:
         """Parse, chunk and index a stored upload; record the outcome as its status."""
-        document = self._store.get(document_id)
-        # Only processing documents are ingested, so a job queued twice runs once.
-        if document is None or document.status != "processing":
+        self._ingest(document_id, self._generations.get(document_id))
+
+    def _ingest(self, document_id: str, generation: int | None) -> None:
+        """One ingestion job. It writes nothing once its document was deleted or queued again.
+
+        Parsing and embedding run outside the lock, so a delete or re-index can happen
+        meanwhile; every write is preceded by a check, under the lock, that the job is current.
+        """
+        with self._lock:
+            document = self._current(document_id, generation)
+        if document is None:
             return
-        try:
-            parsed = self._parser.parse(document.filename, self._store.load_original(document_id))
-        except DocumentUnreadable as error:
-            self._fail(document, error.reason)
-            return
-        except Exception:
-            log.exception("document_parsing_failed", document_id=document_id)
-            self._fail(document, UNREADABLE)
+        parsed = self._parse(document, generation)
+        if parsed is None:
             return
 
-        try:
-            chunks = chunk_document(document_id, parsed)
-            if not chunks:
-                self._fail(document, NO_TEXT)
+        chunks = chunk_document(document_id, parsed)
+        if not chunks:
+            self._fail(document, generation, NO_TEXT)
+            return
+        with self._lock:
+            if self._current(document_id, generation) is None:
                 return
             self._store.save_chunks(document_id, chunks)
+        try:
             self._index.add(chunks)
         except Exception:
             log.exception("document_ingestion_failed", document_id=document_id)
-            self._store.save_chunks(document_id, [])
-            self._fail(document, INGESTION_FAILED)
+            with self._lock:
+                # The write may have been applied in part; a failed document has no vectors.
+                self._index.remove_document(document_id)
+                if self._current(document_id, generation) is not None:
+                    self._store.save_chunks(document_id, [])
+            self._fail(document, generation, INGESTION_FAILED)
             return
-        self._store.update(
-            replace(
-                document,
-                status="ready",
-                chunk_count=len(chunks),
-                page_count=parsed.page_count,
-                failure_reason=None,
+        with self._lock:
+            if self._current(document_id, generation) is None:
+                # Deleted or queued again while embedding: these vectors are stale. The next
+                # job for this document, if any, runs after this one and adds its own.
+                self._index.remove_document(document_id)
+                return
+            self._store.update(
+                replace(
+                    document,
+                    status="ready",
+                    chunk_count=len(chunks),
+                    page_count=parsed.page_count,
+                    failure_reason=None,
+                )
             )
-        )
         log.info("document_ingested", document_id=document_id, chunks=len(chunks))
+
+    def _parse(self, document: Document, generation: int | None) -> ParsedDocument | None:
+        """The parsed document, or None after recording why it could not be parsed."""
+        try:
+            return self._parser.parse(document.filename, self._store.load_original(document.id))
+        except DocumentUnreadable as error:
+            self._fail(document, generation, error.reason)
+        except Exception:
+            log.exception("document_parsing_failed", document_id=document.id)
+            self._fail(document, generation, UNREADABLE)
+        return None
+
+    def _current(self, document_id: str, generation: int | None) -> Document | None:
+        """The document, if it is still processing and this job is its latest. Under the lock."""
+        document = self._store.get(document_id)
+        if document is None or document.status != "processing":
+            return None
+        if generation is not None and self._generations.get(document_id) != generation:
+            return None
+        return document
+
+    def delete(self, document_id: str) -> None:
+        """Remove a document, its files and its chunks from the index."""
+        with self._lock:
+            if self._store.get(document_id) is None:
+                raise DocumentNotFound(document_id)
+            self._index.remove_document(document_id)
+            self._store.delete(document_id)
+            # A job still running for it must not write it back.
+            self._generations.pop(document_id, None)
+        log.info("document_deleted", document_id=document_id)
+
+    def reindex(self, document_id: str) -> Document:
+        """Parse and index a stored document again; its chunk ids stay the same."""
+        with self._lock:
+            document = self._store.get(document_id)
+            if document is None:
+                raise DocumentNotFound(document_id)
+            self._index.remove_document(document_id)
+            processing = replace(document, status="processing", failure_reason=None)
+            self._store.update(processing)
+            job = self._new_job(document_id)
+        self._queue.submit(job)
+        # The queue may already have finished the job.
+        return self._store.get(document_id) or processing
 
     def list_documents(self) -> list[Document]:
         """All stored documents."""
         return self._store.list_documents()
 
     def restore(self) -> int:
-        """Index stored chunks of ready documents and requeue unfinished ones.
+        """Bring the index in line with the store, and requeue unfinished documents.
 
-        Returns how many documents were indexed.
+        The index is derived from stored chunks: documents it lacks are added without parsing,
+        and chunks of documents that are not ready, or no longer stored, are removed. Returns
+        how many documents are searchable.
         """
+        documents = self._store.list_documents()
+        # Only ready documents may have vectors: drop those of deleted, failed or unfinished ones.
+        ready_ids = {document.id for document in documents if document.status == "ready"}
+        for stale in self._index.document_ids() - ready_ids:
+            self._index.remove_document(stale)
+        indexed = self._index.document_ids()
         ready = 0
-        for document in self._store.list_documents():
+        for document in documents:
+            if document.status == "ready" and document.id in indexed:
+                ready += 1
+                continue
             chunks = self._store.load_chunks(document.id) if document.status == "ready" else []
             if chunks:
                 self._index.add(chunks)
                 ready += 1
             elif document.status != "failed":
                 # Unfinished, or ready without stored chunks: parse it again.
-                if document.status == "ready":
-                    self._store.update(replace(document, status="processing"))
-                self._queue_ingestion(document.id)
+                with self._lock:
+                    if document.status == "ready":
+                        self._store.update(replace(document, status="processing"))
+                    job = self._new_job(document.id)
+                self._queue.submit(job)
         return ready
 
-    def _queue_ingestion(self, document_id: str) -> None:
-        self._queue.submit(lambda: self.ingest(document_id))
+    def _new_job(self, document_id: str) -> Callable[[], None]:
+        """An ingestion job that supersedes any job made before for the document. Under the
+        lock; submit the job after releasing it, since a queue may run it at once."""
+        generation = self._generations.get(document_id, 0) + 1
+        self._generations[document_id] = generation
+        return lambda: self._ingest(document_id, generation)
 
-    def _fail(self, document: Document, reason: str) -> None:
-        self._store.update(replace(document, status="failed", failure_reason=reason))
+    def _fail(self, document: Document, generation: int | None, reason: str) -> None:
+        with self._lock:
+            if self._current(document.id, generation) is None:
+                return
+            self._store.update(replace(document, status="failed", failure_reason=reason))
         log.info("document_failed", document_id=document.id, reason=reason)

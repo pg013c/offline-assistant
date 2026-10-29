@@ -49,6 +49,39 @@ export function useUploadDocument() {
   })
 }
 
+/** Deletes a document; the list is reloaded afterwards. */
+export function useDeleteDocument() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (document: DocumentSummary): Promise<void> => {
+      const { error, response } = await apiClient.DELETE('/api/documents/{document_id}', {
+        params: { path: { document_id: document.id } },
+      })
+      if (!response.ok) {
+        throw new Error(messageOf(error) ?? `Deleting ${document.title} failed`)
+      }
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: DOCUMENTS_KEY }),
+  })
+}
+
+/** Parses and indexes a document again; the list then shows it processing. */
+export function useReindexDocument() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (document: DocumentSummary): Promise<DocumentSummary> => {
+      const { data, error } = await apiClient.POST('/api/documents/{document_id}/reindex', {
+        params: { path: { document_id: document.id } },
+      })
+      if (data === undefined) {
+        throw new Error(messageOf(error) ?? `Re-indexing ${document.title} failed`)
+      }
+      return data
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: DOCUMENTS_KEY }),
+  })
+}
+
 function messageOf(error: unknown): string | undefined {
   if (typeof error === 'object' && error !== null && 'message' in error) {
     const { message } = error

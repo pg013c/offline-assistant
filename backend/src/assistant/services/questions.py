@@ -1,3 +1,4 @@
+import asyncio
 from collections.abc import AsyncIterator
 
 from assistant.domain.answers import (
@@ -14,19 +15,37 @@ from assistant.ports.chunk_index import ChunkIndex
 from assistant.ports.document_store import DocumentStore
 
 PASSAGES_PER_ANSWER = 3
+# Candidates fetched before the similarity filter, so weak hits do not crowd out good ones.
+CANDIDATES = 10
 
 
 class QuestionService:
     """Answers a question from the indexed documents, as a stream of events."""
 
-    def __init__(self, index: ChunkIndex, model: ChatModel, store: DocumentStore) -> None:
+    def __init__(
+        self,
+        index: ChunkIndex,
+        model: ChatModel,
+        store: DocumentStore,
+        min_similarity: float,
+    ) -> None:
+        """`min_similarity` is the dense similarity a passage needs to be used (F-03).
+
+        A passage ranked first only for an exact term, but below it, is not used either: the
+        answer would rest on a word, not on the meaning. F-04 measures this choice.
+        """
+        self._min_similarity = min_similarity
         self._index = index
         self._model = model
         self._store = store
 
     async def ask(self, question: str) -> AsyncIterator[AnswerEvent]:
         """Text pieces, then citations, then an end event; or a no-passage notice."""
-        results = self._index.search(question, limit=PASSAGES_PER_ANSWER)
+        # Embedding the question and querying the index block; keep them off the event loop.
+        found = await asyncio.to_thread(self._index.search, question, CANDIDATES)
+        results = [result for result in found if result.similarity >= self._min_similarity][
+            :PASSAGES_PER_ANSWER
+        ]
         if not results:
             yield AnswerText(text=NO_RELEVANT_PASSAGE)
             yield AnswerEnd(

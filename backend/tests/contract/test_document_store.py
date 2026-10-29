@@ -97,3 +97,27 @@ def test_a_document_without_chunks_loads_none(store: DocumentStore) -> None:
 
 def test_an_empty_store_lists_nothing(store: DocumentStore) -> None:
     assert store.list_documents() == []
+
+
+def test_deleting_a_document_removes_its_metadata_original_and_chunks(
+    store: DocumentStore,
+) -> None:
+    store.save_upload(POLICY, b"%PDF policy")
+    store.save_chunks(POLICY.id, CHUNKS)
+    store.save_upload(NOTES, b"Notes.")
+
+    store.delete(POLICY.id)
+
+    assert store.get(POLICY.id) is None
+    assert store.list_documents() == [NOTES]
+    assert store.load_chunks(POLICY.id) == []
+
+
+def test_deleting_twice_or_an_unknown_document_is_harmless(store: DocumentStore) -> None:
+    store.save_upload(POLICY, b"%PDF policy")
+    store.delete(POLICY.id)
+
+    store.delete(POLICY.id)
+    store.delete("unknown")
+
+    assert store.list_documents() == []

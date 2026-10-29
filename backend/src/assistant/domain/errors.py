@@ -23,3 +23,7 @@ class DocumentUnreadable(Exception):
     def __init__(self, reason: str) -> None:
         super().__init__(reason)
         self.reason = reason
+
+
+class DocumentNotFound(Exception):
+    """No document has this id."""

@@ -13,6 +13,8 @@ dependencies = [
     "pydantic-settings>=2.16.2",
     "pypdfium2>=5.14,<6",
     "python-multipart>=0.0.32",
+    "qdrant-client>=1.20,<2",
+    "sentence-transformers>=6.2,<7",
     "structlog>=26.1.0",
     "torch>=2.2.2,<3",
     "torchvision<1",
@@ -42,8 +44,9 @@ select = ["E", "F", "I", "B", "UP", "SIM", "RUF", "PL", "S", "ASYNC"]
 [tool.ruff.lint.per-file-ignores]
 # Plain asserts are how pytest expresses expectations.
 "tests/**" = ["S101", "PLR2004"]
-# Docling loads PyTorch on import; the adapter imports it when the first document is parsed.
+# Docling and sentence-transformers load PyTorch on import; the adapters import them on first use.
 "src/assistant/adapters/docling_parser.py" = ["PLC0415"]
+"src/assistant/adapters/sentence_transformer_embedder.py" = ["PLC0415"]
 
 [tool.mypy]
 strict = true
@@ -102,6 +105,10 @@ forbidden_modules = [
     "starlette",
     "uvicorn",
     "pydantic_settings",
+    # Search (ADR 0017).
+    "qdrant_client",
+    "sentence_transformers",
+    "transformers",
     # Document parsing (ADR 0015).
     "docling",
     "docling_core",

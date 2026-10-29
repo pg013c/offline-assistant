@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 
 import pypdfium2 as pdfium
 
-from assistant.adapters.docling_models import PINNED_MODELS, ParserNotReady, verify_models
+from assistant.adapters.pinned_models import DOCLING_MODELS, ModelsNotReady, verify_models
 from assistant.domain.documents import Block, ParsedDocument
 from assistant.domain.errors import DocumentUnreadable
 
@@ -22,8 +22,7 @@ if TYPE_CHECKING:
     from docling.document_converter import DocumentConverter
     from docling_core.types.doc.document import DoclingDocument
 
-# ParserNotReady is re-exported: callers of the parser handle its readiness error.
-__all__ = ["DoclingDocumentParser", "ParserNotReady"]
+__all__ = ["DoclingDocumentParser", "ModelsNotReady"]
 
 MAX_PAGES = 500
 OCR_LANGUAGES = ("eng", "pol")
@@ -41,12 +40,12 @@ class DoclingDocumentParser:
 
     @staticmethod
     def ensure_ready(models_dir: Path, tesseract: str = "tesseract") -> None:
-        """Raise `ParserNotReady` unless the pinned models and Tesseract with eng and pol exist."""
-        verify_models(models_dir / "docling", PINNED_MODELS.files)
+        """Raise `ModelsNotReady` unless the pinned models and Tesseract with eng and pol exist."""
+        verify_models(models_dir, DOCLING_MODELS)
 
         executable = shutil.which(tesseract)
         if executable is None:
-            raise ParserNotReady(
+            raise ModelsNotReady(
                 f"OCR needs {tesseract}, which is not installed: `brew install tesseract "
                 "tesseract-lang` or `apt install tesseract-ocr tesseract-ocr-pol`."
             )
@@ -55,7 +54,7 @@ class DoclingDocumentParser:
         ).stdout.split()
         absent = [language for language in OCR_LANGUAGES if language not in listed_languages]
         if absent:
-            raise ParserNotReady(
+            raise ModelsNotReady(
                 f"tesseract has no language data for {', '.join(absent)}: "
                 "`brew install tesseract-lang` or `apt install tesseract-ocr-pol`."
             )
