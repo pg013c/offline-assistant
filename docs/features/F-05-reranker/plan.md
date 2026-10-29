@@ -102,7 +102,7 @@
     - a passage that answers the query scores above an unrelated one;
     - the same input gives the same scores.
 - Change: `ports/reranker.py`, `domain/` (ordering), `adapters/fakes/reranker.py`.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 2. Pinned BGE reranker and its adapter
