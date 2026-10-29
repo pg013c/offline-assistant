@@ -10,11 +10,11 @@
 - Route tests (`tests/unit/api/`) build the real composition root with a temporary data directory (F-01 review #16, planned for F-03). With Docling wired in, these tests would import PyTorch and need models. A test-only parser chosen by settings, like `ASSISTANT_CHAT_MODEL`, keeps them fast.
 - Docling (ADR 0015) returns a `DoclingDocument` with items in reading order, each with a label (section header, text, list item, table, page header/footer) and provenance (page number). It takes `artifacts_path`, OCR options (Tesseract CLI, languages) and a page limit. Its import is slow (PyTorch); only the adapter imports it, lazily.
 - EUR-Lex shows "Article 6" and its title as separate headers, and numbered paragraphs as text items starting with `1.`; points `(a)`, `(b)` are list items. Polish: "Artykuł 6". Page headers and footers (journal reference, page number) must be dropped, or chunks pick them up.
-- Risks: Docling output changes between versions (pinned; fixtures guard ids); OCR of a scan may mis-number paragraphs (the scan fixture asserts article and page only); Tesseract is not yet installed on the reference Mac.
+- Risks: Docling output changes between versions (pinned; fixtures guard ids); OCR of a scan may misnumber paragraphs (the scan fixture asserts article and page only); Tesseract is not yet installed on the reference Mac.
 
 ## Design
 
-**Domain**
+### Domain
 
 - `ParsedDocument(page_count, blocks)`; `Block(kind: heading | paragraph | list_item | table, text, page: int | None, level: int | None)`: our own structure, independent of Docling.
 - `ChunkLocation(heading_path: tuple[str, ...], article: str | None, paragraph: str | None, page: int | None)`. `Chunk` gains `location`. `Citation` gains `location`.
@@ -22,7 +22,7 @@
 - `Document` gains `status: processing | ready | failed`, `page_count: int | None`, `failure_reason: str | None`. Document id is the SHA-256 of the uploaded bytes (for UTF-8 text this equals today's id).
 - Errors: `DocumentUnreadable(reason)` from parsing; `UnsupportedFileType`, `FileTooLarge` stay. `NotUtf8Text` becomes a parse failure of the text parser.
 
-**Ports**
+### Ports
 
 - `DocumentParser.parse(filename, content: bytes) -> ParsedDocument`, raises `DocumentUnreadable`.
 - `DocumentStore`: `save_upload(document, content: bytes)`, `update(document)`, `save_chunks(document_id, chunks)`, `load_chunks(document_id)`, `load_original(document_id)`, `get`, `list_documents`. Files: `<id>.<ext>` (original), `<id>.json` (metadata), `<id>.chunks.json`.
