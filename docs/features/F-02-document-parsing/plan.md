@@ -72,7 +72,7 @@
 - Kind: code
 - Tests first: `tests/contract/test_document_parser.py` (text parser and fake): returns blocks in order with a page count; `tests/unit/adapters/test_text_document_parser.py`: `#` lines are headings, blank lines separate paragraphs, invalid UTF-8 raises `DocumentUnreadable`.
 - Change: `ports/document_parser.py`, `adapters/text_document_parser.py`, `adapters/fakes/document_parser.py`, `domain/errors.py`.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 5. Store originals, status and chunks
