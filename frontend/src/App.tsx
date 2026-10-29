@@ -1,3 +1,5 @@
+import { ChatView } from './features/chat/ChatView'
+import { DocumentPanel } from './features/documents/DocumentPanel'
 import { ApiStatus } from './features/status/ApiStatus'
 
 export function App() {
@@ -7,7 +9,10 @@ export function App() {
         <h1 className="text-lg font-semibold">Offline Assistant</h1>
         <ApiStatus />
       </header>
-      <main className="mx-auto max-w-3xl p-6" />
+      <main className="mx-auto grid max-w-5xl gap-8 p-6 md:grid-cols-[1fr_2fr]">
+        <DocumentPanel />
+        <ChatView />
+      </main>
     </div>
   )
 }

@@ -7,7 +7,7 @@ Status: `planned` → `spec` → `building` → `review` → `done`.
 | ID | Feature | Requirements | Milestone | Status |
 |---|---|---|---|---|
 | F-00 | Repository skeleton: backend and frontend projects, Makefile, pre-commit, CI, import contract, API contract check | NFR-06 | 1 | done |
-| F-01 | Walking skeleton: upload a text file, fake chat model, streamed answer with a citation in the UI | FR-01, FR-15, FR-60 | 1 | planned |
+| F-01 | Walking skeleton: upload a text file, fake chat model, streamed answer with a citation in the UI | FR-01, FR-15, FR-60 | 1 | done |
 | F-02 | Document parsing (Docling) and structure-aware chunking with stable chunk ids | FR-01–FR-03 | 2 | planned |
 | F-03 | Multilingual embeddings, Qdrant storage, hybrid search | FR-04, FR-05, FR-07 | 2 | planned |
 | F-04 | Evaluation harness: Promptfoo wired to the API, first retrieval cases (recall@k against expected chunks) | FR-42, FR-43 | 2 | planned |
@@ -31,3 +31,5 @@ Small changes found during reviews, done as chores outside the feature that foun
 | Item | Found in | Status |
 |---|---|---|
 | Switch the backend test client from `httpx` to `httpx2` (Starlette deprecation warning), with a note in ADR 0011 | F-00 review #11 | planned |
+| Route tests with injected fake services instead of the file-backed composition root | F-01 review #16 | planned for F-03 |
+| Use `found=false` in the UI for a proper "no answer" state | F-01 review #18 | planned for F-07 |

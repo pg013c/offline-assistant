@@ -89,6 +89,18 @@ Rules (ADR 0002):
 - The rules are import-linter contracts in `backend/pyproject.toml`, checked by `make check`. Every model, database or parsing library is added to the forbidden list for `domain`, `ports` and `services` together with its ADR.
 - Every port has a fake adapter. Unit tests use fakes; integration tests use real adapters.
 
+### What is implemented (F-01, walking skeleton)
+
+The diagram above is the target. The question flow runs end to end today with the simplest adapters, each replaced by a later feature behind the same kind of port:
+
+| Port | Adapter now | Replaced by |
+|---|---|---|
+| `DocumentStore` | `LocalFileDocumentStore`: `data_dir/documents/<id>.txt` and `<id>.json`; `FakeDocumentStore` for tests | stays; parsing moves in front of it (F-02) |
+| `ChunkIndex` | `KeywordChunkIndex`: in-memory keyword overlap, rebuilt from the store at startup | embeddings, Qdrant and hybrid search (F-03); may split into `Embedder` + `VectorStore` |
+| `ChatModel` | `FakeExtractiveChatModel` (`fake-extractive`): quotes the best passage, labelled as a test model in the UI | OpenAI-compatible local models (F-06), the agent (F-07) |
+
+Documents are plain text or Markdown, chunked at blank lines. The chat endpoint streams `text`, `citation` and `end` events; with no matching passage it streams a notice and no citation.
+
 ## 4. Main flow: a question
 
 ```mermaid

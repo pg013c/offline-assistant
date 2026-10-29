@@ -1,0 +1,16 @@
+"""Services for route handlers. The composition root puts them on `app.state` (PY-21)."""
+
+from typing import cast
+
+from fastapi import Request
+
+from assistant.services.documents import DocumentService
+from assistant.services.questions import QuestionService
+
+
+def get_document_service(request: Request) -> DocumentService:
+    return cast(DocumentService, request.app.state.document_service)
+
+
+def get_question_service(request: Request) -> QuestionService:
+    return cast(QuestionService, request.app.state.question_service)

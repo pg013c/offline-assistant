@@ -3,3 +3,5 @@ coverage
 pnpm-lock.yaml
 src/api/openapi.json
 src/api/schema.d.ts
+test-results
+playwright-report
