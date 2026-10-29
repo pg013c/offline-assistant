@@ -197,7 +197,7 @@
     - restore adds missing documents to the index, removes vectors of deleted ones, and does not parse ready documents.
 - Change: `ports/document_store.py`, both store adapters, `services/documents.py`, `domain/errors.py`.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 9. Composition root with injectable adapters, route tests with fakes
 

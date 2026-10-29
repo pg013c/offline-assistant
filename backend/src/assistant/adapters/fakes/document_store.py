@@ -35,4 +35,6 @@ class FakeDocumentStore:
         return self._documents.get(document_id)
 
     def delete(self, document_id: str) -> None:
-        raise NotImplementedError
+        self._documents.pop(document_id, None)
+        self._originals.pop(document_id, None)
+        self._chunks.pop(document_id, None)

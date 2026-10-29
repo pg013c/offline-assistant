@@ -11,6 +11,7 @@ from assistant.domain.documents import (
     title_from_filename,
 )
 from assistant.domain.errors import (
+    DocumentNotFound,
     DocumentUnreadable,
     FileTooLarge,
     NotUtf8Text,
@@ -130,23 +131,46 @@ class DocumentService:
 
     def delete(self, document_id: str) -> None:
         """Remove a document, its files and its chunks from the index."""
-        raise NotImplementedError
+        with self._lock:
+            if self._store.get(document_id) is None:
+                raise DocumentNotFound(document_id)
+            self._index.remove_document(document_id)
+            self._store.delete(document_id)
+        log.info("document_deleted", document_id=document_id)
 
     def reindex(self, document_id: str) -> Document:
-        """Parse and index a stored document again."""
-        raise NotImplementedError
+        """Parse and index a stored document again; its chunk ids stay the same."""
+        with self._lock:
+            document = self._store.get(document_id)
+            if document is None:
+                raise DocumentNotFound(document_id)
+            self._index.remove_document(document_id)
+            processing = replace(document, status="processing", failure_reason=None)
+            self._store.update(processing)
+            self._queue_ingestion(document_id)
+        # The queue may already have finished the job.
+        return self._store.get(document_id) or processing
 
     def list_documents(self) -> list[Document]:
         """All stored documents."""
         return self._store.list_documents()
 
     def restore(self) -> int:
-        """Index stored chunks of ready documents and requeue unfinished ones.
+        """Bring the index in line with the store, and requeue unfinished documents.
 
-        Returns how many documents were indexed.
+        The index is derived from stored chunks: documents it lacks are added without parsing,
+        and chunks of documents the store no longer has are removed. Returns how many
+        documents are searchable.
         """
+        documents = self._store.list_documents()
+        indexed = self._index.document_ids()
+        for orphan in indexed - {document.id for document in documents}:
+            self._index.remove_document(orphan)
         ready = 0
-        for document in self._store.list_documents():
+        for document in documents:
+            if document.status == "ready" and document.id in indexed:
+                ready += 1
+                continue
             chunks = self._store.load_chunks(document.id) if document.status == "ready" else []
             if chunks:
                 self._index.add(chunks)

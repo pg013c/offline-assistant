@@ -58,7 +58,12 @@ class LocalFileDocumentStore:
         return [_read_metadata(path) for path in files if not path.name.endswith(_CHUNKS)]
 
     def delete(self, document_id: str) -> None:
-        raise NotImplementedError
+        document = self.get(document_id)
+        # Metadata first: without it the document no longer counts as stored.
+        self._path(document_id, _METADATA).unlink(missing_ok=True)
+        self._path(document_id, _CHUNKS).unlink(missing_ok=True)
+        if document is not None:
+            self._original_path(document).unlink(missing_ok=True)
 
     def _path(self, document_id: str, suffix: str) -> Path:
         return self._directory / f"{document_id}{suffix}"
