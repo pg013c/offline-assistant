@@ -32,3 +32,4 @@ Use the `/adr` skill or copy [template.md](template.md).
 | [0015](0015-document-parsing-with-docling-and-tesseract.md) | Parse documents with Docling and Tesseract, models fetched ahead of time | accepted, amended by 0016 |
 | [0016](0016-docling-dependencies-and-pinned-models.md) | Docling's dependencies and pinned parsing models | accepted |
 | [0017](0017-qdrant-and-bge-m3-for-hybrid-search.md) | Hybrid search with BGE-M3 embeddings and BM25 in Qdrant | accepted |
+| [0018](0018-promptfoo-and-a-pinned-evaluation-corpus.md) | Evaluate with Promptfoo on a corpus pinned by hash | accepted |
