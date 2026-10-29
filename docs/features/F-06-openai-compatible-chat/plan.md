@@ -127,7 +127,7 @@ class ChatModel(Protocol):
     - a scripted fake replays attempts, failures and usage for service tests.
 - Change: `ports/chat_model.py`, `adapters/fakes/chat_model.py`.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 3. Service uses the model's citations, retries and failures
 

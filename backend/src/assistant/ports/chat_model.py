@@ -18,10 +18,6 @@ class ChatModel(Protocol):
         """True for stand-ins that are not language models; the UI must say so (AC-8)."""
         ...
 
-    def stream_answer(self, question: str, passages: Sequence[Chunk]) -> AsyncIterator[str]:
-        """The answer as a stream of text pieces."""
-        ...
-
     def answer(self, question: str, passages: Sequence[Chunk]) -> AsyncIterator[ModelEvent]:
         """Text deltas of each attempt, ending with exactly one `Answered` or `ModelFailed`.
 

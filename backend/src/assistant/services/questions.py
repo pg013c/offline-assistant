@@ -9,6 +9,7 @@ from assistant.domain.answers import (
     AnswerEvent,
     AnswerText,
     Citation,
+    TextDelta,
     quote_from,
 )
 from assistant.domain.documents import Chunk, indexed_text
@@ -103,8 +104,9 @@ class QuestionService:
             return
 
         passages = [result.chunk for result in results]
-        async for piece in self._model.stream_answer(question, passages):
-            yield AnswerText(text=piece)
+        async for event in self._model.answer(question, passages):
+            if isinstance(event, TextDelta):
+                yield AnswerText(text=event.text)
 
         # The answer is built from the best passage, so that is the one cited.
         best = passages[0]
