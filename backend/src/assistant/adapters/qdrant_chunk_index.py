@@ -15,7 +15,7 @@ from qdrant_client.http.exceptions import ResponseHandlingException, UnexpectedR
 
 from assistant.domain.documents import Chunk, ChunkLocation
 from assistant.domain.keywords import bm25_terms, tokens
-from assistant.ports.chunk_index import ScoredChunk
+from assistant.ports.chunk_index import ScoredChunk, best_first
 from assistant.ports.embedder import Embedder
 
 SCHEMA_VERSION = 1
@@ -28,6 +28,9 @@ TIE_MARGIN = 4
 _POINT_NAMESPACE = uuid.UUID("6f1c9a3e-2b7d-4c8e-9f10-3a5b7c9d1e2f")
 
 
+__all__ = ["IndexNotReady", "QdrantChunkIndex", "best_first", "collection_name", "point_id"]
+
+
 class IndexNotReady(Exception):
     """Qdrant cannot be reached; the message says how to start it."""
 
@@ -35,23 +38,6 @@ class IndexNotReady(Exception):
 def point_id(chunk_id: str) -> str:
     """Qdrant point id of a chunk: a UUID derived from the chunk id."""
     return str(uuid.uuid5(_POINT_NAMESPACE, chunk_id))
-
-
-def best_first(results: Sequence[ScoredChunk]) -> list[ScoredChunk]:
-    """Fused order, with ties broken by dense similarity, then by position.
-
-    Reciprocal rank fusion often ties: first in one ranking and second in the other scores
-    the same as the reverse, and Qdrant breaks such ties arbitrarily.
-    """
-    return sorted(
-        results,
-        key=lambda result: (
-            -result.score,
-            -result.similarity,
-            result.chunk.document_id,
-            result.chunk.position,
-        ),
-    )
 
 
 def collection_name(prefix: str, model_id: str) -> str:

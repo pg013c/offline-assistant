@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from assistant.adapters.fakes.embedder import FakeEmbedder
 from assistant.domain.documents import Chunk
 from assistant.domain.keywords import bm25_terms, tokens
-from assistant.ports.chunk_index import ScoredChunk
+from assistant.ports.chunk_index import ScoredChunk, best_first
 from assistant.ports.embedder import Embedder
 
 # Reciprocal rank fusion constant, as in Qdrant.
@@ -49,16 +49,16 @@ class InMemoryChunkIndex:
             ordered = sorted((key for key in ranking if ranking[key] > 0), key=ranking.__getitem__)
             for rank, key in enumerate(reversed(ordered)):
                 fused[key] = fused.get(key, 0.0) + 1 / (RRF_K + rank + 1)
-        # Ties go to the closer meaning, as in the Qdrant index.
-        best = sorted(fused, key=lambda key: (-fused[key], -similarity[key], key))[:limit]
-        return [
+        results = [
             ScoredChunk(
                 chunk=self._entries[key].chunk,
                 score=fused[key],
                 similarity=max(similarity[key], 0.0),
             )
-            for key in best
+            for key in fused
         ]
+        # The same order as the Qdrant index, ties included.
+        return best_first(results)[:limit]
 
     def remove_document(self, document_id: str) -> None:
         self._entries = {

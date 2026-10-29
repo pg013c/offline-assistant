@@ -15,6 +15,24 @@ class ScoredChunk:
     similarity: float
 
 
+def best_first(results: Sequence[ScoredChunk]) -> list[ScoredChunk]:
+    """Fused order, with ties broken by dense similarity, then by position.
+
+    Reciprocal rank fusion often ties: first in one ranking and second in the other scores
+    the same as the reverse, and Qdrant breaks such ties arbitrarily. Every index orders its
+    results this way.
+    """
+    return sorted(
+        results,
+        key=lambda result: (
+            -result.score,
+            -result.similarity,
+            result.chunk.document_id,
+            result.chunk.position,
+        ),
+    )
+
+
 class ChunkIndex(Protocol):
     """Searchable store of chunks: dense and keyword search, fused (ADR 0017).
 
