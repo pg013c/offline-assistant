@@ -105,7 +105,7 @@
   - the chunker version is 3.
 - Change: `domain/documents.py`.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 5. Measure and record
 

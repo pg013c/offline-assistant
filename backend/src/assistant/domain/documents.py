@@ -9,7 +9,7 @@ from typing import Literal
 DOCUMENT_ID_LENGTH = 16
 MAX_CHUNK_CHARS = 2000
 # Raised whenever chunking changes, so documents cut the old way are parsed again.
-CHUNKER_VERSION = 2
+CHUNKER_VERSION = 3
 # A sentence: text up to and including its end mark, or to the end of the text.
 _SENTENCE = re.compile(r"\S.*?(?:[.!?](?=\s|$)|$)", re.DOTALL)
 _WORD = re.compile(r"\S+")
@@ -124,6 +124,8 @@ _ARTICLE = re.compile(r"^(?:Article|Artykuł|Art\.)\s+(\d+[a-z]*)\b", re.IGNOREC
 # A section title: short, and not ending like a sentence or a clause.
 _TITLE_MAX_CHARS = 200
 _NOT_A_TITLE_ENDING = tuple(".;:,?!)")
+# "ANNEX III", "Załącznik III": the heading after it is the annex's title.
+_ANNEX = re.compile(r"^(?:Annex|Załącznik)\s+[IVXLC]+\b", re.IGNORECASE)
 _NUMBERED_PARAGRAPH = re.compile(r"^(\d+[a-z]?)\.\s")
 
 
@@ -152,6 +154,11 @@ class _Chunker:
         article = _ARTICLE.match(text)
         if article and (block.kind == "heading" or article.end() == len(text)):
             self._start_article(article.group(1), text, block.level)
+        elif block.kind == "heading" and _ANNEX.match(text):
+            # A new annex is never the title of what came before it.
+            self._expecting_title = False
+            self._heading(text, block.level or 1)
+            self._expecting_title = True
         elif block.kind == "heading":
             self._heading(text, block.level or 1)
         else:
