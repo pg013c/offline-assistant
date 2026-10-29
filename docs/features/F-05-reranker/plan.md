@@ -188,7 +188,7 @@
   - the record `docs/evals/2026-10-29-retrieval-reranker.md`, with both modes, per-case changes, latency, the out-of-scope margin and the decision;
   - the new `retrieval-baseline.json`.
 - If a criterion fails in a way the spec did not foresee, stop and bring the numbers to the human.
-- [ ] green
+- [x] green
 
 ### Step 7. Documentation
 

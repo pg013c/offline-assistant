@@ -1,7 +1,8 @@
 {
+  "gated_mode": "reranked",
   "metrics": {
     "recall@3": {
-      "value": 0.9047619047619048,
+      "value": 0.9523809523809523,
       "cases": 21
     },
     "recall@10": {
@@ -9,7 +10,7 @@
       "cases": 21
     },
     "mrr": {
-      "value": 0.8207671957671957,
+      "value": 0.8730158730158729,
       "cases": 21
     },
     "out_of_scope_refused": {
@@ -22,8 +23,74 @@
     }
   },
   "missed": {
-    "ref-annex-iii": "first expected chunk at rank 9",
-    "ref-article-83": "first expected chunk at rank 8"
+    "ref-annex-iii": "first expected chunk at rank 6"
+  },
+  "modes": {
+    "reranked": {
+      "metrics": {
+        "recall@3": {
+          "value": 0.9523809523809523,
+          "cases": 21
+        },
+        "recall@10": {
+          "value": 1.0,
+          "cases": 21
+        },
+        "mrr": {
+          "value": 0.8730158730158729,
+          "cases": 21
+        },
+        "out_of_scope_refused": {
+          "value": 1.0,
+          "cases": 3
+        },
+        "in_scope_unanswered": {
+          "value": 0.0,
+          "cases": 21
+        }
+      },
+      "missed": {
+        "ref-annex-iii": "first expected chunk at rank 6"
+      },
+      "latency_ms": {
+        "median": 414.5,
+        "p95": 498.0
+      },
+      "out_of_scope_top_similarity": 0.38162608763836636
+    },
+    "hybrid": {
+      "metrics": {
+        "recall@3": {
+          "value": 0.9047619047619048,
+          "cases": 21
+        },
+        "recall@10": {
+          "value": 1.0,
+          "cases": 21
+        },
+        "mrr": {
+          "value": 0.8207671957671957,
+          "cases": 21
+        },
+        "out_of_scope_refused": {
+          "value": 1.0,
+          "cases": 3
+        },
+        "in_scope_unanswered": {
+          "value": 0.0,
+          "cases": 21
+        }
+      },
+      "missed": {
+        "ref-annex-iii": "first expected chunk at rank 9",
+        "ref-article-83": "first expected chunk at rank 8"
+      },
+      "latency_ms": {
+        "median": 27.0,
+        "p95": 31.0
+      },
+      "out_of_scope_top_similarity": 0.38162608763836636
+    }
   },
   "expected": {
     "en-ai-prohibited-practices": [
@@ -153,8 +220,8 @@
   },
   "threshold": 0.5,
   "metadata": {
-    "started_at": "2026-10-29T13:51:06+00:00",
-    "git_commit": "1b84c5b63b29bf1aee4bdff09894006b3913fcd0",
+    "started_at": "2026-10-29T15:14:35+00:00",
+    "git_commit": "6d421e2dc171accd59ce6f38b28c3aa6b0835d7f",
     "dataset": {
       "path": "evals/datasets/retrieval.yaml",
       "version": 2,
@@ -163,7 +230,8 @@
     "models": {
       "docling-project/docling-layout-heron": "8f39ad3c0b4c58e9c2d2c84a38465abf757272d8",
       "docling-project/docling-models": "fc0f2d45e2218ea24bce5045f58a389aed16dc23",
-      "BAAI/bge-m3": "5617a9f61b028005a4858fdac845db406aefb181"
+      "BAAI/bge-m3": "5617a9f61b028005a4858fdac845db406aefb181",
+      "BAAI/bge-reranker-v2-m3": "953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e"
     },
     "qdrant_version": "1.20.0",
     "settings": {
@@ -183,6 +251,6 @@
       "gdpr-en.pdf": "bd84e63f5b622b739a83389afc3b30d240f792bb88d8eb03a816c9a82b0c2499",
       "gdpr-pl.pdf": "61bddbf0f07490978b698f007e4641683b1d48ecd1481532e1a0c2afd4b63e0f"
     },
-    "indexing_seconds": 103.3
+    "indexing_seconds": 104.3
   }
 }
