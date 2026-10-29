@@ -125,7 +125,7 @@
   - empty text gives no terms.
 - Change: `domain/keywords.py`.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 4. Embedder port, fake and BGE-M3
 
