@@ -1,14 +1,30 @@
 """Contract for the ChunkIndex port; every adapter must pass it."""
 
-from collections.abc import Callable
+import os
+import uuid
+from collections.abc import Callable, Iterator
 
 import pytest
 
 from assistant.adapters.fakes.chunk_index import InMemoryChunkIndex
+from assistant.adapters.fakes.embedder import FakeEmbedder
 from assistant.domain.documents import Chunk
 from assistant.ports.chunk_index import ChunkIndex
 
-ADAPTERS: list[Callable[[], ChunkIndex]] = [InMemoryChunkIndex]
+QDRANT_URL = os.environ.get("ASSISTANT_QDRANT_URL", "http://127.0.0.1:6333")
+
+
+def qdrant(prefix: str) -> ChunkIndex:
+    """A Qdrant index in a collection of its own; needs `make qdrant`."""
+    from assistant.adapters.qdrant_chunk_index import QdrantChunkIndex  # noqa: PLC0415
+
+    return QdrantChunkIndex.connect(QDRANT_URL, FakeEmbedder(), prefix=prefix)
+
+
+ADAPTERS = [
+    pytest.param(lambda _: InMemoryChunkIndex(), id="in-memory"),
+    pytest.param(qdrant, id="qdrant", marks=pytest.mark.integration),
+]
 
 
 def chunk(position: int, text: str, document_id: str = "doc") -> Chunk:
@@ -17,10 +33,16 @@ def chunk(position: int, text: str, document_id: str = "doc") -> Chunk:
     )
 
 
-@pytest.fixture(params=ADAPTERS, ids=lambda adapter: adapter.__name__)
-def index(request: pytest.FixtureRequest) -> ChunkIndex:
-    factory: Callable[[], ChunkIndex] = request.param
-    return factory()
+@pytest.fixture(params=ADAPTERS)
+def index(request: pytest.FixtureRequest) -> Iterator[ChunkIndex]:
+    factory: Callable[[str], ChunkIndex] = request.param
+    prefix = f"test-{uuid.uuid4().hex[:8]}"
+    created = factory(prefix)
+    yield created
+    # Qdrant collections outlive the test; drop the one this test made.
+    drop = getattr(created, "drop", None)
+    if drop is not None:
+        drop()
 
 
 def test_the_chunk_closest_to_the_question_ranks_first(index: ChunkIndex) -> None:
