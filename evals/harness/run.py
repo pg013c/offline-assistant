@@ -94,6 +94,10 @@ def run(config: RunConfig) -> Outcome:
         cases = load_cases(config.dataset)
         expected = resolve(cases, chunks)
         responses = _search_with_promptfoo(cases, api_url, config.results_dir, started_at)
+    except Exception as error:
+        log.flush()
+        tail = api_log_tail(config.results_dir / "api.log")
+        raise RuntimeError(f"{error}\n\nEnd of the API log:\n{tail}") from error
     finally:
         _stop(server)
         log.close()
@@ -206,7 +210,9 @@ def api_environment(config: RunConfig, base: Mapping[str, str]) -> dict[str, str
 
 def api_log_tail(path: Path, lines: int = 40) -> str:
     """The last lines of the API's log, to explain a failed run."""
-    raise NotImplementedError
+    if not path.exists():
+        return "(no API log)"
+    return "\n".join(path.read_text(encoding="utf-8", errors="replace").splitlines()[-lines:])
 
 
 def warm_up(api: httpx.Client, mode: str) -> float:
