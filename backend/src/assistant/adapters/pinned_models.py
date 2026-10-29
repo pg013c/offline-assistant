@@ -88,6 +88,10 @@ BGE_M3 = PinnedModel(
 )
 
 DOCLING_MODELS = (DOCLING_LAYOUT, DOCLING_TABLES)
+# The cross-encoder that reorders search candidates (ADR 0019).
+BGE_RERANKER = PinnedModel(
+    repository="BAAI/bge-reranker-v2-m3", revision="", directory="", files={}
+)
 PINNED_MODELS = (*DOCLING_MODELS, BGE_M3)
 
 

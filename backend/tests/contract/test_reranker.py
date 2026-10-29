@@ -1,11 +1,30 @@
 """Contract for the Reranker port; every adapter must pass it."""
 
+import os
+from collections.abc import Callable
+from pathlib import Path
+
 import pytest
 
 from assistant.adapters.fakes.reranker import WordOverlapReranker
 from assistant.ports.reranker import Reranker
 
-ADAPTERS = [pytest.param(WordOverlapReranker, id="word-overlap")]
+MODELS_DIR = Path(
+    os.environ.get("ASSISTANT_MODELS_DIR", Path(__file__).parents[3] / "data" / "models")
+)
+
+
+def bge_reranker() -> Reranker:
+    from assistant.adapters.bge_reranker import BgeReranker  # noqa: PLC0415
+
+    BgeReranker.ensure_ready(MODELS_DIR)
+    return BgeReranker(MODELS_DIR)
+
+
+ADAPTERS = [
+    pytest.param(WordOverlapReranker, id="word-overlap"),
+    pytest.param(bge_reranker, id="bge-reranker", marks=pytest.mark.integration),
+]
 
 PASSAGES = [
     "Member states designate notified bodies.",
@@ -16,7 +35,7 @@ PASSAGES = [
 
 @pytest.fixture(params=ADAPTERS)
 def reranker(request: pytest.FixtureRequest) -> Reranker:
-    factory: type[Reranker] = request.param
+    factory: Callable[[], Reranker] = request.param
     return factory()
 
 
