@@ -139,9 +139,18 @@ jobs:
           enable-cache: true
           cache-dependency-glob: backend/uv.lock
 
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+
       - name: Install dependencies and Tesseract
+        env:
+          COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
         run: |
           uv sync --directory backend --locked
+          uv sync --directory evals --locked
+          corepack enable pnpm
+          pnpm --dir evals install --frozen-lockfile
           sudo apt-get update
           sudo apt-get install --yes --no-install-recommends tesseract-ocr tesseract-ocr-eng tesseract-ocr-pol
 

@@ -32,7 +32,7 @@ export EVAL_CORPUS_DIR := $(abspath $(or $(EVAL_CORPUS_DIR),data/eval-corpus))
 # Where `make api-client` writes the schema and generated types (ADR 0005).
 API_OUT ?= $(CURDIR)/frontend/src/api
 
-.PHONY: help setup models qdrant eval-corpus check-evals dev dev-preflight e2e test-integration check check-backend check-frontend check-api-client api-client test test-backend test-frontend node-version
+.PHONY: help setup models qdrant eval-corpus eval check-evals dev dev-preflight e2e test-integration check check-backend check-frontend check-api-client api-client test test-backend test-frontend node-version
 
 help: ## List targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
@@ -51,6 +51,11 @@ models: ## Download the parsing and embedding models into ASSISTANT_MODELS_DIR (
 
 eval-corpus: ## Download the evaluation corpus into EVAL_CORPUS_DIR, checked against pinned hashes
 	$(EVALS) python -m harness.corpus "$(EVAL_CORPUS_DIR)"
+
+eval: ## Retrieval evaluation on the corpus, compared with the baseline; needs models, qdrant, eval-corpus
+	@curl -fs http://127.0.0.1:$(QDRANT_PORT)/readyz >/dev/null || { \
+	  echo "Qdrant is not running on port $(QDRANT_PORT). Start it with: make qdrant"; exit 1; }
+	HF_HUB_OFFLINE=1 $(EVALS) python -m harness.run
 
 qdrant: ## Start Qdrant in Docker on QDRANT_PORT (data in ASSISTANT_DATA_DIR/qdrant, telemetry off)
 	@if [ -z "$(ASSISTANT_DATA_DIR)" ]; then \
@@ -124,6 +129,7 @@ test-backend: ## Backend tests
 
 test-integration: ## Tests with real adapters; needs `make models`, `make qdrant` and Tesseract
 	HF_HUB_OFFLINE=1 $(BACKEND) pytest -q -m integration
+	HF_HUB_OFFLINE=1 $(EVALS) pytest -q -m integration
 
 test-frontend: ## Frontend tests
 	$(FRONTEND) test
