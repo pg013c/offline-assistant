@@ -4,7 +4,6 @@ Docling is imported when the first document is parsed: it loads PyTorch, which t
 seconds and is not needed by anything else.
 """
 
-import json
 import shutil
 import subprocess
 import threading
@@ -15,6 +14,7 @@ from typing import TYPE_CHECKING
 
 import pypdfium2 as pdfium
 
+from assistant.adapters.docling_models import PINNED_MODELS, ParserNotReady, verify_models
 from assistant.domain.documents import Block, ParsedDocument
 from assistant.domain.errors import DocumentUnreadable
 
@@ -22,18 +22,11 @@ if TYPE_CHECKING:
     from docling.document_converter import DocumentConverter
     from docling_core.types.doc.document import DoclingDocument
 
+# ParserNotReady is re-exported: callers of the parser handle its readiness error.
+__all__ = ["DoclingDocumentParser", "ParserNotReady"]
+
 MAX_PAGES = 500
 OCR_LANGUAGES = ("eng", "pol")
-# Directories `make models` creates under ASSISTANT_MODELS_DIR/docling, and their names.
-REQUIRED_MODELS = {
-    "docling-project--docling-layout-heron": "docling-layout-heron (page layout)",
-    "docling-project--docling-models": "docling-models (TableFormer)",
-}
-MANIFEST = "manifest.json"
-
-
-class ParserNotReady(Exception):
-    """A model or tool the parser needs is missing; the message says how to install it."""
 
 
 class DoclingDocumentParser:
@@ -48,24 +41,8 @@ class DoclingDocumentParser:
 
     @staticmethod
     def ensure_ready(models_dir: Path, tesseract: str = "tesseract") -> None:
-        """Raise `ParserNotReady` unless the models and Tesseract with `eng` and `pol` exist."""
-        artifacts = models_dir / "docling"
-        missing = [
-            name
-            for directory, name in REQUIRED_MODELS.items()
-            if not (artifacts / directory).is_dir()
-        ]
-        manifest = artifacts / MANIFEST
-        if not missing and manifest.is_file():
-            listed = json.loads(manifest.read_text(encoding="utf-8"))
-            missing = sorted(path for path in listed if not (artifacts / path).is_file())
-        elif not missing:
-            missing = [MANIFEST]
-        if missing:
-            raise ParserNotReady(
-                f"Document parsing models are missing in {artifacts}: {', '.join(missing)}. "
-                "Run `make models` (the only step that needs the network)."
-            )
+        """Raise `ParserNotReady` unless the pinned models and Tesseract with eng and pol exist."""
+        verify_models(models_dir / "docling", PINNED_MODELS.files)
 
         executable = shutil.which(tesseract)
         if executable is None:
