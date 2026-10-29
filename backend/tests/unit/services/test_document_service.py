@@ -14,6 +14,7 @@ from assistant.domain.documents import (
     ChunkLocation,
     Document,
     ParsedDocument,
+    chunk_document,
 )
 from assistant.domain.errors import (
     DocumentNotFound,
@@ -516,9 +517,12 @@ def test_restore_parses_again_documents_chunked_by_another_chunker(
     queue.run_all()
     stored = store.get(document.id)
     assert stored is not None
+    # Chunks cut by the older chunker differ from what the current one cuts.
+    stale = [Chunk(id=f"{document.id}:0", document_id=document.id, position=0, text="Stale.")]
+    store.save_chunks(document.id, stale)
     store.update(replace(stored, chunker_version=version))
     index = InMemoryChunkIndex()
-    index.add(store.load_chunks(document.id))
+    index.add(stale)
     restarted = DocumentService(store, index, FakeDocumentParser(PARSED), queue)
 
     restarted.restore()
@@ -528,7 +532,11 @@ def test_restore_parses_again_documents_chunked_by_another_chunker(
     ready = store.get(document.id)
     assert ready is not None
     assert (ready.status, ready.chunker_version) == ("ready", CHUNKER_VERSION)
-    assert index.document_ids() == {document.id}
+    assert store.load_chunks(document.id) == chunk_document(document.id, PARSED)
+    assert "Stale." not in {hit.chunk.text for hit in index.search("Stale", limit=10)}
+    assert {hit.chunk.text for hit in index.search("logs", limit=10)} == {
+        chunk.text for chunk in chunk_document(document.id, PARSED)
+    }
 
 
 def test_restore_does_not_parse_documents_of_the_current_chunker(
@@ -537,9 +545,16 @@ def test_restore_does_not_parse_documents_of_the_current_chunker(
     earlier = DocumentService(store, InMemoryChunkIndex(), FakeDocumentParser(PARSED), queue)
     document = earlier.upload("policy.pdf", PDF)
     queue.run_all()
-    restarted = DocumentService(store, InMemoryChunkIndex(), ParserThatMustNotRun(), queue)
+    chunks = store.load_chunks(document.id)
+    index = InMemoryChunkIndex()
+    restarted = DocumentService(store, index, ParserThatMustNotRun(), queue)
 
     restarted.restore()
-    queue.run_all()
 
-    assert restarted.list_documents()[0].id == document.id
+    # Nothing is queued, so the parser that must not run is never reached.
+    assert queue.pending == 0
+    current = store.get(document.id)
+    assert current is not None
+    assert (current.status, current.chunker_version) == ("ready", CHUNKER_VERSION)
+    assert store.load_chunks(document.id) == chunks
+    assert index.document_ids() == {document.id}

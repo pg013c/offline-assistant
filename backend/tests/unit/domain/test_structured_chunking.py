@@ -349,6 +349,61 @@ def test_a_title_like_line_after_other_content_stays_a_chunk() -> None:
     ]
 
 
+def test_a_title_like_line_followed_by_a_heading_stays_a_chunk() -> None:
+    document = parsed(
+        heading("Address"),
+        paragraph("Main Street 5, 00-001 Warsaw"),
+        heading("Phone"),
+        paragraph("+48 22 123 45 67"),
+    )
+
+    chunks = chunk_document("doc", document)
+
+    assert [(chunk.text, chunk.location.heading_path) for chunk in chunks] == [
+        ("Main Street 5, 00-001 Warsaw", ("Address",)),
+        ("+48 22 123 45 67", ("Phone",)),
+    ]
+
+
+def test_a_document_of_one_heading_and_one_short_line_has_that_line_as_its_chunk() -> None:
+    document = parsed(heading("Wi-Fi password", level=1), paragraph("orange-cat-42"))
+
+    chunks = chunk_document("doc", document)
+
+    assert [(chunk.text, chunk.location.heading_path) for chunk in chunks] == [
+        ("orange-cat-42", ("Wi-Fi password",)),
+    ]
+
+
+def test_a_title_followed_by_the_sections_first_article_joins_the_heading_path() -> None:
+    document = parsed(
+        heading("SEKCJA 3"),
+        paragraph("Obowiązki dostawców"),
+        paragraph("Artykuł 16"),
+        paragraph("1. Dostawcy zapewniają zgodność."),
+    )
+
+    chunks = chunk_document("doc", document)
+
+    assert [chunk.text for chunk in chunks] == ["1. Dostawcy zapewniają zgodność."]
+    assert chunks[0].location.heading_path[:2] == ("SEKCJA 3", "Obowiązki dostawców")
+    assert chunks[0].location.article == "16"
+
+
+def test_an_annex_label_right_after_an_article_heading_is_not_the_articles_title() -> None:
+    document = parsed(
+        heading("Article 113"),
+        heading("ANNEX I"),
+        heading("List of Union harmonisation legislation"),
+        paragraph("Section A lists the legislation based on the New Legislative Framework."),
+    )
+
+    annex = chunk_document("doc", document)[-1]
+
+    assert annex.location.heading_path == ("ANNEX I", "List of Union harmonisation legislation")
+    assert annex.location.article is None
+
+
 def test_the_chunker_version_is_raised_with_the_new_rules() -> None:
     # 2: section titles join the heading path; 3: annex titles keep the annex label.
     assert CHUNKER_VERSION == 3
