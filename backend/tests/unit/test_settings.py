@@ -23,6 +23,7 @@ def test_data_dir_is_read_from_the_environment(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     monkeypatch.setenv("ASSISTANT_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("ASSISTANT_DOCUMENT_PARSER", "text-only")
 
     settings = load_settings()
 
@@ -33,6 +34,7 @@ def test_unknown_assistant_variables_are_ignored(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     monkeypatch.setenv("ASSISTANT_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("ASSISTANT_DOCUMENT_PARSER", "text-only")
     monkeypatch.setenv("ASSISTANT_NOT_A_SETTING", "1")
 
     settings = load_settings()
