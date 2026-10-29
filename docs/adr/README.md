@@ -21,7 +21,7 @@ Use the `/adr` skill or copy [template.md](template.md).
 | [0004](0004-offline-first-no-egress.md) | Offline first: no network egress at runtime | accepted |
 | [0005](0005-contract-first-api.md) | Contract-first API with a generated TypeScript client | accepted |
 | [0006](0006-tdd-for-code-evals-for-model-behaviour.md) | TDD for code, evaluations for model behaviour | accepted |
-| [0007](0007-native-model-serving-on-macos.md) | Native model serving on macOS | accepted |
+| [0007](0007-native-model-serving-on-macos.md) | Native model serving on macOS | accepted, amended by 0021 |
 | [0008](0008-vite-spa-frontend.md) | Vite single-page app instead of a server-rendered framework | accepted |
 | [0009](0009-test-first-commits-and-merge-strategy.md) | Test-first commits, kept in history | accepted |
 | [0010](0010-continuous-integration-from-the-first-commit.md) | Continuous integration from the first commit | accepted |
@@ -35,3 +35,4 @@ Use the `/adr` skill or copy [template.md](template.md).
 | [0018](0018-promptfoo-and-a-pinned-evaluation-corpus.md) | Evaluate with Promptfoo on a corpus pinned by hash | accepted |
 | [0019](0019-bge-reranker-v2-m3-for-reranking.md) | Rerank with BGE reranker v2 M3, pinned and loaded offline | accepted |
 | [0020](0020-retrieval-targets.md) | Retrieval targets: floors that `make eval` enforces | accepted |
+| [0021](0021-llama-server-and-qwen3-8b.md) | Serve the local LLM with llama.cpp's llama-server, starting with Qwen3 8B | accepted |
