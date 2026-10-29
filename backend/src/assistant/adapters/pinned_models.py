@@ -10,8 +10,12 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-class ParserNotReady(Exception):
+class ModelsNotReady(Exception):
     """A model or tool the app needs is missing; the message says how to install it."""
+
+
+# The former name, until the tests use the new one.
+ParserNotReady = ModelsNotReady
 
 
 @dataclass(frozen=True)
@@ -92,7 +96,7 @@ PINNED_MODELS = (*DOCLING_MODELS, BGE_M3)
 
 
 def verify_models(models_dir: Path, models: Iterable[PinnedModel]) -> None:
-    """Raise `ParserNotReady` unless every file of every model exists with its hash."""
+    """Raise `ModelsNotReady` unless every file of every model exists with its hash."""
     problems: list[str] = []
     for model in models:
         folder = models_dir / model.directory
@@ -103,7 +107,7 @@ def verify_models(models_dir: Path, models: Iterable[PinnedModel]) -> None:
             elif _sha256(file) != digest:
                 problems.append(f"{model.repository}: {path} differs from the pinned version")
     if problems:
-        raise ParserNotReady(
+        raise ModelsNotReady(
             f"Models in {models_dir} are not ready: {'; '.join(problems)}. "
             "Run `make models` (the only step that needs the network)."
         )

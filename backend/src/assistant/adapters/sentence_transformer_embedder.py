@@ -26,7 +26,7 @@ class SentenceTransformerEmbedder:
 
     @staticmethod
     def ensure_ready(models_dir: Path) -> None:
-        """Raise `ParserNotReady` unless the pinned BGE-M3 files are in place."""
+        """Raise `ModelsNotReady` unless the pinned BGE-M3 files are in place."""
         verify_models(models_dir, [BGE_M3])
 
     @property
