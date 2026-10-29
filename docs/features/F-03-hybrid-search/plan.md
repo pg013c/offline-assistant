@@ -243,8 +243,8 @@
   - "Annex III" ranks a chunk containing it first;
   - an unrelated question (cooking) stays below the threshold.
 - Change: the threshold default, if the cases show 0.5 is wrong.
-- [ ] red
-- [ ] green
+- [x] red
+- [x] green
 
 ### Step 13. Journey on the full stack
 
