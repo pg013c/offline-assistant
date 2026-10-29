@@ -111,6 +111,39 @@ jobs:
       - name: Format, lint, types, layer contracts, tests
         run: make check-backend
 
+  integration:
+    name: Integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+
+      - name: Install dependencies and Tesseract
+        run: |
+          uv sync --directory backend --locked
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends tesseract-ocr tesseract-ocr-eng tesseract-ocr-pol
+
+      # The models change only with Docling (uv.lock) or with what the download step fetches.
+      - name: Restore parsing models
+        id: models
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: data/models
+          key: models-${{ hashFiles('backend/uv.lock', 'backend/scripts/download_models.py') }}
+
+      - name: Download parsing models
+        if: steps.models.outputs.cache-hit != 'true'
+        run: make models
+
+      - name: Tests with real adapters
+        run: make test-integration
+
   frontend:
     name: Frontend
     runs-on: ubuntu-latest
