@@ -73,9 +73,11 @@ source = { editable = "." }
 dependencies = [
     { name = "docling-slim", extra = ["convert-core", "format-docx", "format-pdf", "models-local"] },
     { name = "fastapi" },
+    { name = "huggingface-hub" },
     { name = "opencv-python-headless" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
+    { name = "pypdfium2" },
     { name = "python-multipart" },
     { name = "structlog" },
     { name = "torch", version = "2.15.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux'" },
@@ -98,9 +100,11 @@ dev = [
 requires-dist = [
     { name = "docling-slim", extras = ["convert-core", "format-docx", "format-pdf", "models-local"], specifier = ">=2.144.0" },
     { name = "fastapi", specifier = ">=0.162.0" },
+    { name = "huggingface-hub", specifier = ">=1.33,<2" },
     { name = "opencv-python-headless", specifier = ">=4.6,<5" },
     { name = "pydantic", specifier = ">=2.14.1" },
     { name = "pydantic-settings", specifier = ">=2.16.2" },
+    { name = "pypdfium2", specifier = ">=5.14,<6" },
     { name = "python-multipart", specifier = ">=0.0.32" },
     { name = "structlog", specifier = ">=26.1.0" },
     { name = "torch", marker = "sys_platform != 'linux'", specifier = ">=2.2.2,<3" },
