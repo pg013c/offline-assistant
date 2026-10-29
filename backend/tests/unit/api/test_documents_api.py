@@ -1,25 +1,19 @@
-from collections.abc import Iterator
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 
-from assistant.app import create_app
 from assistant.domain.errors import DocumentRejected, FileTooLarge, UnsupportedFileType
-from assistant.services.documents import MAX_UPLOAD_BYTES
-from assistant.settings import Settings
+from assistant.services.documents import MAX_UPLOAD_BYTES, NO_TEXT
+
+# Fixtures from tests/conftest.py.
+type ClientFor = Callable[[Path], TestClient]
+type Settle = Callable[[TestClient, str], dict[str, Any]]
+
 
 POLICY = b"Providers keep logs.\n\nAuthorities may inspect the logs."
-
-
-def client_for(data_dir: Path) -> TestClient:
-    return TestClient(create_app(Settings(data_dir=data_dir)))
-
-
-@pytest.fixture
-def client(tmp_path: Path) -> Iterator[TestClient]:
-    with client_for(tmp_path) as client:
-        yield client
 
 
 def upload(client: TestClient, filename: str, content: bytes) -> dict[str, object]:
@@ -27,25 +21,46 @@ def upload(client: TestClient, filename: str, content: bytes) -> dict[str, objec
     return {"status": response.status_code, "body": response.json()}
 
 
-def test_upload_returns_the_new_document(client: TestClient) -> None:
+def test_upload_is_accepted_and_the_document_becomes_ready(
+    client: TestClient, settle: Settle
+) -> None:
     result = upload(client, "policy.txt", POLICY)
 
-    assert result["status"] == 201
+    assert result["status"] == 202
     body = result["body"]
     assert isinstance(body, dict)
-    assert body["title"] == "policy"
-    assert body["filename"] == "policy.txt"
-    assert body["chunk_count"] == 2
-    assert body["id"]
+    assert (body["title"], body["filename"]) == ("policy", "policy.txt")
+    assert body["status"] in {"processing", "ready"}
+    ready = settle(client, str(body["id"]))
+    assert ready == {
+        "id": body["id"],
+        "title": "policy",
+        "filename": "policy.txt",
+        "status": "ready",
+        "chunk_count": 2,
+        "page_count": None,
+        "failure_reason": None,
+    }
 
 
-def test_uploaded_documents_are_listed(client: TestClient) -> None:
+def test_uploaded_documents_are_listed(client: TestClient, settle: Settle) -> None:
     created = upload(client, "policy.txt", POLICY)["body"]
+    assert isinstance(created, dict)
+    ready = settle(client, str(created["id"]))
 
     response = client.get("/api/documents")
 
     assert response.status_code == 200
-    assert response.json() == [created]
+    assert response.json() == [ready]
+
+
+def test_a_document_without_text_fails_with_its_reason(client: TestClient, settle: Settle) -> None:
+    created = upload(client, "empty.md", b"\n\n   \n")["body"]
+    assert isinstance(created, dict)
+
+    failed = settle(client, str(created["id"]))
+
+    assert (failed["status"], failed["failure_reason"]) == ("failed", NO_TEXT)
 
 
 @pytest.mark.parametrize(
@@ -82,23 +97,28 @@ def test_a_request_without_a_file_returns_the_standard_error_with_details(
     assert body["details"] == [{"field": "body.file", "message": "Field required"}]
 
 
-def test_uploading_the_same_content_twice_returns_the_same_document(client: TestClient) -> None:
-    first = upload(client, "policy.txt", POLICY)
+def test_uploading_the_same_content_twice_returns_the_same_document(
+    client: TestClient, settle: Settle
+) -> None:
+    first = upload(client, "policy.txt", POLICY)["body"]
+    assert isinstance(first, dict)
+    ready = settle(client, str(first["id"]))
 
     second = upload(client, "again.txt", POLICY)
 
-    assert first["status"] == 201
-    assert second["status"] == 201
-    assert second["body"] == first["body"]
-    assert client.get("/api/documents").json() == [first["body"]]
+    assert second["status"] == 202
+    assert second["body"] == ready
+    assert client.get("/api/documents").json() == [ready]
 
 
-def test_documents_survive_a_restart(tmp_path: Path) -> None:
+def test_documents_survive_a_restart(tmp_path: Path, settle: Settle, client_for: ClientFor) -> None:
     with client_for(tmp_path) as before:
         created = upload(before, "policy.txt", POLICY)["body"]
+        assert isinstance(created, dict)
+        ready = settle(before, str(created["id"]))
 
     with client_for(tmp_path) as after:
-        assert after.get("/api/documents").json() == [created]
+        assert after.get("/api/documents").json() == [ready]
 
 
 class EmptyFile(UnsupportedFileType):
@@ -130,9 +150,7 @@ class RejectingWithUnmapped:
         raise UnmappedRejection(f"{filename}: rejected")
 
 
-def test_an_unmapped_rejection_is_still_reported_with_the_standard_body(
-    client: TestClient,
-) -> None:
+def test_an_unmapped_rejection_is_still_reported_with_the_standard_body(client: TestClient) -> None:
     client.app.state.document_service = RejectingWithUnmapped()  # type: ignore[attr-defined]
 
     result = upload(client, "file.txt", b"x")

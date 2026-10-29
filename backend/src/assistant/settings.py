@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     data_dir: Path
     # The only chat model until F-06 adds real ones.
     chat_model: Literal["fake-extractive"] = "fake-extractive"
+    # `docling` reads every supported format; `text-only` reads .txt and .md without models.
+    document_parser: Literal["docling", "text-only"] = "docling"
+    models_dir: Path | None = None
 
 
 class SettingsError(Exception):

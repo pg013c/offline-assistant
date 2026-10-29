@@ -1,5 +1,5 @@
 import json
-from collections.abc import Iterator
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -7,9 +7,13 @@ import pytest
 from fastapi.testclient import TestClient
 
 from assistant.adapters.text_document_parser import TextDocumentParser
-from assistant.app import create_app
 from assistant.domain.documents import chunk_document, document_id_for
-from assistant.settings import Settings
+
+# Fixtures from tests/conftest.py.
+type ClientFor = Callable[[Path], TestClient]
+type Settle = Callable[[TestClient, str], dict[str, Any]]
+type Upload = Callable[..., None]
+
 
 POLICY = (
     b"Providers keep logs for six months. Logs record every access.\n\nAuthorities inspect logs."
@@ -17,19 +21,16 @@ POLICY = (
 QUESTION = {"question": "How long do providers keep logs?"}
 
 
-def client_for(data_dir: Path) -> TestClient:
-    return TestClient(create_app(Settings(data_dir=data_dir)))
-
-
 @pytest.fixture
-def client(tmp_path: Path) -> Iterator[TestClient]:
-    with client_for(tmp_path) as client:
-        yield client
+def upload(settle: Settle) -> Upload:
+    def upload_and_wait(
+        client: TestClient, filename: str = "policy.txt", content: bytes = POLICY
+    ) -> None:
+        response = client.post("/api/documents", files={"file": (filename, content, "text/plain")})
+        assert response.status_code == 202
+        assert settle(client, response.json()["id"])["status"] == "ready"
 
-
-def upload(client: TestClient) -> None:
-    response = client.post("/api/documents", files={"file": ("policy.txt", POLICY, "text/plain")})
-    assert response.status_code == 201
+    return upload_and_wait
 
 
 def ask(client: TestClient) -> tuple[str, list[dict[str, Any]]]:
@@ -43,7 +44,9 @@ def ask(client: TestClient) -> tuple[str, list[dict[str, Any]]]:
     return response.headers["content-type"], events
 
 
-def test_answer_is_a_stream_of_text_then_citation_then_end(client: TestClient) -> None:
+def test_answer_is_a_stream_of_text_then_citation_then_end(
+    client: TestClient, upload: Upload
+) -> None:
     upload(client)
 
     content_type, events = ask(client)
@@ -62,7 +65,7 @@ def test_answer_is_a_stream_of_text_then_citation_then_end(client: TestClient) -
     }
 
 
-def test_citation_events_carry_the_quoted_passage(client: TestClient) -> None:
+def test_citation_events_carry_the_quoted_passage(client: TestClient, upload: Upload) -> None:
     upload(client)
 
     _, events = ask(client)
@@ -75,6 +78,22 @@ def test_citation_events_carry_the_quoted_passage(client: TestClient) -> None:
     assert citation["chunk_id"].startswith(citation["document_id"] + ":")
 
 
+def test_citation_events_carry_the_location_of_the_chunk(
+    client: TestClient, upload: Upload
+) -> None:
+    upload(client, "policy.md", b"# Logs\n\n" + POLICY)
+
+    _, events = ask(client)
+
+    citation = next(event for event in events if event["type"] == "citation")
+    assert citation["location"] == {
+        "heading_path": ["Logs"],
+        "article": None,
+        "paragraph": None,
+        "page": None,
+    }
+
+
 def test_without_documents_the_stream_has_no_citation(client: TestClient) -> None:
     _, events = ask(client)
 
@@ -82,7 +101,9 @@ def test_without_documents_the_stream_has_no_citation(client: TestClient) -> Non
     assert events[-1]["found"] is False
 
 
-def test_documents_are_searchable_after_a_restart(tmp_path: Path) -> None:
+def test_documents_are_searchable_after_a_restart(
+    tmp_path: Path, client_for: ClientFor, upload: Upload
+) -> None:
     with client_for(tmp_path) as before:
         upload(before)
 
