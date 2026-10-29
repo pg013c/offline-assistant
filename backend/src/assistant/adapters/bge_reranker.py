@@ -16,6 +16,11 @@ if TYPE_CHECKING:
 BATCH_SIZE = 16
 
 
+def precision_for(device: str) -> str:
+    """The floating-point precision the model runs in on a device."""
+    raise NotImplementedError
+
+
 class BgeReranker:
     def __init__(self, models_dir: Path, device: str | None = None) -> None:
         self._path = models_dir / BGE_RERANKER.directory
@@ -31,6 +36,11 @@ class BgeReranker:
     @property
     def model_id(self) -> str:
         return f"{BGE_RERANKER.repository}@{BGE_RERANKER.revision[:8]}"
+
+    @property
+    def precision(self) -> str:
+        """The precision of the loaded model, as a torch dtype name."""
+        raise NotImplementedError
 
     def score(self, query: str, passages: Sequence[str]) -> list[float]:
         if not passages:

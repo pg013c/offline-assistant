@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from assistant.adapters.bge_reranker import BgeReranker
+from assistant.adapters.bge_reranker import BgeReranker, precision_for
 from assistant.adapters.pinned_models import ModelsNotReady
 
 
@@ -18,3 +18,8 @@ def test_the_model_id_names_the_pinned_revision(tmp_path: Path) -> None:
 def test_no_passages_need_no_model(tmp_path: Path) -> None:
     # Nothing is loaded from the empty directory when there is nothing to score.
     assert BgeReranker(tmp_path).score("query", []) == []
+
+
+def test_the_reranker_runs_in_half_precision_on_mps_and_full_precision_on_cpu() -> None:
+    assert precision_for("mps") == "float16"
+    assert precision_for("cpu") == "float32"

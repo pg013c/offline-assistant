@@ -166,6 +166,18 @@
 - [x] red
 - [x] green
 
+### Step 5a. Half precision on MPS
+
+- Kind: code (added after the first measurement, see "Changes during the build")
+- Tests first:
+  - **unit:** the reranker runs in float16 on MPS and in float32 on CPU;
+  - **integration:**
+    - on a machine with MPS, the loaded model is float16;
+    - its scores stay within 0.01 of float32 on CPU for the same pairs.
+- Change: `adapters/bge_reranker.py`.
+- [x] red
+- [ ] green
+
 ### Step 6. Measure and record
 
 - Kind: eval
@@ -198,3 +210,12 @@
 | AC-4 out-of-scope still refused | 3, 6 |
 | AC-5 both modes, latency and out-of-scope similarity in the report; gate on the default | 5, 6 |
 | AC-6 result recorded, default follows it | 6 |
+
+## Changes during the build
+
+- **Half precision on MPS (step 5a).** The first `make eval` gave the following with the reranker:
+  - recall@3 95.2 % (90.5 % without);
+  - MRR 0.873 (0.821 without);
+  - p95 search latency 1599 ms, above the 1 s limit of spec decision 4.
+
+  Scoring 30 pairs took 785 ms in float32 and 353 ms in float16 on MPS, with scores equal to three decimals. The human approved trying float16 on MPS before deciding the default (2026-10-29). Decision 4 is unchanged.
