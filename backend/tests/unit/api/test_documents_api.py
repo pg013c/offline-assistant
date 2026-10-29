@@ -51,8 +51,8 @@ def test_uploaded_documents_are_listed(client: TestClient) -> None:
 @pytest.mark.parametrize(
     ("filename", "content", "status", "code"),
     [
-        ("policy.pdf", POLICY, 415, "unsupported_file_type"),
-        ("policy.txt", b"x" * (5 * 1024 * 1024 + 1), 413, "file_too_large"),
+        ("slides.pptx", POLICY, 415, "unsupported_file_type"),
+        ("policy.txt", b"x" * (MAX_UPLOAD_BYTES + 1), 413, "file_too_large"),
         ("policy.txt", "Zażółć".encode("utf-16"), 422, "not_utf8_text"),
     ],
 )
