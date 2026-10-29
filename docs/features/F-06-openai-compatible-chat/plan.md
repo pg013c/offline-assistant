@@ -232,7 +232,7 @@ class ChatModel(Protocol):
   - **`make eval-answers`:** it refuses to run when the LLM server is down.
 - Change: `evals/promptfoo/answers.yaml`, `evals/harness/` (answers module, run entry), `Makefile`.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 11. Measure and record
 

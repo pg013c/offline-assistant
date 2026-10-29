@@ -5,7 +5,7 @@ from collections.abc import Mapping
 
 TOLERANCE_POINTS = 5
 # Metrics where a rise, not a drop, is the regression.
-LOWER_IS_BETTER = frozenset({"in_scope_unanswered"})
+LOWER_IS_BETTER = frozenset({"in_scope_unanswered", "answer_failed"})
 
 
 def check(current: Mapping[str, float | None], baseline: Mapping[str, float | None]) -> list[str]:

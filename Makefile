@@ -36,7 +36,7 @@ export EVAL_CORPUS_DIR := $(abspath $(or $(EVAL_CORPUS_DIR),data/eval-corpus))
 # Where `make api-client` writes the schema and generated types (ADR 0005).
 API_OUT ?= $(CURDIR)/frontend/src/api
 
-.PHONY: help setup models llm-models llm-preflight llm qdrant eval-corpus eval check-evals dev dev-preflight e2e test-integration check check-backend check-frontend check-api-client api-client test test-backend test-frontend node-version
+.PHONY: help setup models llm-models llm-preflight llm qdrant eval-corpus eval eval-answers check-evals dev dev-preflight e2e test-integration check check-backend check-frontend check-api-client api-client test test-backend test-frontend node-version
 
 help: ## List targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
@@ -76,6 +76,13 @@ eval: ## Retrieval evaluation on the corpus, compared with the baseline; needs m
 	@curl -fs http://127.0.0.1:$(QDRANT_PORT)/readyz >/dev/null || { \
 	  echo "Qdrant is not running on port $(QDRANT_PORT). Start it with: make qdrant"; exit 1; }
 	HF_HUB_OFFLINE=1 $(EVALS) python -m harness.run
+
+eval-answers: ## Answer evaluation against the local LLM, compared with its baseline; needs make llm, models, qdrant, eval-corpus
+	@curl -fs http://127.0.0.1:$(LLM_PORT)/health >/dev/null || { \
+	  echo "No model server on port $(LLM_PORT). Start it with: make llm"; exit 1; }
+	@curl -fs http://127.0.0.1:$(QDRANT_PORT)/readyz >/dev/null || { \
+	  echo "Qdrant is not running on port $(QDRANT_PORT). Start it with: make qdrant"; exit 1; }
+	HF_HUB_OFFLINE=1 $(EVALS) python -m harness.run --answers
 
 qdrant: ## Start Qdrant in Docker on QDRANT_PORT (data in ASSISTANT_DATA_DIR/qdrant, telemetry off)
 	@if [ -z "$(ASSISTANT_DATA_DIR)" ]; then \

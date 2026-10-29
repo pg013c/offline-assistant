@@ -15,7 +15,7 @@ import subprocess
 import sys
 import time
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import IO, Any
@@ -23,11 +23,19 @@ from typing import IO, Any
 import httpx
 import yaml
 
+from harness.answers import AnswerCase, answers_markdown, parse_chat_stream, score_answers
 from harness.corpus import CorpusDocument, documents, sha256
-from harness.dataset import load_cases
+from harness.dataset import load_answer_cases, load_cases
 from harness.gate import gate_failures
 from harness.metrics import CaseResult, compute, latency, top_out_of_scope_similarity
-from harness.promptfoo import MODES, Response, command_line, environment, responses_by_mode
+from harness.promptfoo import (
+    MODES,
+    Response,
+    command_line,
+    environment,
+    outputs_by_case,
+    responses_by_mode,
+)
 from harness.report import ModeResult, build_report, markdown
 from harness.resolve import ChunkRef, resolve
 
@@ -36,6 +44,8 @@ PROMPTFOO_CONFIG = ROOT / "evals" / "promptfoo" / "retrieval.yaml"
 # The mode the API runs by default; the gate compares it with the baseline.
 GATED_MODE = "reranked"
 BASELINE = ROOT / "docs" / "evals" / "retrieval-baseline.json"
+ANSWER_BASELINE = ROOT / "docs" / "evals" / "answer-baseline.json"
+ANSWERS_CONFIG = ROOT / "evals" / "promptfoo" / "answers.yaml"
 STARTUP_SECONDS = 180
 INGESTION_SECONDS = 1800
 PROMPTFOO_SECONDS = 600
@@ -68,6 +78,9 @@ class RunConfig:
     threshold: float
     # Whether the floors of ADR 0020 apply; `make eval` holds the corpus to them.
     floors: bool = False
+    # The chat model the API answers with, and its server (F-06, ADR 0021).
+    chat_model: str = "fake-extractive"
+    llm_url: str = "http://127.0.0.1:8080"
 
 
 @dataclass(frozen=True)
@@ -132,6 +145,89 @@ def run(config: RunConfig) -> Outcome:
     return Outcome(report_json, report_markdown, failures)
 
 
+def run_answers(config: RunConfig) -> Outcome:
+    """The answer suite from an empty index, against the configured chat model (F-06)."""
+    started_at = datetime.now(UTC)
+    corpus = verify_corpus(config.corpus_dir, config.corpus)
+    ensure_port_free(config.port)
+    _reset(config)
+    api_url = f"http://127.0.0.1:{config.port}"
+    server, log = _start_api(config)
+    try:
+        _wait_until_healthy(api_url, server)
+        with httpx.Client(base_url=api_url, timeout=60) as api:
+            document_ids = _index_corpus(api, config.corpus_dir, config.corpus)
+            chunks = _chunk_refs(api, document_ids)
+        cases = load_answer_cases(config.dataset)
+        expected = resolve(cases, chunks)
+        outputs = outputs_by_case(
+            _promptfoo(ANSWERS_CONFIG, cases, api_url, config.results_dir, started_at)
+        )
+    except Exception as error:
+        log.flush()
+        tail = api_log_tail(config.results_dir / "api.log")
+        raise RuntimeError(f"{error}\n\nEnd of the API log:\n{tail}") from error
+    finally:
+        _stop(server)
+        log.close()
+
+    results = {case.id: parse_chat_stream(outputs[case.id]) for case in cases}
+    metrics = score_answers(
+        [AnswerCase(case.id, case.language, case.behaviour, expected[case.id]) for case in cases],
+        results,
+    )
+    metadata = {
+        **_metadata(config, started_at),
+        "corpus": corpus,
+        "chat_model": config.chat_model,
+        "llm_server": _llm_server(config.llm_url),
+    }
+    report = {
+        "metrics": {
+            name: {"value": value, "cases": metrics.cases[name]}
+            for name, value in metrics.values.items()
+        },
+        "performance": metrics.performance,
+        "missed": metrics.missed,
+        "results": {
+            case_id: {
+                "answer": result.answer,
+                "cited": list(result.cited),
+                "error": result.error,
+                "usage": result.usage,
+            }
+            for case_id, result in results.items()
+        },
+        "expected": {case: sorted(ids) for case, ids in expected.items()},
+        "metadata": metadata,
+    }
+    baseline = (
+        json.loads(config.baseline.read_text(encoding="utf-8"))["metrics"]
+        if config.baseline.exists()
+        else {}
+    )
+    failures = gate_failures(
+        dict(metrics.values),
+        {name: values["value"] for name, values in baseline.items()},
+        floors=False,
+    )
+    stem = config.results_dir / f"answers-{started_at:%Y%m%dT%H%M%SZ}"
+    report_json = stem.with_suffix(".json")
+    report_markdown = stem.with_suffix(".md")
+    report_json.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", "utf-8")
+    report_markdown.write_text(answers_markdown(metrics, metadata), encoding="utf-8")
+    return Outcome(report_json, report_markdown, failures)
+
+
+def _llm_server(url: str) -> dict[str, Any]:
+    """The model server's build and model file, from llama-server's /props (ADR 0021)."""
+    try:
+        props = httpx.get(f"{url}/props", timeout=5).json()
+    except (httpx.HTTPError, ValueError):
+        return {"url": url}
+    return {"url": url, "build": props.get("build_info"), "model_path": props.get("model_path")}
+
+
 def verify_corpus(corpus_dir: Path, pins: Sequence[CorpusDocument]) -> dict[str, str]:
     """File name -> SHA-256 of every pinned corpus file, each checked against its pin."""
     if not pins:
@@ -169,7 +265,14 @@ def drop_collections(qdrant: httpx.Client, prefix: str) -> None:
 
 def default_answers_config(env: Mapping[str, str]) -> RunConfig:
     """`make eval-answers`: the answer suite against the local model (F-06)."""
-    raise NotImplementedError
+    return replace(
+        default_config(env),
+        dataset=ROOT / "evals" / "datasets" / "answers.yaml",
+        baseline=ANSWER_BASELINE,
+        floors=False,
+        chat_model="qwen3-8b",
+        llm_url=f"http://127.0.0.1:{env.get('LLM_PORT', '8080')}",
+    )
 
 
 def default_config(env: Mapping[str, str]) -> RunConfig:
@@ -214,6 +317,8 @@ def api_environment(config: RunConfig, base: Mapping[str, str]) -> dict[str, str
         "ASSISTANT_MIN_SIMILARITY": str(config.threshold),
         # Both modes are measured, so the reranker must be there whatever the default is.
         "ASSISTANT_RERANKER": "on",
+        "ASSISTANT_CHAT_MODEL": config.chat_model,
+        "ASSISTANT_LLM_URL": config.llm_url,
     }
 
 
@@ -319,6 +424,13 @@ def _chunk_refs(api: httpx.Client, document_ids: dict[str, str]) -> list[ChunkRe
 def _search_with_promptfoo(
     cases: list[Any], api_url: str, results_dir: Path, started_at: datetime
 ) -> dict[str, dict[str, Response]]:
+    return responses_by_mode(_promptfoo(PROMPTFOO_CONFIG, cases, api_url, results_dir, started_at))
+
+
+def _promptfoo(
+    suite: Path, cases: list[Any], api_url: str, results_dir: Path, started_at: datetime
+) -> dict[str, Any]:
+    """Promptfoo's JSON output for the suite's provider(s) over the cases."""
     tests = results_dir / "promptfoo-tests.yaml"
     tests.write_text(
         yaml.safe_dump(
@@ -329,12 +441,13 @@ def _search_with_promptfoo(
     )
     output = results_dir / f"promptfoo-{started_at:%Y%m%dT%H%M%SZ}.json"
     subprocess.run(  # noqa: S603 (fixed command)
-        command_line(Path(_executable("pnpm")), PROMPTFOO_CONFIG, tests, output),
+        command_line(Path(_executable("pnpm")), suite, tests, output),
         env=environment(os.environ, api_url),
         check=True,
         timeout=PROMPTFOO_SECONDS,
     )
-    return responses_by_mode(json.loads(output.read_text(encoding="utf-8")))
+    decoded: dict[str, Any] = json.loads(output.read_text(encoding="utf-8"))
+    return decoded
 
 
 def _score(
@@ -448,9 +561,13 @@ def _executable(name: str) -> str:
 
 
 def main() -> None:
-    """`make eval`: the retrieval suite on the full corpus, with the recorded baseline."""
-    config = default_config(os.environ)
-    outcome = run(config)
+    """`make eval`: the retrieval suite; `make eval-answers` (`--answers`): the answer suite."""
+    if sys.argv[1:] == ["--answers"]:
+        config = default_answers_config(os.environ)
+        outcome = run_answers(config)
+    else:
+        config = default_config(os.environ)
+        outcome = run(config)
     print(outcome.report_markdown.read_text(encoding="utf-8"))
     print(f"Report: {outcome.report_json}")
     if not config.baseline.exists():

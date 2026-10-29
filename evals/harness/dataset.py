@@ -36,9 +36,13 @@ class Case:
 def load_cases(path: Path) -> list[Case]:
     """The cases of a dataset file, each validated against the schema."""
     document = yaml.safe_load(path.read_text(encoding="utf-8"))
+    return _validated(document["cases"])
+
+
+def _validated(entries: list[dict[str, Any]]) -> list[Case]:
     validator = Draft202012Validator(json.loads(SCHEMA.read_text(encoding="utf-8")))
     cases: list[Case] = []
-    for entry in document["cases"]:
+    for entry in entries:
         errors = sorted(validator.iter_errors(entry), key=lambda error: list(error.path))
         if errors:
             problems = "; ".join(error.message for error in errors)
@@ -61,4 +65,5 @@ def _case(entry: dict[str, Any]) -> Case:
 
 def load_answer_cases(path: Path) -> list[Case]:
     """The answer suite: the reused retrieval cases, then the suite's own (F-06)."""
-    raise NotImplementedError
+    document = yaml.safe_load(path.read_text(encoding="utf-8"))
+    return load_cases(path.parent / document["reuse"]) + _validated(document["cases"])
