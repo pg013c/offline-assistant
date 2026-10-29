@@ -1,6 +1,6 @@
 # 0016. Docling's dependencies and pinned parsing models
 
-- Status: proposed
+- Status: accepted
 - Date: 2026-10-29
 - Related: ADR 0004, ADR 0015 (amended), F-02, F-02 review findings 1 and 9, NFR-07, GEN-30, GEN-31, AI-40
 

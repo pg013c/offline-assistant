@@ -44,7 +44,7 @@ Decision is filled in by the human: `fix`, `backlog (F-xx)`, or `reject: <reason
 | 6 | `08b3ba6` and `a85d40c` test, `e495e2d` fix (close stops after the running job; the worker starts with the first job) |
 | 7 | `db0ba3d` refactor (fails with the variable name instead of falling back) |
 | 8 | `db0ba3d` |
-| 9 | `dc4c8b1` build (`pypdfium2`, `huggingface-hub` declared), `7edf9ec` docs (ADR 0016, proposed; README licences) |
+| 9 | `dc4c8b1` build (`pypdfium2`, `huggingface-hub` declared), `7edf9ec` docs (ADR 0016; README licences) |
 | 10 | `17f460e` test, `94cf3cd` fix |
 | 11 | `17f460e` test, `94cf3cd` fix |
 | 12 | `0ec9a58` test |
