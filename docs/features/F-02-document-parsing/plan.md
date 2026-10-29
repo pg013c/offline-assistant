@@ -104,7 +104,7 @@
 - Kind: code
 - Tests first: `tests/integration/test_docling_parser.py` (marker `integration`) on the fixtures: the English and Polish excerpts give `Article 6` and paragraphs `1.`, `2.` with their pages and no page headers or footers; DOCX gives headings and a table; the scan and the photo give text from the right article and page; parsing the same file twice gives identical chunks; password-protected, corrupt, text-free and over-limit files raise `DocumentUnreadable` with a reason; `ensure_ready` names the missing model or language and `make models`.
 - Change: `adapters/docling_parser.py`, `adapters/routing_parser.py`, fixtures and `make_documents.py`; CI job `Integration` (Tesseract, model cache, `make models`, `make test-integration`).
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 9. API: accepted uploads, status and citation location
