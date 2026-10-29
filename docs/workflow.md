@@ -107,7 +107,7 @@ Which loop applies to which part of the system is set by [ADR 0006](adr/0006-tdd
 A feature is done when:
 
 - [ ] every acceptance criterion in `spec.md` is met and checked off with a pointer to the test or evaluation that proves it,
-- [ ] `make check` passes (format, lint, types, unit and integration tests, contract check),
+- [ ] `make check` passes (format, lint, types, unit tests, contract check), and `make test-integration` and `make e2e` pass when the feature touches real adapters or the UI,
 - [ ] for model behaviour: `make eval` meets the PRD targets with no regression above 5 points,
 - [ ] `make offline-check` passes once it exists (from F-10),
 - [ ] review findings are fixed or triaged with a reason,

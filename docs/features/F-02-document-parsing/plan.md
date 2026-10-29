@@ -49,7 +49,7 @@
 - Kind: setup (one `build` commit)
 - Change: `uv add docling-slim[format-pdf,format-docx,models-local]` (ADR 0015); `make models`, `make test-integration`; `ASSISTANT_MODELS_DIR` and `ASSISTANT_DOCUMENT_PARSER` in `.env.example`; `pytest` default `-m "not integration"`; README setup lists Tesseract.
 - Done when: `make models` fills the directory and writes the manifest; `make check` is green.
-- [ ] green
+- [x] green
 
 ### Step 2. Chunking along headings, paragraphs and tables
 

@@ -5,6 +5,7 @@ description = "Offline Assistant backend: local LLM agent, RAG with citations an
 license = "MIT"
 requires-python = ">=3.13"
 dependencies = [
+    "docling-slim[format-docx,format-pdf,models-local]>=2.144.0",
     "fastapi>=0.162.0",
     "pydantic>=2.14.1",
     "pydantic-settings>=2.16.2",
@@ -44,7 +45,8 @@ files = ["src", "tests"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = ["--strict-markers", "--import-mode=importlib"]
+# Integration tests need models and system tools; they run with `make test-integration`.
+addopts = ["--strict-markers", "--import-mode=importlib", "-m", "not integration"]
 markers = [
     "integration: uses real adapters (models, Qdrant, files); slower, may need local services",
 ]
