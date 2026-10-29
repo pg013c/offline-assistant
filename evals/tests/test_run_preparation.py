@@ -12,6 +12,7 @@ from harness.run import (
     CorpusError,
     PortInUse,
     api_environment,
+    api_log_tail,
     default_config,
     drop_collections,
     ensure_port_free,
@@ -114,3 +115,16 @@ def test_a_warm_up_search_asks_for_its_mode_and_returns_its_time() -> None:
 
     assert bodies == [{"query": "warm-up", "limit": 10, "rerank": False}]
     assert elapsed >= 0
+
+
+def test_a_failed_run_shows_the_end_of_the_api_log(tmp_path: Path) -> None:
+    log = tmp_path / "api.log"
+    log.write_text("".join(f"line {n}\n" for n in range(100)), encoding="utf-8")
+
+    tail = api_log_tail(log, lines=3)
+
+    assert tail == "line 97\nline 98\nline 99"
+
+
+def test_a_missing_api_log_is_said_so(tmp_path: Path) -> None:
+    assert api_log_tail(tmp_path / "missing.log") == "(no API log)"

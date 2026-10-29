@@ -204,6 +204,11 @@ def api_environment(config: RunConfig, base: Mapping[str, str]) -> dict[str, str
     }
 
 
+def api_log_tail(path: Path, lines: int = 40) -> str:
+    """The last lines of the API's log, to explain a failed run."""
+    raise NotImplementedError
+
+
 def warm_up(api: httpx.Client, mode: str) -> float:
     """One unmeasured search in the mode, so measured ones find the models loaded; its ms."""
     started = time.monotonic()
