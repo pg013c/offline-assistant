@@ -2,6 +2,7 @@
 
 import re
 from dataclasses import dataclass, field
+from typing import Any
 
 from assistant.domain.documents import ChunkLocation
 
@@ -37,6 +38,33 @@ class AnswerEnd:
 
 
 type AnswerEvent = AnswerText | AnswerCitation | AnswerEnd
+
+# The structured answer a language model is asked for (FR-13, AI-20): the answer first, so it
+# can stream, then the numbers of the passages it rests on, counted from 1.
+ANSWER_SCHEMA: dict[str, Any] = {}
+
+
+class InvalidAnswer(Exception):
+    """The model's output is not a valid answer; the reason is fed back to it (AI-21)."""
+
+
+@dataclass(frozen=True, slots=True)
+class ModelAnswer:
+    text: str
+    cited: tuple[int, ...]
+
+
+def parse_answer(raw: str, passage_count: int) -> ModelAnswer:
+    """The validated answer, or `InvalidAnswer` saying what to correct."""
+    raise NotImplementedError
+
+
+class AnswerTextExtractor:
+    """Pulls the answer text out of the structured answer while it is being written."""
+
+    def feed(self, chunk: str) -> str:
+        """The answer text decoded from this chunk; empty before and after the answer."""
+        raise NotImplementedError
 
 
 def opening_sentences(text: str, count: int = QUOTE_SENTENCES) -> str:

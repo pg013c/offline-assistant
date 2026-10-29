@@ -110,7 +110,7 @@ class ChatModel(Protocol):
     - decodes escapes, including an escape or a `\u` sequence split between chunks;
     - stops at the end of the string.
 - Change: `domain/answers.py`.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 2. Port, fakes and contract
