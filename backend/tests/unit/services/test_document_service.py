@@ -8,6 +8,7 @@ from assistant.adapters.fakes.document_store import FakeDocumentStore
 from assistant.adapters.fakes.ingestion_queue import FakeIngestionQueue
 from assistant.domain.documents import Block, Chunk, ChunkLocation, Document, ParsedDocument
 from assistant.domain.errors import (
+    DocumentNotFound,
     DocumentUnreadable,
     FileTooLarge,
     NotUtf8Text,
@@ -287,3 +288,76 @@ def test_restore_requeues_a_ready_document_without_stored_chunks(
     assert document is not None
     assert document.status == "ready"
     assert len(index.search("inspect", limit=5)) == 1
+
+
+class CountingIndex(InMemoryChunkIndex):
+    def __init__(self) -> None:
+        super().__init__()
+        self.added: list[str] = []
+
+    def add(self, chunks: Sequence[Chunk]) -> None:
+        self.added.extend(chunk.document_id for chunk in chunks)
+        super().add(chunks)
+
+
+def test_deleting_a_document_removes_it_from_store_and_index(
+    service: DocumentService,
+    store: FakeDocumentStore,
+    index: InMemoryChunkIndex,
+    queue: FakeIngestionQueue,
+) -> None:
+    document = service.upload("policy.pdf", PDF)
+    queue.run_all()
+
+    service.delete(document.id)
+
+    assert store.get(document.id) is None
+    assert index.document_ids() == set()
+
+
+def test_deleting_or_reindexing_an_unknown_document_is_refused(service: DocumentService) -> None:
+    with pytest.raises(DocumentNotFound):
+        service.delete("unknown")
+    with pytest.raises(DocumentNotFound):
+        service.reindex("unknown")
+
+
+def test_reindexing_parses_the_document_again_and_keeps_its_chunk_ids(
+    service: DocumentService,
+    store: FakeDocumentStore,
+    index: InMemoryChunkIndex,
+    queue: FakeIngestionQueue,
+) -> None:
+    document = service.upload("policy.pdf", PDF)
+    queue.run_all()
+    before = [chunk.id for chunk in store.load_chunks(document.id)]
+
+    reindexing = service.reindex(document.id)
+
+    assert reindexing.status == "processing"
+    assert index.document_ids() == set()
+    queue.run_all()
+    ready = store.get(document.id)
+    assert ready is not None
+    assert ready.status == "ready"
+    assert [chunk.id for chunk in store.load_chunks(document.id)] == before
+    assert index.document_ids() == {document.id}
+
+
+def test_restore_adds_only_missing_documents_and_drops_deleted_ones(
+    store: FakeDocumentStore, queue: FakeIngestionQueue
+) -> None:
+    earlier = DocumentService(store, InMemoryChunkIndex(), FakeDocumentParser(PARSED), queue)
+    indexed = earlier.upload("indexed.pdf", PDF)
+    missing = earlier.upload("missing.pdf", PDF + b"2")
+    queue.run_all()
+    index = CountingIndex()
+    index.add(store.load_chunks(indexed.id))
+    index.add([Chunk(id="ghost:0", document_id="ghost", position=0, text="Deleted.")])
+    index.added.clear()
+    restarted = DocumentService(store, index, ParserThatMustNotRun(), queue)
+
+    restarted.restore()
+
+    assert index.document_ids() == {indexed.id, missing.id}
+    assert set(index.added) == {missing.id}

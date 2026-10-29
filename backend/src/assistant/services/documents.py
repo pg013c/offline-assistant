@@ -128,6 +128,14 @@ class DocumentService:
         )
         log.info("document_ingested", document_id=document_id, chunks=len(chunks))
 
+    def delete(self, document_id: str) -> None:
+        """Remove a document, its files and its chunks from the index."""
+        raise NotImplementedError
+
+    def reindex(self, document_id: str) -> Document:
+        """Parse and index a stored document again."""
+        raise NotImplementedError
+
     def list_documents(self) -> list[Document]:
         """All stored documents."""
         return self._store.list_documents()

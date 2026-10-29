@@ -57,6 +57,9 @@ class LocalFileDocumentStore:
         files = sorted(self._directory.glob(f"*{_METADATA}"))
         return [_read_metadata(path) for path in files if not path.name.endswith(_CHUNKS)]
 
+    def delete(self, document_id: str) -> None:
+        raise NotImplementedError
+
     def _path(self, document_id: str, suffix: str) -> Path:
         return self._directory / f"{document_id}{suffix}"
 

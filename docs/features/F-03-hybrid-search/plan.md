@@ -196,7 +196,7 @@
     - re-index sets `processing`, removes the vectors, and after ingestion the document is ready with the same chunk ids;
     - restore adds missing documents to the index, removes vectors of deleted ones, and does not parse ready documents.
 - Change: `ports/document_store.py`, both store adapters, `services/documents.py`, `domain/errors.py`.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 9. Composition root with injectable adapters, route tests with fakes
