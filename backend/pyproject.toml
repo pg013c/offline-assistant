@@ -12,6 +12,8 @@ dependencies = [
     "pydantic-settings>=2.16.2",
     "python-multipart>=0.0.32",
     "structlog>=26.1.0",
+    "torch>=2.2.2,<3",
+    "torchvision<1",
     "uvicorn>=0.54.0",
 ]
 
@@ -101,3 +103,14 @@ name = "Domain and ports do not log"
 type = "forbidden"
 source_modules = ["assistant.domain", "assistant.ports"]
 forbidden_modules = ["structlog"]
+
+# PyTorch on Linux comes from the CPU-only index: the parsing models run on CPU there, and
+# the default wheels pull several gigabytes of CUDA libraries (ADR 0015). macOS uses PyPI.
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+torchvision = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
