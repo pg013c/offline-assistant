@@ -27,6 +27,8 @@ def environment(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator[str
     monkeypatch.setenv("ASSISTANT_MODELS_DIR", str(MODELS_DIR))
     monkeypatch.setenv("ASSISTANT_QDRANT_URL", QDRANT_URL)
     monkeypatch.setenv("ASSISTANT_QDRANT_COLLECTION_PREFIX", prefix)
+    # The test model: these tests are about startup, not a running LLM server (F-06).
+    monkeypatch.setenv("ASSISTANT_CHAT_MODEL", "fake-extractive")
     # main() sets these; recording them here restores them after the test.
     monkeypatch.setenv("HF_HUB_OFFLINE", "1")
     monkeypatch.setenv("TRANSFORMERS_OFFLINE", "1")
