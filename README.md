@@ -11,7 +11,7 @@ Built to answer three practical questions about local AI:
 2. How do local models compare with a cloud model on **quality, latency, memory and cost**, measured on the same evaluation set?
 3. Can the whole thing be **installed and verified on an air-gapped machine**?
 
-> **Status:** walking skeleton (F-01). You can upload a text or Markdown document, ask a question and get a streamed answer with a clickable source. Retrieval is keyword-based and the answer comes from a clearly labelled test model; real parsing, embeddings and local LLMs follow in [F-02 to F-07](docs/backlog.md). Results will be published in [docs/evals/](docs/evals/).
+> **Status:** document parsing (F-02). You can upload PDFs (including scans), Word files, photos of text, plain text or Markdown; they are parsed offline with Docling and Tesseract and split by article, paragraph and page. Answers stream with a clickable source that names its location, such as "Art. 6(1), p. 1". Retrieval is still keyword-based and the answer comes from a clearly labelled test model; embeddings and local LLMs follow in [F-03 to F-07](docs/backlog.md). Results will be published in [docs/evals/](docs/evals/).
 
 ## What it will do
 
