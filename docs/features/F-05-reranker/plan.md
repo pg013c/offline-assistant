@@ -60,7 +60,7 @@
 
 ### Service
 
-- `QuestionService` takes an optional `Reranker` and a `rerank_by_default` flag.
+- `QuestionService` takes an optional `Reranker`; when one is given, reranking is the default.
 - **Reranking on:**
   - `search(query, limit, rerank=None)` fetches `max(limit, 30)` candidates, reranks them and returns `limit`;
   - `ask` reranks 30 candidates, then applies the dense threshold, then keeps 3.
@@ -129,7 +129,7 @@
   - **No reranker:** asking for reranking raises `RerankerOff`.
 - Change: `services/questions.py`, `domain/errors.py`.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 4. Setting, composition and API
 

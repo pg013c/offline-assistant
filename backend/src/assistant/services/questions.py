@@ -1,5 +1,5 @@
 import asyncio
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Sequence
 from dataclasses import dataclass
 
 from assistant.domain.answers import (
@@ -11,9 +11,11 @@ from assistant.domain.answers import (
     Citation,
     quote_from,
 )
-from assistant.domain.documents import Chunk
+from assistant.domain.documents import Chunk, indexed_text
+from assistant.domain.errors import RerankerOff
+from assistant.domain.ranking import rerank as by_score
 from assistant.ports.chat_model import ChatModel
-from assistant.ports.chunk_index import ChunkIndex
+from assistant.ports.chunk_index import ChunkIndex, ScoredChunk
 from assistant.ports.document_store import DocumentStore
 from assistant.ports.reranker import Reranker
 
@@ -48,9 +50,12 @@ class QuestionService:
         """`min_similarity` is the dense similarity a passage needs to be used (F-03).
 
         A passage ranked first only for an exact term, but below it, is not used either: the
-        answer would rest on a word, not on the meaning. F-04 measures this choice.
+        answer would rest on a word, not on the meaning. F-04 measures this choice. With a
+        `reranker`, candidates are reordered by it by default; the threshold still decides
+        whether a passage is used (F-05).
         """
         self._min_similarity = min_similarity
+        self._reranker = reranker
         self._index = index
         self._model = model
         self._store = store
@@ -58,11 +63,14 @@ class QuestionService:
     async def search(
         self, query: str, limit: int, rerank: bool | None = None
     ) -> list[FoundPassage]:
-        """The index's best passages for the query, best first, without any threshold."""
-        raise NotImplementedError
-        found = await asyncio.to_thread(self._index.search, query, limit)
+        """The best passages for the query, best first, without any threshold.
+
+        `rerank` asks for the reranker's order or the index's; by default the reranker's
+        when one is configured.
+        """
+        found = await asyncio.to_thread(self._find, query, limit, rerank)
         titles: dict[str, str] = {}
-        for result in found:
+        for result, _ in found:
             document_id = result.chunk.document_id
             if document_id not in titles:
                 document = self._store.get(document_id)
@@ -72,15 +80,18 @@ class QuestionService:
                 chunk=result.chunk,
                 document_title=titles[result.chunk.document_id],
                 similarity=result.similarity,
+                rerank_score=score,
             )
-            for result in found
+            for result, score in found
         ]
 
     async def ask(self, question: str) -> AsyncIterator[AnswerEvent]:
         """Text pieces, then citations, then an end event; or a no-passage notice."""
         # Embedding the question and querying the index block; keep them off the event loop.
-        found = await asyncio.to_thread(self._index.search, question, CANDIDATES)
-        results = [result for result in found if result.similarity >= self._min_similarity][
+        # The threshold applies after reranking, to every candidate the reranker scored.
+        candidates = RERANK_CANDIDATES if self._reranker else CANDIDATES
+        found = await asyncio.to_thread(self._find, question, candidates, None)
+        results = [result for result, _ in found if result.similarity >= self._min_similarity][
             :PASSAGES_PER_ANSWER
         ]
         if not results:
@@ -113,3 +124,16 @@ class QuestionService:
             found=True,
             is_test_model=self._model.is_test_model,
         )
+
+    def _find(
+        self, query: str, limit: int, rerank: bool | None
+    ) -> Sequence[tuple[ScoredChunk, float | None]]:
+        """Up to `limit` candidates in the index's or the reranker's order, with its scores."""
+        if rerank and self._reranker is None:
+            raise RerankerOff
+        reranker = self._reranker if rerank is not False else None
+        if reranker is None:
+            return [(result, None) for result in self._index.search(query, limit)]
+        candidates = self._index.search(query, max(limit, RERANK_CANDIDATES))
+        scores = reranker.score(query, [indexed_text(result.chunk) for result in candidates])
+        return by_score(candidates, scores)[:limit]
