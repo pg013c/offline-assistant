@@ -11,7 +11,7 @@ Built to answer three practical questions about local AI:
 2. How do local models compare with a cloud model on **quality, latency, memory and cost**, measured on the same evaluation set?
 3. Can the whole thing be **installed and verified on an air-gapped machine**?
 
-> **Status:** hybrid search (F-03). You can upload PDFs (including scans), Word files, photos of text, plain text or Markdown; they are parsed offline with Docling and Tesseract and split by article, paragraph and page. Questions find passages by meaning and by exact terms, across Polish and English (BGE-M3 and BM25 in Qdrant), and answers stream with a clickable source such as "Art. 6(1), p. 1". Documents can be deleted and re-indexed. The answer still comes from a clearly labelled test model; retrieval metrics and local LLMs follow in [F-04 to F-07](docs/backlog.md). Results will be published in [docs/evals/](docs/evals/).
+> **Status:** evaluation harness (F-04). You can upload PDFs (including scans), Word files, photos of text, plain text or Markdown; they are parsed offline with Docling and Tesseract and split by article, paragraph and page. Questions find passages by meaning and by exact terms, across Polish and English (BGE-M3 and BM25 in Qdrant), and answers stream with a clickable source such as "Art. 6(1), p. 1". Documents can be deleted and re-indexed. Retrieval is measured: `make eval` scores 24 questions over the AI Act and the GDPR against a recorded [baseline](docs/evals/2026-10-29-retrieval-baseline.md) (recall@3 52 %, recall@10 76 %, all out-of-scope questions refused). The answer still comes from a clearly labelled test model; the reranker and local LLMs follow in [F-05 to F-07](docs/backlog.md).
 
 ## What it will do
 
@@ -90,6 +90,13 @@ make e2e
 ```bash
 make test-integration
 ```
+
+```bash
+make eval-corpus
+make eval
+```
+
+`make eval` indexes the evaluation corpus (the AI Act and the GDPR in English and Polish, fetched once by `make eval-corpus` and checked against pinned hashes) into its own data directory and Qdrant collection. It then scores the retrieval cases in `evals/datasets/` with Promptfoo and fails if a metric is more than 5 points worse than the baseline in [docs/evals/](docs/evals/). Reports go to `evals/results/`.
 
 `make test-integration` runs the tests with real adapters (Docling, BGE-M3, Qdrant); it needs `make models`, `make qdrant` and Tesseract.
 

@@ -179,7 +179,7 @@ Two projects side by side, apart from the backend and the frontend:
   - `docs/standards/testing.md` (`make eval`, `make check-evals`);
   - README (how to run an evaluation, the baseline result);
   - backlog.
-- [ ] green
+- [x] green
 
 ## Acceptance criteria mapping
 

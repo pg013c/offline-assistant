@@ -112,6 +112,14 @@ The diagram above is the target. The question flow runs end to end today; each p
 
 **Answers.** The chat endpoint streams `text`, `citation` and `end` events. A citation carries the chunk location, which the UI shows as "Art. 6(2), p. 53", or the nearest heading and page. With no passage over the threshold the stream says so and has no citation.
 
+**Evaluation** (`evals/`, ADR 0018). `make eval` starts its own API with:
+
+- data directory `data/eval`;
+- Qdrant collection prefix `eval`;
+- port 8021.
+
+It uploads the pinned corpus (AI Act and GDPR, English and Polish) and resolves each case's expected sources, written as document and article, to chunk ids through `GET /api/documents/{id}/chunks`. Promptfoo then queries `POST /api/search` for every case. Python computes recall@k, MRR and the refusal shares at the similarity threshold, writes a report with the run metadata, and fails when a metric is more than 5 points worse than `docs/evals/retrieval-baseline.json`. The API it started is stopped at the end.
+
 ## 4. Main flow: a question
 
 ```mermaid
