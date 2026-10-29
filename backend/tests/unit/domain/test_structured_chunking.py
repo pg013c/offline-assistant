@@ -349,5 +349,25 @@ def test_a_title_like_line_after_other_content_stays_a_chunk() -> None:
     ]
 
 
-def test_the_chunker_version_is_raised_with_the_new_rule() -> None:
-    assert CHUNKER_VERSION == 2
+def test_the_chunker_version_is_raised_with_the_new_rules() -> None:
+    # 2: section titles join the heading path; 3: annex titles keep the annex label.
+    assert CHUNKER_VERSION == 3
+
+
+@pytest.mark.parametrize("label", ["ANNEX III", "ZAŁĄCZNIK III"])
+def test_the_heading_after_an_annex_label_is_its_title(label: str) -> None:
+    document = parsed(
+        heading("Article 7"),
+        paragraph("1. The Commission may amend Annex III."),
+        heading(label),
+        heading("High-risk AI systems referred to in Article 6(2)"),
+        paragraph("High-risk AI systems pursuant to Article 6(2) are the AI systems listed."),
+    )
+
+    annex = chunk_document("doc", document)[-1]
+
+    assert annex.location.heading_path == (
+        label,
+        "High-risk AI systems referred to in Article 6(2)",
+    )
+    assert annex.location.article is None

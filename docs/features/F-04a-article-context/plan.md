@@ -96,6 +96,17 @@
 - [x] red
 - [x] green
 
+### Step 4a. Annex titles
+
+- Kind: code (added after the first measurement: `ref-annex-iii` still missed because the annex title replaced "ANNEX III" in the heading path)
+- Tests first, in `test_structured_chunking.py`:
+  - after "ANNEX III" or "ZAŁĄCZNIK III", the next heading is the annex's title and both stay in the heading path;
+  - annex chunks belong to no article;
+  - the chunker version is 3.
+- Change: `domain/documents.py`.
+- [x] red
+- [ ] green
+
 ### Step 5. Measure and record
 
 - Kind: eval
