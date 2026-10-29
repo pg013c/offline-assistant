@@ -48,7 +48,8 @@ class DocumentService:
             filename=filename,
             chunk_count=len(chunks),
         )
-        self._store.save(document, text)
+        self._store.save_upload(document, content)
+        self._store.save_chunks(document_id, chunks)
         self._index.add(chunks)
         return document
 
@@ -58,7 +59,9 @@ class DocumentService:
 
     def restore(self) -> int:
         """Index every stored document; returns how many were restored."""
-        stored = self._store.load_all()
-        for document, text in stored:
-            self._index.add(split_into_chunks(document.id, text))
-        return len(stored)
+        ready = [
+            document for document in self._store.list_documents() if document.status == "ready"
+        ]
+        for document in ready:
+            self._index.add(self._store.load_chunks(document.id))
+        return len(ready)

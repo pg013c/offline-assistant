@@ -81,7 +81,7 @@
 - Tests first: `tests/contract/test_document_store.py` extended (file store and fake): an upload is stored with status `processing` and its original bytes; `update` changes status and counts; saved chunks load back equal, including locations; `list_documents` and `get` read metadata only.
 - Change: `ports/document_store.py`, `adapters/file_document_store.py`, `adapters/fakes/document_store.py`, `domain/documents.py` (`Document` fields).
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 6. Ingestion in the background
 

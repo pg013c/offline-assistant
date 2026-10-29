@@ -5,18 +5,10 @@ from assistant.domain.documents import Chunk, Document
 
 
 class DocumentStore(Protocol):
-    """Durable storage of uploaded documents and their text."""
-
-    def save(self, document: Document, content: str) -> None:
-        """Store the document; saving an existing document again changes nothing."""
-        ...
+    """Durable storage of uploaded files, their metadata and their chunks."""
 
     def list_documents(self) -> list[Document]:
         """All stored documents."""
-        ...
-
-    def load_all(self) -> list[tuple[Document, str]]:
-        """All stored documents with their text, to rebuild indexes at startup."""
         ...
 
     def save_upload(self, document: Document, content: bytes) -> None:
