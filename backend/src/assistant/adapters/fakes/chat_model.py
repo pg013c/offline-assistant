@@ -6,11 +6,13 @@ from assistant.domain.answers import (
     Answered,
     ModelAnswer,
     ModelEvent,
+    ModelFailed,
     TextDelta,
     Usage,
     opening_sentences,
 )
 from assistant.domain.documents import Chunk
+from assistant.domain.tools import FinalText, Message, ToolCalls, ToolSpec
 
 
 class FakeExtractiveChatModel:
@@ -48,3 +50,16 @@ class ScriptedChatModel:
         self.calls += 1
         for event in self._events:
             yield event
+
+
+class ScriptedToolCallingModel:
+    """Replays tool-call replies, validating them like a real model's (F-07)."""
+
+    def __init__(self, replies: Sequence[tuple[str, str] | str], max_retries: int = 2) -> None:
+        self._replies = list(replies)
+        self._max_retries = max_retries
+
+    async def call_tools(
+        self, messages: Sequence[Message], tools: Sequence[ToolSpec]
+    ) -> ToolCalls | FinalText | ModelFailed:
+        raise NotImplementedError

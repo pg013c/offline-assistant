@@ -9,6 +9,7 @@ import time
 from collections.abc import AsyncIterator, Sequence
 from dataclasses import dataclass, field, replace
 from importlib.resources import files
+from string import Template
 from typing import Any
 
 import httpx
@@ -37,6 +38,8 @@ from assistant.domain.tools import (
 )
 
 ANSWER_PROMPT = files("assistant").joinpath("prompts/answer.md").read_text(encoding="utf-8")
+USER_PROMPT = Template("")
+RETRY_PROMPT = Template("")
 
 
 @dataclass(frozen=True)
