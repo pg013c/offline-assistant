@@ -223,3 +223,35 @@ def test_an_unknown_document_is_reported_as_not_found(
     assert body["code"] == "document_not_found"
     assert body["message"]
     assert body["details"] is None
+
+
+def test_a_document_lists_its_chunks_with_their_locations(
+    client: TestClient, settle: Settle
+) -> None:
+    created = upload(client, "policy.md", b"# Logs\n\n" + POLICY)["body"]
+    assert isinstance(created, dict)
+    settle(client, str(created["id"]))
+
+    response = client.get(f"/api/documents/{created['id']}/chunks")
+
+    assert response.status_code == 200
+    assert response.json() == [
+        {
+            "chunk_id": f"{created['id']}:{position}",
+            "position": position,
+            "location": {
+                "heading_path": ["Logs"],
+                "article": None,
+                "paragraph": None,
+                "page": None,
+            },
+        }
+        for position in (0, 1)
+    ]
+
+
+def test_the_chunks_of_an_unknown_document_are_not_found(client: TestClient) -> None:
+    response = client.get("/api/documents/unknown/chunks")
+
+    assert response.status_code == 404
+    assert response.json()["code"] == "document_not_found"

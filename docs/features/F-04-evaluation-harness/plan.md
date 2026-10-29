@@ -107,7 +107,7 @@ Two projects side by side, apart from the backend and the frontend:
   - `test_document_service.py`: the stored chunks of a document, or `DocumentNotFound`;
   - `test_documents_api.py`: `GET /api/documents/{id}/chunks` lists ids, positions and locations; an unknown id gives `404`.
 - Change: `services/documents.py`, `api/routes/documents.py`, `make api-client`.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 4. Retrieval dataset
