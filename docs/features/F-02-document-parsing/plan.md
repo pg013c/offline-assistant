@@ -57,7 +57,7 @@
 - Tests first: `tests/unit/domain/test_structured_chunking.py`: one chunk per paragraph under a heading, with the heading path and page; a new heading starts a new chunk; a long paragraph splits at sentence boundaries within `max_chars`; a table stays one chunk however long; ids are `"{doc}:{n}"` and repeatable.
 - Change: `domain/documents.py` (`ParsedDocument`, `Block`, `ChunkLocation`, `chunk_document`).
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 3. Articles and numbered paragraphs in English and Polish
 
