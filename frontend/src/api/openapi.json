@@ -212,6 +212,63 @@
         }
       }
     },
+    "/api/documents/{document_id}/chunks": {
+      "get": {
+        "tags": [
+          "documents"
+        ],
+        "summary": "List Document Chunks",
+        "description": "The passages of a document with their locations, in order.",
+        "operationId": "list_document_chunks",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ChunkSummary"
+                  },
+                  "title": "Response List Document Chunks"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/chat": {
       "post": {
         "tags": [
@@ -465,6 +522,29 @@
         ],
         "title": "ChatTextEvent",
         "description": "A piece of the answer text, in order."
+      },
+      "ChunkSummary": {
+        "properties": {
+          "chunk_id": {
+            "type": "string",
+            "title": "Chunk Id"
+          },
+          "position": {
+            "type": "integer",
+            "title": "Position"
+          },
+          "location": {
+            "$ref": "#/components/schemas/CitationLocation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "chunk_id",
+          "position",
+          "location"
+        ],
+        "title": "ChunkSummary",
+        "description": "A passage of a document: its id and where it is, without its text."
       },
       "CitationLocation": {
         "properties": {

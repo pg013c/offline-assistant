@@ -197,7 +197,9 @@ class DocumentService:
 
     def chunks(self, document_id: str) -> list[Chunk]:
         """The stored chunks of a document, in order."""
-        raise NotImplementedError
+        if self._store.get(document_id) is None:
+            raise DocumentNotFound(document_id)
+        return self._store.load_chunks(document_id)
 
     def list_documents(self) -> list[Document]:
         """All stored documents."""

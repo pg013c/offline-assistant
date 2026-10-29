@@ -108,7 +108,7 @@ Two projects side by side, apart from the backend and the frontend:
   - `test_documents_api.py`: `GET /api/documents/{id}/chunks` lists ids, positions and locations; an unknown id gives `404`.
 - Change: `services/documents.py`, `api/routes/documents.py`, `make api-client`.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 4. Retrieval dataset
 

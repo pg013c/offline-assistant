@@ -41,6 +41,14 @@ class ChatRequest(BaseModel):
     question: str = Field(min_length=1, max_length=2000)
 
 
+class ChunkSummary(BaseModel):
+    """A passage of a document: its id and where it is, without its text."""
+
+    chunk_id: str
+    position: int
+    location: "CitationLocation"
+
+
 class SearchRequest(BaseModel):
     query: str = Field(min_length=1, max_length=2000)
     limit: int = Field(default=10, ge=1, le=50)
