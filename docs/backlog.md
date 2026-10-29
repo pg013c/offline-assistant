@@ -9,7 +9,7 @@ Status: `planned` → `spec` → `building` → `review` → `done`.
 | F-00 | Repository skeleton: backend and frontend projects, Makefile, pre-commit, CI, import contract, API contract check | NFR-06 | 1 | done |
 | F-01 | Walking skeleton: upload a text file, fake chat model, streamed answer with a citation in the UI | FR-01, FR-15, FR-60 | 1 | done |
 | F-02 | Document parsing (Docling) and structure-aware chunking with stable chunk ids | FR-01–FR-03 | 2 | done |
-| F-03 | Multilingual embeddings, Qdrant storage, hybrid search | FR-04, FR-05, FR-07 | 2 | planned |
+| F-03 | Multilingual embeddings, Qdrant storage, hybrid search | FR-04, FR-05, FR-07 | 2 | spec |
 | F-04 | Evaluation harness: Promptfoo wired to the API, first retrieval cases (recall@k against expected chunks) | FR-42, FR-43 | 2 | planned |
 | F-05 | Reranker, switchable, measured with and without | FR-06, FR-43 | 2 | planned |
 | F-06 | OpenAI-compatible chat adapter with tool calling, JSON schema output, validation and retries | FR-13, FR-40 | 2 | planned |
