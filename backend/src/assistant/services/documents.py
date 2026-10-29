@@ -126,6 +126,8 @@ class DocumentService:
         except Exception:
             log.exception("document_ingestion_failed", document_id=document_id)
             with self._lock:
+                # The write may have been applied in part; a failed document has no vectors.
+                self._index.remove_document(document_id)
                 if self._current(document_id, generation) is not None:
                     self._store.save_chunks(document_id, [])
             self._fail(document, generation, INGESTION_FAILED)
@@ -200,13 +202,15 @@ class DocumentService:
         """Bring the index in line with the store, and requeue unfinished documents.
 
         The index is derived from stored chunks: documents it lacks are added without parsing,
-        and chunks of documents the store no longer has are removed. Returns how many
-        documents are searchable.
+        and chunks of documents that are not ready, or no longer stored, are removed. Returns
+        how many documents are searchable.
         """
         documents = self._store.list_documents()
+        # Only ready documents may have vectors: drop those of deleted, failed or unfinished ones.
+        ready_ids = {document.id for document in documents if document.status == "ready"}
+        for stale in self._index.document_ids() - ready_ids:
+            self._index.remove_document(stale)
         indexed = self._index.document_ids()
-        for orphan in indexed - {document.id for document in documents}:
-            self._index.remove_document(orphan)
         ready = 0
         for document in documents:
             if document.status == "ready" and document.id in indexed:

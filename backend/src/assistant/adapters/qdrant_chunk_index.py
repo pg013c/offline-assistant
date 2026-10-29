@@ -9,7 +9,9 @@ import uuid
 from collections.abc import Sequence
 from typing import Any
 
+import httpx
 from qdrant_client import QdrantClient, models
+from qdrant_client.http.exceptions import ResponseHandlingException, UnexpectedResponse
 
 from assistant.domain.documents import Chunk, ChunkLocation
 from assistant.domain.keywords import bm25_terms, tokens
@@ -69,7 +71,7 @@ class QdrantChunkIndex:
         client = QdrantClient(url=url, timeout=10)
         try:
             client.get_collections()
-        except Exception as error:
+        except (ResponseHandlingException, UnexpectedResponse, httpx.HTTPError, OSError) as error:
             raise IndexNotReady(
                 f"Qdrant is not reachable at {url} (ASSISTANT_QDRANT_URL). "
                 "Start it with `make qdrant`."
