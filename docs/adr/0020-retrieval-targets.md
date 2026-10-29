@@ -54,11 +54,11 @@ One in-scope case is 4.8 points and one out-of-scope case is 33 points, so a flo
 - **Good:**
   - a fixed bar for F-06 to F-09;
   - drift below it is caught;
-  - the floors leave room for one case changing.
+  - every floor but the out-of-scope refusal leaves room for one case changing.
 - **Bad:**
   - with 3 out-of-scope cases, the refusal floor allows no miss at all until F-09 adds cases;
   - floors on 21 cases are coarse.
 - **Follow-up:**
-  - `evals/harness/gate.py` checks the floors (a `chore` with tests);
+  - `evals/harness/gate.py` checks the floors (red/green commits on the ADR's branch);
   - the floors are listed in `docs/standards/testing.md` (TEST-24);
   - F-09 revisits them with the full evaluation set.
