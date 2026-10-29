@@ -1,4 +1,7 @@
+import pytest
+
 from assistant.domain.documents import (
+    CHUNKER_VERSION,
     Block,
     ChunkLocation,
     ParsedDocument,
@@ -300,3 +303,51 @@ def test_each_part_of_a_split_chunk_gets_the_page_it_starts_on() -> None:
             assert page == 2
         if words == ["Page", "one"]:
             assert page == 1
+
+
+def test_a_title_right_after_a_heading_joins_the_heading_path() -> None:
+    document = parsed(
+        heading("SEKCJA 3"),
+        paragraph("Obowiązki dostawców i podmiotów stosujących systemy AI wysokiego ryzyka"),
+        paragraph("Dostawcy zapewniają zgodność systemów z wymogami."),
+    )
+
+    chunks = chunk_document("doc", document)
+
+    assert [chunk.text for chunk in chunks] == ["Dostawcy zapewniają zgodność systemów z wymogami."]
+    assert chunks[0].location.heading_path == (
+        "SEKCJA 3",
+        "Obowiązki dostawców i podmiotów stosujących systemy AI wysokiego ryzyka",
+    )
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "This Regulation applies to providers.",
+        "Providers shall:",
+        "Having regard to the Treaty on the Functioning of the European Union,",
+        "x" * 201,
+    ],
+)
+def test_a_paragraph_that_does_not_look_like_a_title_stays_a_chunk(line: str) -> None:
+    document = parsed(heading("Scope"), paragraph(line))
+
+    assert [chunk.text for chunk in chunk_document("doc", document)] == [line]
+
+
+def test_a_title_like_line_after_other_content_stays_a_chunk() -> None:
+    document = parsed(
+        heading("Scope"),
+        paragraph("This Regulation applies to providers."),
+        paragraph("Annex overview"),
+    )
+
+    assert [chunk.text for chunk in chunk_document("doc", document)] == [
+        "This Regulation applies to providers.",
+        "Annex overview",
+    ]
+
+
+def test_the_chunker_version_is_raised_with_the_new_rule() -> None:
+    assert CHUNKER_VERSION == 2

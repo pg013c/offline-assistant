@@ -69,7 +69,7 @@
   - one after other content under the heading stays a chunk;
   - the article title rule is unchanged.
 - Change: `domain/documents.py` (chunker, `CHUNKER_VERSION = 2`).
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 3. Re-parse documents chunked by an older chunker

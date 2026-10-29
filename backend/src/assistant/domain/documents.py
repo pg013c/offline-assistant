@@ -8,6 +8,8 @@ from typing import Literal
 
 DOCUMENT_ID_LENGTH = 16
 MAX_CHUNK_CHARS = 2000
+# Raised whenever chunking changes, so documents cut the old way are parsed again.
+CHUNKER_VERSION = 1
 # A sentence: text up to and including its end mark, or to the end of the text.
 _SENTENCE = re.compile(r"\S.*?(?:[.!?](?=\s|$)|$)", re.DOTALL)
 _WORD = re.compile(r"\S+")
