@@ -9,7 +9,7 @@ from typing import Literal
 DOCUMENT_ID_LENGTH = 16
 MAX_CHUNK_CHARS = 2000
 # Raised whenever chunking changes, so documents cut the old way are parsed again.
-CHUNKER_VERSION = 1
+CHUNKER_VERSION = 2
 # A sentence: text up to and including its end mark, or to the end of the text.
 _SENTENCE = re.compile(r"\S.*?(?:[.!?](?=\s|$)|$)", re.DOTALL)
 _WORD = re.compile(r"\S+")
@@ -119,6 +119,9 @@ def chunk_document(
 
 # "Article 6", "Artykuł 6", "Art. 6a"; a heading may continue with the title.
 _ARTICLE = re.compile(r"^(?:Article|Artykuł|Art\.)\s+(\d+[a-z]*)\b", re.IGNORECASE)
+# A section title: short, and not ending like a sentence or a clause.
+_TITLE_MAX_CHARS = 200
+_NOT_A_TITLE_ENDING = tuple(".;:,?!)")
 _NUMBERED_PARAGRAPH = re.compile(r"^(\d+[a-z]?)\.\s")
 
 
@@ -137,6 +140,8 @@ class _Chunker:
         self._paragraph: str | None = None
         # True between an article heading and its first content: the next heading is its title.
         self._expecting_title = False
+        # True between any heading and its first content: a title-like paragraph is its title.
+        self._after_heading = False
 
     def add(self, block: Block) -> None:
         text = block.text.strip()
@@ -161,8 +166,10 @@ class _Chunker:
         self._set_heading(level, text)
         self._article, self._article_level, self._paragraph = number, level, None
         self._expecting_title = True
+        self._after_heading = True
 
     def _heading(self, text: str, level: int) -> None:
+        self._after_heading = True
         if self._expecting_title:
             self._headings.append((level, text))
             self._expecting_title = False
@@ -175,6 +182,13 @@ class _Chunker:
         self._headings = [*(entry for entry in self._headings if entry[0] < level), (level, text)]
 
     def _content(self, kind: BlockKind, text: str, page: int | None) -> None:
+        if self._after_heading and kind == "paragraph" and _looks_like_title(text):
+            # Parsers sometimes give a section's title as a paragraph (F-04a).
+            level = self._headings[-1][0] + 1 if self._headings else 1
+            self._headings.append((level, text))
+            self._after_heading = self._expecting_title = False
+            return
+        self._after_heading = False
         self._expecting_title = False
         # Parsers deliver numbered paragraphs as paragraphs or as numbered list items.
         numbered = _NUMBERED_PARAGRAPH.match(text) if self._article and kind != "table" else None
@@ -210,6 +224,15 @@ class _Chunker:
             page = next(page for begin, page in reversed(starts) if begin <= start)
             self._pieces.append((part, replace(self._location, page=page)))
         self._lines.clear()
+
+
+def _looks_like_title(text: str) -> bool:
+    # A numbered paragraph is content, however short.
+    return (
+        len(text) <= _TITLE_MAX_CHARS
+        and not text.endswith(_NOT_A_TITLE_ENDING)
+        and not _NUMBERED_PARAGRAPH.match(text)
+    )
 
 
 def _within_limit(text: str, max_chars: int) -> list[tuple[str, int]]:
