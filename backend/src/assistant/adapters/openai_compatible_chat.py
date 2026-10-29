@@ -26,6 +26,7 @@ from assistant.domain.answers import (
     parse_answer,
 )
 from assistant.domain.documents import Chunk, indexed_text
+from assistant.domain.tools import FinalText, Message, ToolCalls, ToolSpec
 
 ANSWER_PROMPT = files("assistant").joinpath("prompts/answer.md").read_text(encoding="utf-8")
 
@@ -38,6 +39,8 @@ class LlmServer:
     served_model: str
     timeout_seconds: float
     max_retries: int
+    # Capabilities are declared, not guessed from the model's name (AI-23).
+    tools: bool = True
 
 
 @dataclass
@@ -179,6 +182,11 @@ class OpenAICompatibleChat:
                     f"No model server answers at {url}. Start it with make llm.",
                 )
             ) from error
+
+    async def call_tools(
+        self, messages: Sequence[Message], tools: Sequence[ToolSpec]
+    ) -> ToolCalls | FinalText | ModelFailed:
+        raise NotImplementedError
 
     def _body(self, messages: list[dict[str, str]]) -> dict[str, Any]:
         return {
