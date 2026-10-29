@@ -128,3 +128,7 @@ def test_a_failed_run_shows_the_end_of_the_api_log(tmp_path: Path) -> None:
 
 def test_a_missing_api_log_is_said_so(tmp_path: Path) -> None:
     assert api_log_tail(tmp_path / "missing.log") == "(no API log)"
+
+
+def test_make_eval_holds_the_corpus_to_the_floors_of_adr_0020() -> None:
+    assert default_config({}).floors is True

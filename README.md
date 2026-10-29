@@ -96,7 +96,7 @@ make eval-corpus
 make eval
 ```
 
-`make eval` indexes the evaluation corpus (the AI Act and the GDPR in English and Polish, fetched once by `make eval-corpus` and checked against pinned hashes) into its own data directory and Qdrant collection. It then scores the retrieval cases in `evals/datasets/` with Promptfoo and fails if a metric is more than 5 points worse than the baseline in [docs/evals/](docs/evals/). Reports go to `evals/results/`.
+`make eval` indexes the evaluation corpus (the AI Act and the GDPR in English and Polish, fetched once by `make eval-corpus` and checked against pinned hashes) into its own data directory and Qdrant collection. It then scores the retrieval cases in `evals/datasets/` with Promptfoo and fails if a metric is more than 5 points worse than the baseline in [docs/evals/](docs/evals/) or below its floor ([ADR 0020](docs/adr/0020-retrieval-targets.md)). Reports go to `evals/results/`.
 
 `make test-integration` runs the tests with real adapters (Docling, BGE-M3, the reranker, Qdrant); it needs `make models`, `make qdrant` and Tesseract.
 

@@ -35,3 +35,13 @@ def test_without_a_baseline_the_run_says_it_can_become_one(
     harness_run.main()
 
     assert "this run can become it" in capsys.readouterr().out
+
+
+def test_failures_are_listed_under_one_heading_whatever_their_kind(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    floor = "answerable@3 is 80.0, below its floor of 85.0 (ADR 0020)"
+    monkeypatch.setattr(harness_run, "run", fake_run(tmp_path, [floor]))
+
+    with pytest.raises(SystemExit, match=re.escape(f"Gate failures:\n- {floor}")):
+        harness_run.main()

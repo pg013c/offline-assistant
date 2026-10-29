@@ -12,8 +12,8 @@ Evaluate model behaviour ([ADR 0006](../../../docs/adr/0006-tdd-for-code-evals-f
 
 1. Check the preconditions: the model server answers at the configured base URL, the models named in configuration are available, the index is built for the evaluation dataset. If not, say what is missing and stop; do not download anything without the human's go-ahead.
 2. Run `make eval` (or the suite or models passed as arguments). Comparison with Claude needs `ASSISTANT_ALLOW_NETWORK=1`; ask before enabling it.
-3. Read the results and compare with the last baseline in `docs/evals/`. For each metric in the PRD quality targets report: value, target, change from baseline.
-4. If any metric is below target or dropped by more than 5 points, run the `eval-analyst` agent on the failing cases and include its explanation.
+3. Read the results and compare with the last baseline in `docs/evals/`. For each metric with a target report: value, target, change from baseline. Targets are the PRD quality targets (§9) and the retrieval floors of TEST-24 (ADR 0020).
+4. If any metric is below its target or floor, or dropped by more than 5 points, run the `eval-analyst` agent on the failing cases and include its explanation.
 5. Record the outcome:
    - during a feature: a section in `docs/features/F-xx-*/review.md` (create it if needed) with the metrics table,
    - when the run sets a new baseline or compares models: a new file `docs/evals/YYYY-MM-DD-<topic>.md` with model versions, hardware, configuration, dataset version and metrics (AI-61).

@@ -25,7 +25,7 @@ import yaml
 
 from harness.corpus import CorpusDocument, documents, sha256
 from harness.dataset import load_cases
-from harness.gate import check
+from harness.gate import gate_failures
 from harness.metrics import CaseResult, compute, latency, top_out_of_scope_similarity
 from harness.promptfoo import MODES, Response, command_line, environment, responses_by_mode
 from harness.report import ModeResult, build_report, markdown
@@ -66,6 +66,8 @@ class RunConfig:
     collection_prefix: str
     port: int
     threshold: float
+    # Whether the floors of ADR 0020 apply; `make eval` holds the corpus to them.
+    floors: bool = False
 
 
 @dataclass(frozen=True)
@@ -117,9 +119,10 @@ def run(config: RunConfig) -> Outcome:
         if config.baseline.exists()
         else {}
     )
-    failures = check(
+    failures = gate_failures(
         {name: values["value"] for name, values in report["metrics"].items()},
         {name: values["value"] for name, values in baseline.items()},
+        floors=config.floors,
     )
     stem = config.results_dir / f"retrieval-{started_at:%Y%m%dT%H%M%SZ}"
     report_json = stem.with_suffix(".json")
@@ -183,6 +186,7 @@ def default_config(env: Mapping[str, str]) -> RunConfig:
         collection_prefix="eval",
         port=int(env.get("EVAL_API_PORT", "8021")),
         threshold=EVAL_THRESHOLD,
+        floors=True,
     )
 
 
@@ -447,7 +451,9 @@ def main() -> None:
     if not config.baseline.exists():
         print(f"No baseline at {config.baseline}; this run can become it.")
     if outcome.gate_failures:
-        sys.exit("Regression:\n" + "\n".join(f"- {failure}" for failure in outcome.gate_failures))
+        sys.exit(
+            "Gate failures:\n" + "\n".join(f"- {failure}" for failure in outcome.gate_failures)
+        )
 
 
 if __name__ == "__main__":

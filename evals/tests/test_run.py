@@ -55,6 +55,8 @@ def config(tmp_path: Path) -> Iterator[RunConfig]:
         collection_prefix=prefix,
         port=PORT,
         threshold=0.5,
+        # Two excerpt questions say nothing about the corpus-wide floors of ADR 0020.
+        floors=False,
     )
     for name in collections():
         if name.startswith(prefix):
