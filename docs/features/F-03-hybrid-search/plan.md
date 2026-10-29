@@ -140,7 +140,7 @@
     - a Polish and an English sentence about high-risk AI are closer than either is to a sentence about cooking;
     - the model loads from the pinned directory with `HF_HUB_OFFLINE=1`.
 - Change: `ports/embedder.py`, `adapters/fakes/embedder.py`, `adapters/sentence_transformer_embedder.py`.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 5. Chunk index port and in-memory fake
