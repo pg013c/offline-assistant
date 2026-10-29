@@ -1,6 +1,6 @@
 """Tools a language model may call, and the conversation that carries the calls (F-07)."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Literal
 
 from pydantic import BaseModel
@@ -37,7 +37,7 @@ class ToolCalls:
     """The model wants these tools run before it answers."""
 
     calls: tuple[ToolCall, ...]
-    usage: Usage | None = None
+    usage: Usage | None = field(default=None, compare=False)
 
 
 @dataclass(frozen=True, slots=True)
@@ -45,7 +45,7 @@ class FinalText:
     """The model answered without calling a tool."""
 
     text: str
-    usage: Usage | None = None
+    usage: Usage | None = field(default=None, compare=False)
 
 
 class ToolsUnsupported(Exception):

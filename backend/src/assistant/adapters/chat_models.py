@@ -24,7 +24,9 @@ class ChatModelSpec:
 
 CHAT_MODELS: dict[str, ChatModelSpec] = {
     "fake-extractive": ChatModelSpec(served_model=None, pinned=None, tools=False),
-    "qwen3-8b": ChatModelSpec(served_model="qwen3-8b", pinned=QWEN3_8B, tools=True),
+    "qwen3-8b": ChatModelSpec(
+        served_model="qwen3-8b", pinned=QWEN3_8B, tools=True, json_schema=True, streaming=True
+    ),
 }
 
 
@@ -46,6 +48,8 @@ def chat_model_for(settings: Settings, transport: httpx.BaseTransport | None = N
             timeout_seconds=settings.llm_timeout,
             max_retries=settings.max_retries,
             tools=spec.tools,
+            json_schema=spec.json_schema,
+            streaming=spec.streaming,
         ),
     )
 

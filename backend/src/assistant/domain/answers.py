@@ -97,7 +97,8 @@ type ModelFailure = Literal["invalid_answer", "model_unreachable", "model_timeou
 class ModelFailed:
     code: ModelFailure
     detail: str
-    usage: Usage | None = None
+    # What the failed answer cost; not part of what the failure is.
+    usage: Usage | None = field(default=None, compare=False)
 
 
 type ModelEvent = TextDelta | AttemptDiscarded | Answered | ModelFailed

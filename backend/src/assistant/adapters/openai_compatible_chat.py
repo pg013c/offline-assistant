@@ -7,7 +7,7 @@ writes it, and an invalid answer is retried with the reason fed back (AI-21).
 import json
 import time
 from collections.abc import AsyncIterator, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from importlib.resources import files
 from typing import Any
 
@@ -118,7 +118,7 @@ class OpenAICompatibleChat:
                             streamed.append(event.text)
                         yield event
                 except _Unanswered as error:
-                    yield error.failure
+                    yield replace(error.failure, usage=tally.usage())
                     return
                 raw = "".join(output)
                 try:
@@ -131,6 +131,7 @@ class OpenAICompatibleChat:
                             "invalid_answer",
                             f"The model gave no valid answer after {tally.attempts} attempts; "
                             f"the last one was rejected because {reason}.",
+                            usage=tally.usage(),
                         )
                         return
                     messages += [
@@ -158,8 +159,16 @@ class OpenAICompatibleChat:
         tally: _Tally,
         output: list[str],
     ) -> AsyncIterator[ModelEvent]:
-        """One streamed completion: its answer text as deltas, its raw output into `output`."""
+        """One completion: its answer text as deltas, its raw output into `output`.
+
+        A model that does not stream answers in one piece; its text is sent after validation.
+        """
         url = self._server.base_url
+        if not self._server.streaming:
+            message = await self._complete(client, self._body(messages), tally)
+            output.append(message.get("content") or "")
+            tally.first_token = tally.first_token or time.monotonic()
+            return
         extractor = AnswerTextExtractor()
         # The client's timeout covers each read; this covers the whole attempt (AI-22).
         deadline = time.monotonic() + self._server.timeout_seconds
@@ -201,24 +210,27 @@ class OpenAICompatibleChat:
             raise ToolsUnsupported(f"{self.model_id} is not configured to call tools")
         by_name = {tool.name: tool for tool in tools}
         sent = [_wire(message) for message in messages]
+        tally = _Tally()
+        errors: list[tuple[str, str]] = []
         async with httpx.AsyncClient(
             base_url=self._server.base_url,
             timeout=self._server.timeout_seconds,
             transport=self._transport,
         ) as client:
-            for attempt in range(1, self._server.max_retries + 2):
+            while tally.attempts <= self._server.max_retries:
+                tally.attempts += 1
                 try:
-                    reply = await self._complete(client, sent, tools)
+                    reply = await self._complete(
+                        client, _tools_body(self._server, sent, tools), tally
+                    )
                 except _Unanswered as error:
-                    return error.failure
+                    return replace(error.failure, usage=tally.usage())
                 raw_calls = reply.get("tool_calls") or []
                 if not raw_calls:
-                    return FinalText(reply.get("content") or "")
+                    return FinalText(reply.get("content") or "", usage=tally.usage())
                 calls, errors = _parse_calls(raw_calls, by_name)
                 if not errors:
-                    return ToolCalls(tuple(calls))
-                if attempt > self._server.max_retries:
-                    break
+                    return ToolCalls(tuple(calls), usage=tally.usage())
                 sent += [
                     {
                         "role": "assistant",
@@ -232,31 +244,15 @@ class OpenAICompatibleChat:
                 ]
         return ModelFailed(
             "invalid_answer",
-            f"The model made no valid tool call after {attempt} attempts: {errors[0][1]}",
+            f"The model made no valid tool call after {tally.attempts} attempts: {errors[0][1]}",
+            usage=tally.usage(),
         )
 
     async def _complete(
-        self, client: httpx.AsyncClient, messages: list[dict[str, Any]], tools: Sequence[ToolSpec]
+        self, client: httpx.AsyncClient, body: dict[str, Any], tally: _Tally
     ) -> dict[str, Any]:
-        """One non-streamed completion with tools; its message."""
+        """One non-streamed completion: its message, its tokens counted in `tally`."""
         url = self._server.base_url
-        body = {
-            "model": self._server.served_model,
-            "messages": messages,
-            "stream": False,
-            "tools": [
-                {
-                    "type": "function",
-                    "function": {
-                        "name": tool.name,
-                        "description": tool.description,
-                        "parameters": tool.arguments.model_json_schema(),
-                    },
-                }
-                for tool in tools
-            ],
-            "temperature": 0,
-        }
         try:
             response = await client.post("/v1/chat/completions", json=body)
         except httpx.TimeoutException as error:
@@ -266,25 +262,54 @@ class OpenAICompatibleChat:
         if response.status_code != httpx.codes.OK:
             raise _Unanswered(_error_status(url, response))
         try:
-            message: dict[str, Any] = response.json()["choices"][0]["message"]
+            decoded = response.json()
+            message: dict[str, Any] = decoded["choices"][0]["message"]
         except (ValueError, KeyError, IndexError, TypeError) as error:
             raise _Unanswered(_not_json(url)) from error
+        _count(decoded, tally)
         return message
 
     def _body(self, messages: list[dict[str, str]]) -> dict[str, Any]:
-        return {
+        """An answer request, using only the capabilities the model declares (AI-23)."""
+        body: dict[str, Any] = {
             "model": self._server.served_model,
             "messages": messages,
-            "stream": True,
-            "stream_options": {"include_usage": True},
-            "response_format": {
-                "type": "json_schema",
-                "json_schema": {"name": "answer", "strict": True, "schema": ANSWER_SCHEMA},
-            },
+            "stream": self._server.streaming,
             # Answers should follow the passages, not vary between runs.
             "temperature": 0,
             "max_tokens": self._server.max_tokens,
         }
+        if self._server.streaming:
+            body["stream_options"] = {"include_usage": True}
+        if self._server.json_schema:
+            body["response_format"] = {
+                "type": "json_schema",
+                "json_schema": {"name": "answer", "strict": True, "schema": ANSWER_SCHEMA},
+            }
+        return body
+
+
+def _tools_body(
+    server: LlmServer, messages: list[dict[str, Any]], tools: Sequence[ToolSpec]
+) -> dict[str, Any]:
+    return {
+        "model": server.served_model,
+        "messages": messages,
+        "stream": False,
+        "tools": [
+            {
+                "type": "function",
+                "function": {
+                    "name": tool.name,
+                    "description": tool.description,
+                    "parameters": tool.arguments.model_json_schema(),
+                },
+            }
+            for tool in tools
+        ],
+        "temperature": 0,
+        "max_tokens": server.max_tokens,
+    }
 
 
 def _wire(message: Message) -> dict[str, Any]:
