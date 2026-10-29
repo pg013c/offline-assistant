@@ -11,7 +11,7 @@ Built to answer three practical questions about local AI:
 2. How do local models compare with a cloud model on **quality, latency, memory and cost**, measured on the same evaluation set?
 3. Can the whole thing be **installed and verified on an air-gapped machine**?
 
-> **Status:** reranker (F-05). You can upload PDFs (including scans), Word files, photos of text, plain text or Markdown; they are parsed offline with Docling and Tesseract and split by article, paragraph and page. Questions find passages by meaning and by exact terms, across Polish and English (BGE-M3 and BM25 in Qdrant), reordered by a cross-encoder (BGE reranker v2 M3), and answers stream with a clickable source such as "Art. 6(1), p. 1". Documents can be deleted and re-indexed. Retrieval is measured: `make eval` scores 24 questions over the AI Act and the GDPR with and without the reranker against a recorded [baseline](docs/evals/2026-10-29-retrieval-reranker.md) (recall@3 95 %, recall@10 100 %, MRR 0.87, all out-of-scope questions refused, 0.5 s p95 search latency). The answer still comes from a clearly labelled test model; local LLMs follow in [F-06 and F-07](docs/backlog.md).
+> **Status:** local LLM answers (F-06). You can upload PDFs (including scans), Word files, photos of text, plain text or Markdown; they are parsed offline with Docling and Tesseract and split by article, paragraph and page. Questions find passages by meaning and by exact terms, across Polish and English (BGE-M3 and BM25 in Qdrant), reordered by a cross-encoder (BGE reranker v2 M3), and answers stream with a clickable source such as "Art. 6(1), p. 1". Documents can be deleted and re-indexed. Retrieval is measured: `make eval` scores 24 questions over the AI Act and the GDPR with and without the reranker against a recorded [baseline](docs/evals/2026-10-29-retrieval-reranker.md) (recall@3 95 %, recall@10 100 %, MRR 0.87, all out-of-scope questions refused, 0.5 s p95 search latency). Answers come from a local LLM, Qwen3 8B on llama.cpp, as validated JSON with citations of the passages used. `make eval-answers` measures them: 86 % cite an expected passage, all are in the question's language, and the first token arrives in under 1 s median ([record](docs/evals/2026-10-29-answers-qwen3-8b.md)). The agent with tools follows in [F-07](docs/backlog.md).
 
 ## What it will do
 
@@ -67,11 +67,13 @@ cp .env.example .env
 make setup
 make models
 make qdrant
+make llm-models
 ```
 
-`make models` downloads the models (about 4.8 GB: document parsing, embeddings and the reranker, pinned by commit and checked by hash) into `ASSISTANT_MODELS_DIR`. It is the only step that needs the network; nothing is downloaded at runtime ([ADR 0004](docs/adr/0004-offline-first-no-egress.md)). `make qdrant` starts the vector database in Docker, pinned by digest, with telemetry off and data under `ASSISTANT_DATA_DIR/qdrant` ([ADR 0017](docs/adr/0017-qdrant-and-bge-m3-for-hybrid-search.md)).
+`make models` downloads the models (about 4.8 GB: document parsing, embeddings and the reranker, pinned by commit and checked by hash) into `ASSISTANT_MODELS_DIR`. It is the only step that needs the network; nothing is downloaded at runtime ([ADR 0004](docs/adr/0004-offline-first-no-egress.md)). `make llm-models` downloads the local LLM, Qwen3 8B (5 GB GGUF, pinned by hash), for `make llm`, which serves it with llama.cpp's `llama-server` on port 8080 (`brew install llama.cpp`; [ADR 0021](docs/adr/0021-llama-server-and-qwen3-8b.md)). Without it, set `ASSISTANT_CHAT_MODEL=fake-extractive` for the test model. `make qdrant` starts the vector database in Docker, pinned by digest, with telemetry off and data under `ASSISTANT_DATA_DIR/qdrant` ([ADR 0017](docs/adr/0017-qdrant-and-bge-m3-for-hybrid-search.md)).
 
 ```bash
+make llm
 make dev
 ```
 
@@ -96,7 +98,7 @@ make eval-corpus
 make eval
 ```
 
-`make eval` indexes the evaluation corpus (the AI Act and the GDPR in English and Polish, fetched once by `make eval-corpus` and checked against pinned hashes) into its own data directory and Qdrant collection. It then scores the retrieval cases in `evals/datasets/` with Promptfoo and fails if a metric is more than 5 points worse than the baseline in [docs/evals/](docs/evals/) or below its floor ([ADR 0020](docs/adr/0020-retrieval-targets.md)). Reports go to `evals/results/`.
+`make eval` indexes the evaluation corpus (the AI Act and the GDPR in English and Polish, fetched once by `make eval-corpus` and checked against pinned hashes) into its own data directory and Qdrant collection. It then scores the retrieval cases in `evals/datasets/` with Promptfoo and fails if a metric is more than 5 points worse than the baseline in [docs/evals/](docs/evals/) or below its floor ([ADR 0020](docs/adr/0020-retrieval-targets.md)). Reports go to `evals/results/`. `make eval-answers` asks the same questions through the chat API with the local LLM (it needs `make llm`) and compares the answers with their own baseline.
 
 `make test-integration` runs the tests with real adapters (Docling, BGE-M3, the reranker, Qdrant); it needs `make models`, `make qdrant` and Tesseract.
 
@@ -120,6 +122,8 @@ Code: [MIT](LICENSE). Models, tools and datasets keep their own licences:
 | [Qdrant](https://qdrant.tech/) server and [qdrant-client](https://github.com/qdrant/qdrant-client) | vector and keyword search | Apache-2.0 |
 | [BGE-M3](https://huggingface.co/BAAI/bge-m3) | multilingual embeddings | MIT |
 | [BGE reranker v2 M3](https://huggingface.co/BAAI/bge-reranker-v2-m3) | multilingual reranking | Apache-2.0 |
+| [Qwen3 8B](https://huggingface.co/Qwen/Qwen3-8B-GGUF) | local LLM, Q4_K_M GGUF | Apache-2.0 |
+| [llama.cpp](https://github.com/ggml-org/llama.cpp) | `make llm` serves the LLM | MIT |
 | [sentence-transformers](https://www.sbert.net/) | runs the embedding model | Apache-2.0 |
 | [scikit-learn](https://scikit-learn.org/) | dependency of sentence-transformers | BSD-3-Clause |
 | [Promptfoo](https://www.promptfoo.dev/) | evaluation runner (`evals/`, telemetry off) | MIT |

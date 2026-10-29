@@ -253,7 +253,7 @@ class ChatModel(Protocol):
   - **README:** setup, the model in the licence table, status;
   - **ADR 0007:** status line;
   - **backlog.**
-- [ ] green
+- [x] green
 
 ## Acceptance criteria mapping
 
