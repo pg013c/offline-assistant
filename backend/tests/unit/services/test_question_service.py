@@ -3,9 +3,9 @@ import asyncio
 import pytest
 
 from assistant.adapters.fakes.chat_model import FakeExtractiveChatModel
+from assistant.adapters.fakes.chunk_index import InMemoryChunkIndex
 from assistant.adapters.fakes.document_store import FakeDocumentStore
 from assistant.adapters.fakes.ingestion_queue import InlineIngestionQueue
-from assistant.adapters.keyword_index import KeywordChunkIndex
 from assistant.adapters.text_document_parser import TextDocumentParser
 from assistant.domain.answers import (
     NO_RELEVANT_PASSAGE,
@@ -30,7 +30,7 @@ def store() -> FakeDocumentStore:
 
 @pytest.fixture
 def services(store: FakeDocumentStore) -> tuple[DocumentService, QuestionService]:
-    index = KeywordChunkIndex()
+    index = InMemoryChunkIndex()
     documents = DocumentService(store, index, TextDocumentParser(), InlineIngestionQueue())
     return documents, QuestionService(index, FakeExtractiveChatModel(), store)
 

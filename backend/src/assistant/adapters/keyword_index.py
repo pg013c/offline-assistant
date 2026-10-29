@@ -81,3 +81,9 @@ class KeywordChunkIndex:
         ]
         matches = [result for result in scored if result.score > 0]
         return sorted(matches, key=lambda result: result.score, reverse=True)[:limit]
+
+    def remove_document(self, document_id: str) -> None:
+        raise NotImplementedError
+
+    def document_ids(self) -> set[str]:
+        raise NotImplementedError

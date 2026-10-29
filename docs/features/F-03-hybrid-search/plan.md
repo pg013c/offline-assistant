@@ -158,7 +158,7 @@
 
   Service tests switch to the fake index.
 - Change: `ports/chunk_index.py`, `adapters/fakes/chunk_index.py`, removal of `adapters/keyword_index.py`.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 6. Qdrant chunk index
