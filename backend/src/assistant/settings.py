@@ -13,10 +13,13 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix=ENV_PREFIX)
 
     data_dir: Path
+    # A name from `adapters.chat_models`; the test model needs no server (FR-40).
     chat_model: Literal["fake-extractive", "qwen3-8b"] = "fake-extractive"
-    llm_url: str = ""
-    llm_timeout: float = 0
-    max_retries: int = 0
+    # The OpenAI-compatible server `make llm` starts (ADR 0021), a call's timeout in seconds
+    # (AI-22) and how often a rejected answer is retried (AI-21).
+    llm_url: str = "http://127.0.0.1:8080"
+    llm_timeout: float = Field(default=60, gt=0)
+    max_retries: int = Field(default=2, ge=0, le=5)
     # `docling` reads every supported format; `text-only` reads .txt and .md without models.
     document_parser: Literal["docling", "text-only"] = "docling"
     # Where `make models` put the parsing and embedding models (ADR 0004).

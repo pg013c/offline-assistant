@@ -210,7 +210,7 @@ class ChatModel(Protocol):
   - `scripts/download_models.py` (LLM group);
   - `Makefile`, `.env.example`.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 9. Answer evaluation cases
 
