@@ -33,3 +33,17 @@ Decision is filled in by the human: `fix`, `backlog (F-xx)`, or `reject: <reason
 
 | # | Commits |
 |---|---|
+| 1 | `2dd8eef` test, `30e81f7` fix (each run empties its data directory and drops its own collections; the integration test runs twice) |
+| 2 | `0dc2c06` test, `3a11bcc` fix |
+| 3 | `2dd8eef` test, `30e81f7` fix (corpus verified against its pins first; hashes in the metadata; waits only for corpus documents) |
+| 4 | `2dd8eef` test, `30e81f7` fix (a busy port is refused) |
+| 5 | `0dc2c06` test, `3a11bcc` fix |
+| 6 | `0dc2c06` test, `3a11bcc` fix (corpus download with an injected client; `make eval` exit and the missing-baseline message) |
+| 7 | `100f65f` test, `502f80d` build; the commit that added the Promptfoo suite was split so the suite lands in its own `test(eval)` commit (`857deec`) |
+| 8 | `f2f21a4` test(eval), dataset version 2; baseline recorded again in `01271a5` |
+| 9 | `0dc2c06` test, `3a11bcc` fix (named error for a case without output); `30e81f7` (Promptfoo timeout, log closed) |
+| 10 | `01271a5` docs (gate sensitivity in the baseline record) |
+| 11 | `2dd8eef` test, `30e81f7` fix (fixed threshold, Qdrant from `QDRANT_PORT`, no `ASSISTANT_*` inherited) |
+| 12 | `998d797` test, `6f6a1b4` fix (`--no-write`, `--no-share`); `40a5c43` docs (telemetry list) |
+| 13 | `40a5c43` docs (`plan.md`, "Changes during the build") |
+| 14 | `30e81f7` fix (indexing time in the metadata), `01271a5` docs (97.7 s for 464 pages) |
