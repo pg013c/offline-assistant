@@ -46,6 +46,7 @@
       model_id: str
       def score(self, query: str, passages: Sequence[str]) -> list[float]: ...
   ```
+
 - **`domain`:** `rerank(found, scores)` orders the candidates by score, highest first, and keeps the hybrid order for ties.
 - **Fake:** `adapters/fakes/reranker.py`, `WordOverlapReranker`, scores by shared words. It is deterministic and needs no model.
 
