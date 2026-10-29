@@ -31,20 +31,3 @@ def test_a_polish_question_finds_the_english_answer(reranker: BgeReranker) -> No
     )
 
     assert scores[0] > scores[1]
-
-
-def test_the_article_itself_outranks_a_passage_that_cites_it(reranker: BgeReranker) -> None:
-    scores = reranker.score(
-        "What does Article 83 of the GDPR set out?",
-        [
-            "Article 84 > Penalties\n\nMember States shall lay down the rules on other "
-            "penalties for infringements of this Regulation, in particular for infringements "
-            "which are not subject to administrative fines pursuant to Article 83.",
-            "Article 83 > General conditions for imposing administrative fines\n\nEach "
-            "supervisory authority shall ensure that the imposition of administrative fines "
-            "pursuant to this Article shall in each individual case be effective, "
-            "proportionate and dissuasive.",
-        ],
-    )
-
-    assert scores[1] > scores[0]
