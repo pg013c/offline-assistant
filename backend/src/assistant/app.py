@@ -57,7 +57,9 @@ def create_app(settings: Settings) -> FastAPI:
     parser = document_parser_for(settings)
     queue = ThreadIngestionQueue()
     document_service = DocumentService(store, index, parser, queue)
-    question_service = QuestionService(index, model, store)
+    # The in-memory index returns only passages sharing a word with the question; the
+    # threshold comes from settings with the Qdrant index (F-03 step 9).
+    question_service = QuestionService(index, model, store, min_similarity=0)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:

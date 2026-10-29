@@ -183,7 +183,7 @@
   - the best remaining hit is cited.
 - Change: `services/questions.py`.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 8. Delete, re-index and index reconciliation
 
