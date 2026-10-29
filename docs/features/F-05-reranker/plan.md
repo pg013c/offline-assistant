@@ -227,3 +227,7 @@
   - `make eval` adds answerable@3, a warm-up search per mode and the reranker's settings.
 
   The measurement after them is the baseline.
+- **A default that follows the device (after the first CI run).**
+  - On CI's CPU the reranker made a browser journey miss its answer. Locally, scoring 30 passages on the M5 Pro's CPU took 3.4 s.
+  - The human chose `ASSISTANT_RERANKER=auto` as the default (2026-10-29): on with an Apple GPU, off on a CPU. `on` and `off` force either mode.
+  - The browser journeys run with the reranker off, and `make eval` with it on.

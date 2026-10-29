@@ -30,7 +30,7 @@ Hybrid search (F-03, F-04a) puts every expected passage in the top 10, but two e
 - [x] AC-3: Given the reranker model is missing or its files fail their hash, when the API starts with reranking on, then it refuses to start with `ModelsNotReady`, naming the model; with reranking off it starts. Proof: `tests/integration/test_app_startup.py::test_a_missing_reranker_stops_the_app_naming_it`, `::test_with_reranking_off_the_app_starts_without_the_reranker`; `tests/unit/test_settings.py::test_with_reranking_on_a_missing_reranker_stops_startup`; hash checks in `tests/unit/adapters/test_pinned_models.py`.
 - [x] AC-4: Given an out-of-scope question, when reranking is on, then no passage is used for an answer (the dense threshold still decides). Proof: `test_question_service.py::test_the_dense_threshold_still_refuses_what_the_reranker_scores_high`, `::test_with_a_reranker_answers_use_only_its_top_ten_like_the_evaluation`; `make eval`: out-of-scope refused 3/3 with the reranker, top similarity 0.38.
 - [x] AC-5: Given the evaluation corpus, when `make eval` runs, then the report holds recall@3, recall@10, MRR, the refusal shares and the median and 95th-percentile search latency for both modes, plus the highest out-of-scope similarity; the gate compares the default mode against the baseline. Proof: `evals/tests/test_report.py`, `test_metrics.py`, `test_promptfoo.py`, `test_run.py` (integration); report `retrieval-20261029T160557Z.json`.
-- [x] AC-6: The result with and without the reranker is recorded in `docs/evals/`, and the default mode is the one the recorded result supports (decision 4). Proof: [record](../../evals/2026-10-29-retrieval-reranker.md): recall@3 and MRR higher, no metric worse, p95 473 ms; `ASSISTANT_RERANKER` defaults to `on` (`test_settings.py::test_reranking_is_on_by_default`).
+- [x] AC-6: The result with and without the reranker is recorded in `docs/evals/`, and the default mode is the one the recorded result supports (decision 4). Proof: [record](../../evals/2026-10-29-retrieval-reranker.md): recall@3 and MRR higher, no metric worse, p95 473 ms; `ASSISTANT_RERANKER` defaults to `auto`, on with an Apple GPU, where the record was measured (`test_settings.py::test_reranking_follows_the_device_by_default`, `::test_automatic_reranking_is_on_with_an_apple_gpu`, `::test_automatic_reranking_is_off_on_a_cpu`).
 
 ## Evaluation cases
 
@@ -47,7 +47,7 @@ The F-04 suite (dataset version 2, 24 cases) runs unchanged in both modes. The c
 
 1. **Model:** `BAAI/bge-reranker-v2-m3` (Apache-2.0, multilingual, built on the same XLM-RoBERTa base as BGE-M3), run with the sentence-transformers library already in the backend. A new model needs an ADR (`/adr`).
 2. **Candidates:** the reranker scores the top 30 hybrid candidates; answers keep the best 3 above the threshold, searches return the requested limit.
-3. **Switch:** `ASSISTANT_RERANKER` (`on` by default, `off`), and an optional `rerank` field on `POST /api/search` for the evaluation.
+3. **Switch:** `ASSISTANT_RERANKER` (`on` by default, `off`), and an optional `rerank` field on `POST /api/search` for the evaluation. Changed during the build: the default is `auto`, on with an Apple GPU and off on a CPU (plan, "Changes during the build").
 4. **Default:** the reranker is on by default only if, with it, recall@3 and MRR are higher, no metric is more than 5 points worse, and the 95th-percentile search latency stays under 1 s on the reference hardware. Otherwise it ships switched off and the record says why.
 
 ## Open questions

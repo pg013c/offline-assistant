@@ -52,7 +52,9 @@ Float16 on MPS (plan step 5a) left every metric and every rank unchanged and bro
 - no metric is worse;
 - the p95 is under 1 s.
 
-The run after the review gives the same quality figures and a p95 of 473 ms; answerable@3 is equal in both modes. The reranker is therefore on by default (`ASSISTANT_RERANKER=on`): decision 4 holds, and better order means a better cited passage, at about 0.4 s per question. On CPU, as in Docker (ADR 0007), it runs in float32 and will be slower. F-10 measures that.
+The run after the review gives the same quality figures and a p95 of 473 ms; answerable@3 is equal in both modes. Decision 4 holds on the reference Mac, and better order means a better cited passage, at about 0.4 s per question.
+
+On a CPU it does not hold. The reranker runs in float32 there, and scoring 30 passages took 3.4 s on the M5 Pro's CPU and longer on CI's runners, where it made a browser journey miss its answer. The human therefore chose a default that follows the device (2026-10-29): `ASSISTANT_RERANKER=auto` turns the reranker on with an Apple GPU and leaves it off on a CPU, as in CI and Docker (ADR 0007). `on` and `off` force either mode. F-10 measures the CPU case with the Docker profiles.
 
 ## The cases that changed
 
