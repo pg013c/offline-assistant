@@ -27,6 +27,8 @@ class Document:
     status: DocumentStatus
     page_count: int | None = None
     failure_reason: str | None = None
+    # The chunker that cut the stored chunks; None for documents chunked before F-04a.
+    chunker_version: int | None = None
 
 
 @dataclass(frozen=True, slots=True)

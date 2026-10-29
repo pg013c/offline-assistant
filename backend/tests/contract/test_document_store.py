@@ -121,3 +121,12 @@ def test_deleting_twice_or_an_unknown_document_is_harmless(store: DocumentStore)
     store.delete("unknown")
 
     assert store.list_documents() == []
+
+
+def test_the_chunker_version_is_kept(store: DocumentStore) -> None:
+    store.save_upload(POLICY, b"%PDF policy")
+    chunked = replace(POLICY_READY, chunker_version=2)
+
+    store.update(chunked)
+
+    assert store.get(POLICY.id) == chunked
