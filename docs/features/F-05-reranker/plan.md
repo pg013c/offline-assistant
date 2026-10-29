@@ -115,7 +115,7 @@
   - **contract (integration):** the step 1 contract, run against `BgeReranker`, plus a Polish query whose English answer scores above an unrelated English passage.
 - Change: `adapters/pinned_models.py` (hashes taken from the downloaded files), `adapters/bge_reranker.py`. `make models` then fetches the model.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 3. Reranking in the question service
 

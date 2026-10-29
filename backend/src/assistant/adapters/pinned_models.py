@@ -1,4 +1,4 @@
-"""Every model the app loads, pinned by commit and file hash (ADR 0004, ADR 0016, ADR 0017).
+"""Every model the app loads, pinned by commit and file hash (ADR 0004, 0016, 0017, 0019).
 
 `make models` fetches exactly these files and checks them; the API checks them again at
 startup, so two machines with the same `uv.lock` get the same chunks and the same vectors.
@@ -90,9 +90,25 @@ BGE_M3 = PinnedModel(
 DOCLING_MODELS = (DOCLING_LAYOUT, DOCLING_TABLES)
 # The cross-encoder that reorders search candidates (ADR 0019).
 BGE_RERANKER = PinnedModel(
-    repository="BAAI/bge-reranker-v2-m3", revision="", directory="", files={}
+    repository="BAAI/bge-reranker-v2-m3",
+    revision="953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e",
+    directory="rerankers/BAAI--bge-reranker-v2-m3",
+    files={
+        "config.json": "13dcd6c31d9fec9d1d8e158702072f62d7fa7d312a64b9fe057bec9a08cfe41a",
+        "model.safetensors": "d9e3e081faff1eefb84019509b2f5558fd74c1a05a2c7db22f74174fcedb5286",
+        "sentencepiece.bpe.model": (
+            "cfc8146abe2a0488e9e2a0c56de7952f7c11ab059eca145a0a727afce0db2865"
+        ),
+        "special_tokens_map.json": (
+            "8c785abebea9ae3257b61681b4e6fd8365ceafde980c21970d001e834cf10835"
+        ),
+        "tokenizer.json": "69564b696052886ed0ac63fa393e928384e0f8caada38c1f4864a9bfbf379c15",
+        "tokenizer_config.json": (
+            "7e4c1cc848840aeccdd763458c18dd525eb0f795c992e00ebe9c28554e7db2d4"
+        ),
+    },
 )
-PINNED_MODELS = (*DOCLING_MODELS, BGE_M3)
+PINNED_MODELS = (*DOCLING_MODELS, BGE_M3, BGE_RERANKER)
 
 
 def verify_models(models_dir: Path, models: Iterable[PinnedModel]) -> None:

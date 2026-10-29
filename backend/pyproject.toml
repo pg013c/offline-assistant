@@ -47,6 +47,7 @@ select = ["E", "F", "I", "B", "UP", "SIM", "RUF", "PL", "S", "ASYNC"]
 # Docling and sentence-transformers load PyTorch on import; the adapters import them on first use.
 "src/assistant/adapters/docling_parser.py" = ["PLC0415"]
 "src/assistant/adapters/sentence_transformer_embedder.py" = ["PLC0415"]
+"src/assistant/adapters/bge_reranker.py" = ["PLC0415"]
 
 [tool.mypy]
 strict = true
