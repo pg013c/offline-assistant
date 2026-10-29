@@ -4,8 +4,8 @@ from pathlib import Path
 import pytest
 
 from assistant.adapters.pinned_models import ModelsNotReady
-from assistant.app import main
-from assistant.settings import SettingsError, load_settings, variable_name
+from assistant.app import main, reranker_for
+from assistant.settings import Settings, SettingsError, load_settings, variable_name
 
 
 @pytest.fixture(autouse=True)
@@ -17,6 +17,7 @@ def clean_environment(monkeypatch: pytest.MonkeyPatch) -> None:
         "ASSISTANT_QDRANT_URL",
         "ASSISTANT_QDRANT_COLLECTION_PREFIX",
         "ASSISTANT_MIN_SIMILARITY",
+        "ASSISTANT_RERANKER",
     ):
         monkeypatch.delenv(name, raising=False)
     # main() sets these; recording them here restores them after each test.
@@ -156,3 +157,40 @@ def test_the_minimum_similarity_must_lie_between_0_and_1(
 
     with pytest.raises(SettingsError, match="ASSISTANT_MIN_SIMILARITY"):
         load_settings()
+
+
+def test_reranking_is_on_by_default(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("ASSISTANT_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("ASSISTANT_MODELS_DIR", str(tmp_path / "models"))
+
+    assert load_settings().reranker == "on"
+
+
+def test_reranking_can_be_switched_off(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("ASSISTANT_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("ASSISTANT_MODELS_DIR", str(tmp_path / "models"))
+    monkeypatch.setenv("ASSISTANT_RERANKER", "off")
+
+    assert load_settings().reranker == "off"
+
+
+def test_the_reranker_setting_is_on_or_off(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("ASSISTANT_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("ASSISTANT_MODELS_DIR", str(tmp_path / "models"))
+    monkeypatch.setenv("ASSISTANT_RERANKER", "maybe")
+
+    with pytest.raises(SettingsError, match="ASSISTANT_RERANKER"):
+        load_settings()
+
+
+def test_with_reranking_off_no_reranker_is_built_or_checked(tmp_path: Path) -> None:
+    settings = Settings(data_dir=tmp_path, models_dir=tmp_path / "no-models", reranker="off")
+
+    assert reranker_for(settings) is None
+
+
+def test_with_reranking_on_a_missing_reranker_stops_startup(tmp_path: Path) -> None:
+    settings = Settings(data_dir=tmp_path, models_dir=tmp_path / "no-models", reranker="on")
+
+    with pytest.raises(ModelsNotReady, match=r"BAAI/bge-reranker-v2-m3.*make models"):
+        reranker_for(settings)

@@ -30,6 +30,7 @@ from assistant.ports.chunk_index import ChunkIndex
 from assistant.ports.document_parser import DocumentParser
 from assistant.ports.document_store import DocumentStore
 from assistant.ports.ingestion_queue import IngestionQueue
+from assistant.ports.reranker import Reranker
 from assistant.services.documents import DocumentService
 from assistant.services.questions import QuestionService
 from assistant.settings import Settings, load_settings
@@ -58,6 +59,12 @@ class Adapters:
     parser: DocumentParser
     queue: IngestionQueue
     chat_model: ChatModel
+    reranker: Reranker | None = None
+
+
+def reranker_for(settings: Settings) -> Reranker | None:
+    """The pinned reranker when reranking is on; it fails here if its model is missing."""
+    raise NotImplementedError
 
 
 def build_adapters(settings: Settings) -> Adapters:

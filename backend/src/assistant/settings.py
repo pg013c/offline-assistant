@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     qdrant_collection_prefix: str = "assistant"
     # Dense similarity a passage needs to be cited; tuned on the fixtures (F-03), measured in F-04.
     min_similarity: float = Field(default=0.5, ge=0, le=1)
+    # Reorder search candidates with the cross-encoder (F-05, ADR 0019).
+    reranker: Literal["on", "off"] = "off"
 
 
 class SettingsError(Exception):

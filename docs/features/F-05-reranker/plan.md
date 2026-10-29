@@ -145,7 +145,7 @@
     - with no reranker, `rerank: true` is a 409 `reranker_off`;
     - the OpenAPI contract has the new fields.
 - Change: `settings.py`, `app.py`, `api/schemas.py`, `api/routes/search.py`, `api/errors.py`, the generated client (`make api-client`), `.env.example`.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 5. Evaluation of both modes
