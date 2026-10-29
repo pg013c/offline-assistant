@@ -79,8 +79,14 @@ def title_from_filename(filename: str) -> str:
 
 
 def indexed_text(chunk: Chunk) -> str:
-    """What the index embeds and searches for a chunk: its heading path, then its text."""
-    raise NotImplementedError
+    """What the index embeds and searches for a chunk: its heading path, then its text.
+
+    The article label and title live in the heading path, not in the text; without them a
+    question naming "Article 50" could not match the passage (F-04a). Answers quote the
+    text alone.
+    """
+    context = " > ".join(chunk.location.heading_path)
+    return f"{context}\n\n{chunk.text}" if context else chunk.text
 
 
 def chunk_document(

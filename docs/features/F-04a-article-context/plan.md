@@ -57,7 +57,7 @@
   - the chunk's own text is not changed.
 - Change: `domain/documents.py`.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 2. Section titles join the heading path
 
