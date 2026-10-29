@@ -18,6 +18,8 @@ class ChatModelSpec:
     served_model: str | None
     pinned: PinnedModel | None
     tools: bool
+    json_schema: bool = False
+    streaming: bool = False
 
 
 CHAT_MODELS: dict[str, ChatModelSpec] = {

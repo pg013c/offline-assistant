@@ -75,3 +75,9 @@ def test_a_server_that_does_not_list_models_fails_with_the_command(body: bytes) 
 
     with pytest.raises(ChatModelNotReady, match="make llm"):
         chat_model_for(settings("qwen3-8b"), transport=httpx.MockTransport(handler))
+
+
+def test_each_served_model_declares_its_capabilities() -> None:
+    qwen = CHAT_MODELS["qwen3-8b"]
+
+    assert (qwen.tools, qwen.json_schema, qwen.streaming) == (True, True, True)

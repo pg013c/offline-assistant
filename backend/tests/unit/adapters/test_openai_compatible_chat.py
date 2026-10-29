@@ -242,3 +242,58 @@ def test_an_attempt_that_never_ends_times_out_as_a_whole() -> None:
     assert events[-1] == ModelFailed(
         "model_timeout", f"The model server at {URL} did not answer within 0.3 s."
     )
+
+
+def test_a_failed_answer_keeps_the_usage_of_every_attempt() -> None:
+    events = answer(model(StubServer("not json", "still not json"), max_retries=1))
+
+    outcome = events[-1]
+    assert isinstance(outcome, ModelFailed)
+    assert outcome.usage is not None
+    assert (outcome.usage.attempts, outcome.usage.prompt_tokens) == (2, 200)
+
+
+def test_a_model_without_json_schema_output_is_asked_by_the_prompt_alone() -> None:
+    server = StubServer(VALID)
+    chat = OpenAICompatibleChat(
+        model_id="plain",
+        server=LlmServer(
+            base_url=URL, served_model="plain", timeout_seconds=30, max_retries=2, json_schema=False
+        ),
+        transport=httpx.MockTransport(server),
+    )
+
+    outcome = answer(chat)[-1]
+
+    assert "response_format" not in server.requests[0]
+    assert isinstance(outcome, Answered)
+
+
+def test_a_model_without_streaming_answers_in_one_piece() -> None:
+    requests: list[dict[str, object]] = []
+
+    def server(request: httpx.Request) -> httpx.Response:
+        requests.append(json.loads(request.content))
+        return httpx.Response(
+            200,
+            json={
+                "choices": [{"index": 0, "message": {"role": "assistant", "content": VALID}}],
+                "usage": {"prompt_tokens": 90, "completion_tokens": 15},
+            },
+        )
+
+    chat = OpenAICompatibleChat(
+        model_id="batch",
+        server=LlmServer(
+            base_url=URL, served_model="batch", timeout_seconds=30, max_retries=2, streaming=False
+        ),
+        transport=httpx.MockTransport(server),
+    )
+
+    events = answer(chat)
+
+    assert requests[0]["stream"] is False
+    assert events[0] == TextDelta("At least six months.")
+    outcome = events[-1]
+    assert isinstance(outcome, Answered)
+    assert outcome.usage.prompt_tokens == 90

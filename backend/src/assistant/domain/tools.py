@@ -5,6 +5,8 @@ from typing import Literal
 
 from pydantic import BaseModel
 
+from assistant.domain.answers import Usage
+
 
 @dataclass(frozen=True, slots=True)
 class ToolSpec:
@@ -35,6 +37,7 @@ class ToolCalls:
     """The model wants these tools run before it answers."""
 
     calls: tuple[ToolCall, ...]
+    usage: Usage | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -42,6 +45,7 @@ class FinalText:
     """The model answered without calling a tool."""
 
     text: str
+    usage: Usage | None = None
 
 
 class ToolsUnsupported(Exception):

@@ -191,3 +191,12 @@ def test_a_completion_body_that_is_not_json_is_a_model_error() -> None:
 
     assert isinstance(result, ModelFailed)
     assert result.code == "model_error"
+
+
+def test_a_tool_turn_records_its_usage() -> None:
+    result = turn(model(StubServer(calling("search_documents", '{"query": "logs"}'))))
+
+    assert isinstance(result, ToolCalls)
+    assert result.usage is not None
+    assert (result.usage.prompt_tokens, result.usage.completion_tokens) == (150, 20)
+    assert result.usage.attempts == 1

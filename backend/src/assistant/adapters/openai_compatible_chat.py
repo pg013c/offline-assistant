@@ -51,6 +51,8 @@ class LlmServer:
     tools: bool = True
     # A cap on each answer, so a runaway generation ends (AI-22).
     max_tokens: int = 1024
+    json_schema: bool = True
+    streaming: bool = True
 
 
 @dataclass

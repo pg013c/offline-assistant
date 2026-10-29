@@ -3,6 +3,7 @@ import time
 from collections.abc import Sequence
 
 import pytest
+from structlog.testing import capture_logs
 
 from assistant.adapters.fakes.chat_model import FakeExtractiveChatModel, ScriptedChatModel
 from assistant.adapters.fakes.chunk_index import InMemoryChunkIndex
@@ -540,3 +541,36 @@ def test_an_out_of_scope_question_never_reaches_the_model() -> None:
 
     assert events[0] == AnswerText(text=NO_RELEVANT_PASSAGE)
     assert model.calls == 0
+
+
+def test_a_failed_answer_still_reports_its_usage() -> None:
+    questions, _ = scripted(ModelFailed("model_timeout", "slow", usage=USAGE))
+
+    end = ask(questions, "How long are logs kept?")[-1]
+
+    assert isinstance(end, AnswerEnd)
+    assert end.usage == USAGE
+
+
+def test_every_model_call_is_logged_with_ids_timings_and_tokens_but_no_text() -> None:
+    questions, _ = scripted(
+        TextDelta("Kept six months."),
+        Answered(ModelAnswer(text="Kept six months.", cited=(1,)), USAGE),
+    )
+
+    with capture_logs() as logs:
+        ask(questions, "How long are logs kept?")
+
+    [entry] = [log for log in logs if log["event"] == "model_answered"]
+    assert entry == {
+        "event": "model_answered",
+        "log_level": "info",
+        "model_id": "scripted",
+        "outcome": "answered",
+        "passages": 3,
+        "prompt_tokens": 200,
+        "completion_tokens": 30,
+        "first_token_ms": 420.0,
+        "total_ms": 1500.0,
+        "attempts": 1,
+    }
