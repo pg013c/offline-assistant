@@ -1,12 +1,39 @@
+from collections.abc import Sequence
+
 import pytest
 
+from assistant.adapters.fakes.document_parser import FakeDocumentParser
 from assistant.adapters.fakes.document_store import FakeDocumentStore
+from assistant.adapters.fakes.ingestion_queue import FakeIngestionQueue
 from assistant.adapters.keyword_index import KeywordChunkIndex
-from assistant.domain.documents import Document, document_id_for
-from assistant.domain.errors import FileTooLarge, NotUtf8Text, UnsupportedFileType
-from assistant.services.documents import MAX_UPLOAD_BYTES, DocumentService
+from assistant.domain.documents import Block, Chunk, ChunkLocation, Document, ParsedDocument
+from assistant.domain.errors import (
+    DocumentUnreadable,
+    FileTooLarge,
+    NotUtf8Text,
+    UnsupportedFileType,
+)
+from assistant.services.documents import INGESTION_FAILED, MAX_UPLOAD_BYTES, DocumentService
 
-POLICY = b"Providers keep logs.\n\nAuthorities may inspect the logs."
+PDF = b"%PDF-1.7 policy"
+PARSED = ParsedDocument(
+    page_count=3,
+    blocks=(
+        Block(kind="heading", text="Article 12", page=2, level=1),
+        Block(kind="paragraph", text="1. Providers keep logs.", page=2),
+        Block(kind="paragraph", text="2. Authorities may inspect the logs.", page=3),
+    ),
+)
+
+
+class ParserThatMustNotRun:
+    def parse(self, filename: str, content: bytes) -> ParsedDocument:
+        raise AssertionError("restore must not parse again")
+
+
+class BrokenParser:
+    def parse(self, filename: str, content: bytes) -> ParsedDocument:
+        raise RuntimeError("model crashed")
 
 
 @pytest.fixture
@@ -20,51 +47,120 @@ def index() -> KeywordChunkIndex:
 
 
 @pytest.fixture
-def service(store: FakeDocumentStore, index: KeywordChunkIndex) -> DocumentService:
-    return DocumentService(store, index)
+def queue() -> FakeIngestionQueue:
+    return FakeIngestionQueue()
 
 
-def test_upload_stores_and_indexes_the_document(
-    service: DocumentService, store: FakeDocumentStore, index: KeywordChunkIndex
+@pytest.fixture
+def service(
+    store: FakeDocumentStore, index: KeywordChunkIndex, queue: FakeIngestionQueue
+) -> DocumentService:
+    parser = FakeDocumentParser(PARSED, unreadable={"locked.pdf": "The PDF is password-protected."})
+    return DocumentService(store, index, parser, queue)
+
+
+def test_upload_stores_the_file_and_returns_it_as_processing(
+    service: DocumentService, store: FakeDocumentStore, queue: FakeIngestionQueue
 ) -> None:
-    document = service.upload("policy.txt", POLICY)
+    document = service.upload("AI Act.pdf", PDF)
 
-    assert document == Document(
-        id=document_id_for(POLICY.decode()), title="policy", filename="policy.txt", chunk_count=2
+    assert (document.title, document.filename, document.status) == (
+        "AI Act",
+        "AI Act.pdf",
+        "processing",
     )
-    assert store.list_documents() == [document]
-    assert [result.chunk.text for result in index.search("inspect", limit=5)] == [
-        "Authorities may inspect the logs."
+    assert document.chunk_count == 0
+    assert store.load_original(document.id) == PDF
+    assert queue.pending == 1
+
+
+def test_ingestion_makes_the_document_ready_and_searchable(
+    service: DocumentService,
+    store: FakeDocumentStore,
+    index: KeywordChunkIndex,
+    queue: FakeIngestionQueue,
+) -> None:
+    document = service.upload("AI Act.pdf", PDF)
+
+    queue.run_all()
+
+    ready = store.get(document.id)
+    assert ready is not None
+    assert (ready.status, ready.chunk_count, ready.page_count) == ("ready", 2, 3)
+    [result] = index.search("inspect", limit=5)
+    assert result.chunk.location == ChunkLocation(
+        heading_path=("Article 12",), article="12", paragraph="2", page=3
+    )
+    assert [chunk.text for chunk in store.load_chunks(document.id)] == [
+        "1. Providers keep logs.",
+        "2. Authorities may inspect the logs.",
     ]
 
 
-def test_markdown_files_are_accepted(service: DocumentService) -> None:
-    assert service.upload("notes.MD", b"# Notes").title == "notes"
+def test_an_unreadable_file_fails_with_its_reason_and_nothing_is_searchable(
+    service: DocumentService,
+    store: FakeDocumentStore,
+    index: KeywordChunkIndex,
+    queue: FakeIngestionQueue,
+) -> None:
+    document = service.upload("locked.pdf", PDF)
+
+    queue.run_all()
+
+    failed = store.get(document.id)
+    assert failed is not None
+    assert (failed.status, failed.failure_reason) == ("failed", "The PDF is password-protected.")
+    assert index.search("inspect", limit=5) == []
+    assert store.load_chunks(document.id) == []
 
 
-def test_other_file_types_are_rejected(service: DocumentService, store: FakeDocumentStore) -> None:
+def test_an_unexpected_parser_error_fails_the_document_without_internals(
+    store: FakeDocumentStore, index: KeywordChunkIndex, queue: FakeIngestionQueue
+) -> None:
+    service = DocumentService(store, index, BrokenParser(), queue)
+    document = service.upload("policy.pdf", PDF)
+
+    queue.run_all()
+
+    failed = store.get(document.id)
+    assert failed is not None
+    assert failed.status == "failed"
+    assert failed.failure_reason == "The document could not be read."
+
+
+@pytest.mark.parametrize(
+    "filename", ["a.pdf", "b.DOCX", "c.png", "d.jpg", "e.jpeg", "f.txt", "g.md"]
+)
+def test_supported_file_types_are_accepted(service: DocumentService, filename: str) -> None:
+    assert service.upload(filename, PDF + filename.encode()).status == "processing"
+
+
+def test_other_file_types_are_rejected_and_nothing_is_stored(
+    service: DocumentService, store: FakeDocumentStore, queue: FakeIngestionQueue
+) -> None:
     with pytest.raises(UnsupportedFileType):
-        service.upload("policy.pdf", POLICY)
+        service.upload("slides.pptx", PDF)
 
     assert store.list_documents() == []
+    assert queue.pending == 0
 
 
 def test_files_over_the_size_limit_are_rejected(
-    store: FakeDocumentStore, index: KeywordChunkIndex
+    store: FakeDocumentStore, index: KeywordChunkIndex, queue: FakeIngestionQueue
 ) -> None:
-    service = DocumentService(store, index, max_upload_bytes=10)
+    service = DocumentService(store, index, FakeDocumentParser(PARSED), queue, max_upload_bytes=10)
 
     with pytest.raises(FileTooLarge):
-        service.upload("policy.txt", b"x" * 11)
+        service.upload("policy.pdf", b"x" * 11)
 
     assert store.list_documents() == []
 
 
-def test_the_default_size_limit_is_five_megabytes() -> None:
-    assert MAX_UPLOAD_BYTES == 5 * 1024 * 1024
+def test_the_default_size_limit_is_fifty_megabytes() -> None:
+    assert MAX_UPLOAD_BYTES == 50 * 1024 * 1024
 
 
-def test_text_that_is_not_utf8_is_rejected(
+def test_text_files_that_are_not_utf8_are_rejected_at_upload(
     service: DocumentService, store: FakeDocumentStore
 ) -> None:
     with pytest.raises(NotUtf8Text):
@@ -73,31 +169,121 @@ def test_text_that_is_not_utf8_is_rejected(
     assert store.list_documents() == []
 
 
-def test_uploading_the_same_content_twice_returns_the_existing_document(
-    service: DocumentService, store: FakeDocumentStore, index: KeywordChunkIndex
+def test_uploading_the_same_file_twice_returns_the_stored_document(
+    service: DocumentService, store: FakeDocumentStore, queue: FakeIngestionQueue
 ) -> None:
-    first = service.upload("policy.txt", POLICY)
+    first = service.upload("policy.pdf", PDF)
+    queue.run_all()
 
-    second = service.upload("copy of policy.txt", POLICY)
+    second = service.upload("copy of policy.pdf", PDF)
 
-    assert second == first
-    assert store.list_documents() == [first]
-    assert len(index.search("inspect", limit=5)) == 1
+    assert second == store.get(first.id)
+    assert second.status == "ready"
+    assert len(store.list_documents()) == 1
+    assert queue.pending == 0
 
 
 def test_documents_lists_what_is_stored(service: DocumentService) -> None:
-    document = service.upload("policy.txt", POLICY)
+    document = service.upload("policy.pdf", PDF)
 
     assert service.list_documents() == [document]
 
 
-def test_restore_indexes_previously_stored_documents(
-    store: FakeDocumentStore, index: KeywordChunkIndex
+def test_restore_indexes_stored_chunks_without_parsing_and_resubmits_unfinished_files(
+    store: FakeDocumentStore, index: KeywordChunkIndex, queue: FakeIngestionQueue
 ) -> None:
-    DocumentService(store, KeywordChunkIndex()).upload("policy.txt", POLICY)
-    restarted = DocumentService(store, index)
+    earlier = DocumentService(store, KeywordChunkIndex(), FakeDocumentParser(PARSED), queue)
+    ready = earlier.upload("ready.pdf", PDF)
+    queue.run_all()
+    unfinished = earlier.upload("unfinished.pdf", PDF + b"2")
+    restarted_queue = FakeIngestionQueue()
+    restarted = DocumentService(store, index, ParserThatMustNotRun(), restarted_queue)
 
     restored = restarted.restore()
 
     assert restored == 1
+    assert len(index.search("inspect", limit=5)) == 1
+    assert restarted_queue.pending == 1
+    assert store.get(ready.id) is not None
+    assert unfinished.status == "processing"
+
+
+class FailingIndex(KeywordChunkIndex):
+    def add(self, chunks: Sequence[Chunk]) -> None:
+        raise OSError("disk full")
+
+
+class FlakyParser:
+    """Fails the first time, then reads the document."""
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def parse(self, filename: str, content: bytes) -> ParsedDocument:
+        self.calls += 1
+        if self.calls == 1:
+            raise DocumentUnreadable("Tesseract has no Polish language data.")
+        return PARSED
+
+
+def test_a_failure_after_parsing_fails_the_document(
+    store: FakeDocumentStore, queue: FakeIngestionQueue
+) -> None:
+    service = DocumentService(store, FailingIndex(), FakeDocumentParser(PARSED), queue)
+    document = service.upload("policy.pdf", PDF)
+
+    queue.run_all()
+
+    failed = store.get(document.id)
+    assert failed is not None
+    assert (failed.status, failed.failure_reason) == ("failed", INGESTION_FAILED)
+    assert store.load_chunks(document.id) == []
+
+
+def test_uploading_a_failed_document_again_retries_it(
+    store: FakeDocumentStore, index: KeywordChunkIndex, queue: FakeIngestionQueue
+) -> None:
+    parser = FlakyParser()
+    service = DocumentService(store, index, parser, queue)
+    first = service.upload("policy.pdf", PDF)
+    queue.run_all()
+
+    retried = service.upload("policy.pdf", PDF)
+    queue.run_all()
+
+    assert retried.status == "processing"
+    ready = store.get(first.id)
+    assert ready is not None
+    assert (ready.status, ready.failure_reason) == ("ready", None)
+    assert len(index.search("inspect", limit=5)) == 1
+
+
+def test_ingesting_a_document_that_is_not_processing_changes_nothing(
+    service: DocumentService, index: KeywordChunkIndex, queue: FakeIngestionQueue
+) -> None:
+    document = service.upload("policy.pdf", PDF)
+    queue.run_all()
+
+    service.ingest(document.id)
+
+    assert len(index.search("inspect", limit=5)) == 1
+
+
+def test_restore_requeues_a_ready_document_without_stored_chunks(
+    store: FakeDocumentStore, index: KeywordChunkIndex, queue: FakeIngestionQueue
+) -> None:
+    # Documents stored by F-01 have metadata but no chunks file.
+    store.save_upload(
+        Document(id="f01", title="old", filename="old.txt", chunk_count=2, status="ready"),
+        b"Providers keep logs.\n\nAuthorities may inspect the logs.",
+    )
+    service = DocumentService(store, index, FakeDocumentParser(PARSED), queue)
+
+    restored = service.restore()
+    queue.run_all()
+
+    assert restored == 0
+    document = store.get("f01")
+    assert document is not None
+    assert document.status == "ready"
     assert len(index.search("inspect", limit=5)) == 1

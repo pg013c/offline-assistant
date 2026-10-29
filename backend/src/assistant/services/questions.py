@@ -49,6 +49,7 @@ class QuestionService:
                 document_id=best.document_id,
                 document_title=document.title if document else best.document_id,
                 quote=quote_from(best.text),
+                location=best.location,
             )
         )
         yield AnswerEnd(

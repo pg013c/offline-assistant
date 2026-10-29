@@ -11,6 +11,7 @@ from assistant.api.schemas import (
     ChatEvent,
     ChatRequest,
     ChatTextEvent,
+    CitationLocation,
 )
 from assistant.domain.answers import AnswerCitation, AnswerEnd, AnswerEvent, AnswerText
 from assistant.services.questions import QuestionService
@@ -32,6 +33,12 @@ def _to_schema(event: AnswerEvent) -> ChatEvent:
                     document_id=citation.document_id,
                     document_title=citation.document_title,
                     quote=citation.quote,
+                    location=CitationLocation(
+                        heading_path=list(citation.location.heading_path),
+                        article=citation.location.article,
+                        paragraph=citation.location.paragraph,
+                        page=citation.location.page,
+                    ),
                 )
             )
         case AnswerEnd(model_id=model_id, found=found, is_test_model=is_test_model):

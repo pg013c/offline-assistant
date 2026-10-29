@@ -89,17 +89,25 @@ Rules (ADR 0002):
 - The rules are import-linter contracts in `backend/pyproject.toml`, checked by `make check`. Every model, database or parsing library is added to the forbidden list for `domain`, `ports` and `services` together with its ADR.
 - Every port has a fake adapter. Unit tests use fakes; integration tests use real adapters.
 
-### What is implemented (F-01, walking skeleton)
+### What is implemented (F-01, F-02)
 
-The diagram above is the target. The question flow runs end to end today with the simplest adapters, each replaced by a later feature behind the same kind of port:
+The diagram above is the target. The question flow runs end to end today; each part is replaced by a later feature behind the same kind of port:
 
 | Port | Adapter now | Replaced by |
 |---|---|---|
-| `DocumentStore` | `LocalFileDocumentStore`: `data_dir/documents/<id>.txt` and `<id>.json`; `FakeDocumentStore` for tests | stays; parsing moves in front of it (F-02) |
-| `ChunkIndex` | `KeywordChunkIndex`: in-memory keyword overlap, rebuilt from the store at startup | embeddings, Qdrant and hybrid search (F-03); may split into `Embedder` + `VectorStore` |
+| `DocumentParser` | `RoutingDocumentParser`: `TextDocumentParser` for `.txt` and `.md`, `DoclingDocumentParser` for PDF, DOCX, PNG and JPG (pdfium text, Tesseract OCR `eng+pol`, models from `make models`, ADR 0015); `FakeDocumentParser` for tests | stays |
+| `DocumentStore` | `LocalFileDocumentStore`: `data_dir/documents/<id><ext>` (original), `<id>.json` (metadata, status), `<id>.chunks.json`; `FakeDocumentStore` for tests | stays |
+| `IngestionQueue` | `ThreadIngestionQueue`: one worker thread, so one parse holds model memory at a time; `FakeIngestionQueue` and `InlineIngestionQueue` for tests | stays |
+| `ChunkIndex` | `KeywordChunkIndex`: in-memory keyword overlap, rebuilt from stored chunks at startup | embeddings, Qdrant and hybrid search (F-03); may split into `Embedder` + `VectorStore` |
 | `ChatModel` | `FakeExtractiveChatModel` (`fake-extractive`): quotes the best passage, labelled as a test model in the UI | OpenAI-compatible local models (F-06), the agent (F-07) |
 
-Documents are plain text or Markdown, chunked at blank lines. The chat endpoint streams `text`, `citation` and `end` events; with no matching passage it streams a notice and no citation.
+`ASSISTANT_DOCUMENT_PARSER=text-only` wires the text parser alone, for tests and for running without models. With the default `docling`, startup fails with the name of a missing model or OCR language and the command that installs it, and the process runs with the Hugging Face offline flags.
+
+**Ingestion.** `POST /api/documents` checks type (PDF, DOCX, PNG, JPG, TXT, MD), size (50 MB) and, for text, UTF-8, stores the original with status `processing`, queues ingestion and answers `202`. The job parses the file into blocks (headings, paragraphs, list items, tables, with pages), chunks them and indexes the chunks; the document ends `ready` with chunk and page counts, or `failed` with a reason (locked, corrupt, over 500 pages, no text). On restart, ready documents are indexed from their stored chunks without parsing, and unfinished ones are queued again. The UI refreshes the list while a document is processing.
+
+**Chunking** (`domain.chunk_document`). Chunks follow the document's structure: one paragraph with the list items after it, one table, or, in legal texts, one numbered paragraph of an article (`Article 6` / `Artykuł 6`, paragraphs `1.`, `2.`) with its points and subparagraphs. No chunk crosses an article or heading; text over 2,000 characters is split at sentence ends. Each chunk records its location (heading path, article, paragraph, page). Chunk ids are `<document id>:<position>`, and the document id is the SHA-256 of the uploaded bytes, so the same file always gives the same ids.
+
+**Answers.** The chat endpoint streams `text`, `citation` and `end` events. A citation carries the chunk location, which the UI shows as "Art. 6(2), p. 53", or the nearest heading and page. With no matching passage the stream says so and has no citation.
 
 ## 4. Main flow: a question
 

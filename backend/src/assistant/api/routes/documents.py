@@ -18,13 +18,16 @@ def _response(document: Document) -> DocumentResponse:
         id=document.id,
         title=document.title,
         filename=document.filename,
+        status=document.status,
         chunk_count=document.chunk_count,
+        page_count=document.page_count,
+        failure_reason=document.failure_reason,
     )
 
 
 @router.post(
     "",
-    status_code=status.HTTP_201_CREATED,
+    status_code=status.HTTP_202_ACCEPTED,
     responses={
         status.HTTP_413_CONTENT_TOO_LARGE: {"model": ErrorResponse},
         status.HTTP_415_UNSUPPORTED_MEDIA_TYPE: {"model": ErrorResponse},
@@ -32,10 +35,14 @@ def _response(document: Document) -> DocumentResponse:
     },
 )
 async def upload_document(file: UploadFile, documents: Documents) -> DocumentResponse:
-    """Upload a plain-text or Markdown document; known content returns the stored document."""
+    """Upload a document to be parsed in the background; known content returns as stored.
+
+    Accepts PDF, DOCX, PNG, JPG, plain text and Markdown. The document is listed with status
+    `processing` until parsing ends with `ready` or `failed`.
+    """
     # One byte past the limit is enough for the service to reject the file (GEN-42).
     content = await file.read(MAX_UPLOAD_BYTES + 1)
-    # Storing and indexing touch the disk; keep them off the event loop (PY-14).
+    # Storing touches the disk; keep it off the event loop (PY-14).
     document = await run_in_threadpool(documents.upload, file.filename or "", content)
     return _response(document)
 

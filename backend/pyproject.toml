@@ -5,11 +5,17 @@ description = "Offline Assistant backend: local LLM agent, RAG with citations an
 license = "MIT"
 requires-python = ">=3.13"
 dependencies = [
+    "docling-slim[convert-core,format-docx,format-pdf,models-local]>=2.144.0",
     "fastapi>=0.162.0",
+    "huggingface-hub>=1.33,<2",
+    "opencv-python-headless>=4.6,<5",
     "pydantic>=2.14.1",
     "pydantic-settings>=2.16.2",
+    "pypdfium2>=5.14,<6",
     "python-multipart>=0.0.32",
     "structlog>=26.1.0",
+    "torch>=2.2.2,<3",
+    "torchvision<1",
     "uvicorn>=0.54.0",
 ]
 
@@ -36,15 +42,23 @@ select = ["E", "F", "I", "B", "UP", "SIM", "RUF", "PL", "S", "ASYNC"]
 [tool.ruff.lint.per-file-ignores]
 # Plain asserts are how pytest expresses expectations.
 "tests/**" = ["S101", "PLR2004"]
+# Docling loads PyTorch on import; the adapter imports it when the first document is parsed.
+"src/assistant/adapters/docling_parser.py" = ["PLC0415"]
 
 [tool.mypy]
 strict = true
 python_version = "3.13"
 files = ["src", "tests"]
 
+# pypdfium2 ships no type information; pikepdf is only used to build test fixtures.
+[[tool.mypy.overrides]]
+module = ["pypdfium2", "pypdfium2.*", "pikepdf"]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = ["--strict-markers", "--import-mode=importlib"]
+# Integration tests need models and system tools; they run with `make test-integration`.
+addopts = ["--strict-markers", "--import-mode=importlib", "-m", "not integration"]
 markers = [
     "integration: uses real adapters (models, Qdrant, files); slower, may need local services",
 ]
@@ -80,10 +94,22 @@ allow_indirect_imports = true
 # (Qdrant, Docling, Whisper, ...) is added here in the same change as the ADR that introduces it.
 [[tool.importlinter.contracts]]
 id = "framework-free-core"
-name = "Domain, ports and services do not import the web framework or settings"
+name = "Domain, ports and services do not import the web framework, settings or model libraries"
 type = "forbidden"
 source_modules = ["assistant.domain", "assistant.ports", "assistant.services"]
-forbidden_modules = ["fastapi", "starlette", "uvicorn", "pydantic_settings"]
+forbidden_modules = [
+    "fastapi",
+    "starlette",
+    "uvicorn",
+    "pydantic_settings",
+    # Document parsing (ADR 0015).
+    "docling",
+    "docling_core",
+    "docling_ibm_models",
+    "pypdfium2",
+    "torch",
+    "cv2",
+]
 
 [[tool.importlinter.contracts]]
 id = "logging-free-domain"
@@ -91,3 +117,14 @@ name = "Domain and ports do not log"
 type = "forbidden"
 source_modules = ["assistant.domain", "assistant.ports"]
 forbidden_modules = ["structlog"]
+
+# PyTorch on Linux comes from the CPU-only index: the parsing models run on CPU there, and
+# the default wheels pull several gigabytes of CUDA libraries (ADR 0015). macOS uses PyPI.
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+torchvision = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]

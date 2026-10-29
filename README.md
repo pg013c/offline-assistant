@@ -11,7 +11,7 @@ Built to answer three practical questions about local AI:
 2. How do local models compare with a cloud model on **quality, latency, memory and cost**, measured on the same evaluation set?
 3. Can the whole thing be **installed and verified on an air-gapped machine**?
 
-> **Status:** walking skeleton (F-01). You can upload a text or Markdown document, ask a question and get a streamed answer with a clickable source. Retrieval is keyword-based and the answer comes from a clearly labelled test model; real parsing, embeddings and local LLMs follow in [F-02 to F-07](docs/backlog.md). Results will be published in [docs/evals/](docs/evals/).
+> **Status:** document parsing (F-02). You can upload PDFs (including scans), Word files, photos of text, plain text or Markdown; they are parsed offline with Docling and Tesseract and split by article, paragraph and page. Answers stream with a clickable source that names its location, such as "Art. 6(1), p. 1". Retrieval is still keyword-based and the answer comes from a clearly labelled test model; embeddings and local LLMs follow in [F-03 to F-07](docs/backlog.md). Results will be published in [docs/evals/](docs/evals/).
 
 ## What it will do
 
@@ -60,12 +60,15 @@ MacBook Pro 14", Apple M5 Pro, 64 GB unified memory. A Linux + NVIDIA profile wi
 
 Development setup. Docker packaging and the offline install guide arrive with F-10 and F-12.
 
-Prerequisites: [uv](https://docs.astral.sh/uv/), Node 24 (`nvm use` reads `.nvmrc`), GNU Make. pnpm comes through Corepack.
+Prerequisites: [uv](https://docs.astral.sh/uv/), Node 24 (`nvm use` reads `.nvmrc`), GNU Make, and [Tesseract](https://tesseract-ocr.github.io/) with English and Polish data for OCR (`brew install tesseract tesseract-lang` on macOS, `apt install tesseract-ocr tesseract-ocr-pol` on Debian/Ubuntu). pnpm comes through Corepack.
 
 ```bash
 cp .env.example .env
 make setup
+make models
 ```
+
+`make models` downloads the document parsing models (about 500 MB, pinned by commit and checked by hash) into `ASSISTANT_MODELS_DIR`. It is the only step that needs the network; nothing is downloaded at runtime ([ADR 0004](docs/adr/0004-offline-first-no-egress.md)).
 
 ```bash
 make dev
@@ -83,8 +86,26 @@ make check
 make e2e
 ```
 
-`make e2e` runs the browser journeys with Playwright against the real API and the test model, on a fresh data directory and ports 8011/5181. `make help` lists all targets.
+```bash
+make test-integration
+```
+
+`make test-integration` runs the tests with real adapters, such as the document parser; it needs `make models` and Tesseract.
+
+`make e2e` runs the browser journeys with Playwright against the real API, the Docling parser and the test model, on a fresh data directory and ports 8011/5181; it needs `make models` and Tesseract. `make help` lists all targets.
 
 ## Licence
 
-Code: [MIT](LICENSE). Models and datasets keep their own licences; each one in use will be listed here.
+Code: [MIT](LICENSE). Models, tools and datasets keep their own licences:
+
+| Component | Use | Licence |
+|---|---|---|
+| [Docling](https://github.com/docling-project/docling) | document parsing | MIT |
+| [docling-layout-heron](https://huggingface.co/docling-project/docling-layout-heron) | page layout model | Apache-2.0 |
+| [TableFormer](https://huggingface.co/docling-project/docling-models) | table structure model | CDLA-Permissive-2.0 |
+| [Tesseract](https://github.com/tesseract-ocr/tesseract) and its `eng`/`pol` data | OCR | Apache-2.0 |
+| [PyTorch](https://pytorch.org/) and torchvision | run the parsing models | BSD-3-Clause |
+| [OpenCV](https://opencv.org/) (headless) | image handling for the table model | Apache-2.0 |
+| [SciPy](https://scipy.org/) | OCR region detection in Docling | BSD-3-Clause |
+| [pypdfium2](https://github.com/pypdfium2-team/pypdfium2) (PDFium) | PDF text and page checks | Apache-2.0 or BSD-3-Clause |
+| [huggingface_hub](https://github.com/huggingface/huggingface_hub) | `make models` downloads | Apache-2.0 |

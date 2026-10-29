@@ -31,7 +31,8 @@ A feature's intent is in `docs/features/F-xx-*/spec.md`, its steps in `plan.md`,
 | Command | Does |
 |---|---|
 | `make dev` | API and UI with hot reload |
-| `make check` | format, lint, types, unit + integration tests, API contract |
+| `make check` | format, lint, types, unit tests, API contract |
+| `make test-integration` | tests with real adapters (needs `make models`) |
 | `make test` | tests only |
 | `make eval` | evaluation suite (needs a running model server) |
 | `make api-client` | regenerate the TypeScript client from OpenAPI |

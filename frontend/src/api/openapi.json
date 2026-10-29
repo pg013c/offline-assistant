@@ -57,7 +57,7 @@
           "documents"
         ],
         "summary": "Upload Document",
-        "description": "Upload a plain-text or Markdown document; known content returns the stored document.",
+        "description": "Upload a document to be parsed in the background; known content returns as stored.\n\nAccepts PDF, DOCX, PNG, JPG, plain text and Markdown. The document is listed with status\n`processing` until parsing ends with `ready` or `failed`.",
         "operationId": "upload_document",
         "requestBody": {
           "content": {
@@ -70,7 +70,7 @@
           "required": true
         },
         "responses": {
-          "201": {
+          "202": {
             "description": "Successful Response",
             "content": {
               "application/json": {
@@ -216,6 +216,9 @@
           "quote": {
             "type": "string",
             "title": "Quote"
+          },
+          "location": {
+            "$ref": "#/components/schemas/CitationLocation"
           }
         },
         "type": "object",
@@ -224,7 +227,8 @@
           "chunk_id",
           "document_id",
           "document_title",
-          "quote"
+          "quote",
+          "location"
         ],
         "title": "ChatCitationEvent",
         "description": "A passage the answer is based on, quoted verbatim."
@@ -317,6 +321,59 @@
         "title": "ChatTextEvent",
         "description": "A piece of the answer text, in order."
       },
+      "CitationLocation": {
+        "properties": {
+          "heading_path": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Heading Path"
+          },
+          "article": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Article"
+          },
+          "paragraph": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paragraph"
+          },
+          "page": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page"
+          }
+        },
+        "type": "object",
+        "required": [
+          "heading_path",
+          "article",
+          "paragraph",
+          "page"
+        ],
+        "title": "CitationLocation",
+        "description": "Where the cited passage is; parts the document does not have are empty."
+      },
       "DocumentResponse": {
         "properties": {
           "id": {
@@ -331,9 +388,40 @@
             "type": "string",
             "title": "Filename"
           },
+          "status": {
+            "type": "string",
+            "enum": [
+              "processing",
+              "ready",
+              "failed"
+            ],
+            "title": "Status"
+          },
           "chunk_count": {
             "type": "integer",
             "title": "Chunk Count"
+          },
+          "page_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Count"
+          },
+          "failure_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Reason"
           }
         },
         "type": "object",
@@ -341,7 +429,10 @@
           "id",
           "title",
           "filename",
-          "chunk_count"
+          "status",
+          "chunk_count",
+          "page_count",
+          "failure_reason"
         ],
         "title": "DocumentResponse"
       },

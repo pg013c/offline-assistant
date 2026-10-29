@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, type JSX } from 'react'
 
+import { citationLabel } from './citationLabel'
 import type { ChatCitation } from './useChatStream'
 
 interface CitationDialogProps {
@@ -10,6 +11,7 @@ interface CitationDialogProps {
 /** The quoted source of an answer, as a modal dialog that can be used from the keyboard (FE-24). */
 export function CitationDialog({ citation, onClose }: CitationDialogProps): JSX.Element {
   const titleId = useId()
+  const label = citationLabel(citation.location)
   const dialog = useRef<HTMLDialogElement>(null)
   const closeButton = useRef<HTMLButtonElement>(null)
   // The latest onClose, so the effect below runs once per opening and not on every render.
@@ -63,6 +65,7 @@ export function CitationDialog({ citation, onClose }: CitationDialogProps): JSX.
       <h3 id={titleId} className="text-base font-semibold">
         {citation.document_title}
       </h3>
+      {label && <p className="text-sm text-gray-600">{label}</p>}
       <blockquote className="mt-3 border-l-4 border-gray-300 pl-3 text-sm whitespace-pre-line">
         {citation.quote}
       </blockquote>

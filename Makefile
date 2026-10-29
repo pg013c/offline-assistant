@@ -13,6 +13,8 @@ export $(shell sed -n 's/^\([A-Za-z_][A-Za-z0-9_]*\)=.*/\1/p' $(ENV_FILE) 2>/dev
 ifdef ASSISTANT_DATA_DIR
 export ASSISTANT_DATA_DIR := $(abspath $(ASSISTANT_DATA_DIR))
 endif
+# Where `make models` puts the models the API loads at runtime (ADR 0004).
+export ASSISTANT_MODELS_DIR := $(abspath $(or $(ASSISTANT_MODELS_DIR),data/models))
 export COREPACK_ENABLE_DOWNLOAD_PROMPT := 0
 # Ports for `make dev`; override when another local service already uses one (API_PORT=8010 make dev).
 export API_PORT ?= 8000
@@ -21,7 +23,7 @@ export UI_PORT ?= 5173
 # Where `make api-client` writes the schema and generated types (ADR 0005).
 API_OUT ?= $(CURDIR)/frontend/src/api
 
-.PHONY: help setup dev dev-preflight e2e check check-backend check-frontend check-api-client api-client test test-backend test-frontend node-version
+.PHONY: help setup models dev dev-preflight e2e test-integration check check-backend check-frontend check-api-client api-client test test-backend test-frontend node-version
 
 help: ## List targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
@@ -32,6 +34,9 @@ setup: node-version ## Install project dependencies
 	$(FRONTEND) install --frozen-lockfile
 	$(FRONTEND) exec playwright install chromium
 	uvx pre-commit install
+
+models: ## Download the parsing models into ASSISTANT_MODELS_DIR (the only step that needs the network)
+	$(BACKEND) python scripts/download_models.py "$(ASSISTANT_MODELS_DIR)"
 
 dev: node-version dev-preflight ## API on :8000 and UI on :5173 (API_PORT, UI_PORT), both with hot reload
 	@mkdir -p "$(ASSISTANT_DATA_DIR)"
@@ -65,11 +70,14 @@ api-client: node-version ## Regenerate the TypeScript client from the backend's 
 
 test: test-backend test-frontend ## Tests only
 
-e2e: node-version ## Browser journeys: real API with the fake model, fresh data directory
+e2e: node-version ## Browser journeys: real API with Docling and the fake model; needs `make models`
 	$(FRONTEND) e2e
 
 test-backend: ## Backend tests
 	$(BACKEND) pytest -q
+
+test-integration: ## Tests with real adapters; needs `make models` and Tesseract
+	HF_HUB_OFFLINE=1 $(BACKEND) pytest -q -m integration
 
 test-frontend: ## Frontend tests
 	$(FRONTEND) test

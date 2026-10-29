@@ -4,7 +4,9 @@ import pytest
 
 from assistant.adapters.fakes.chat_model import FakeExtractiveChatModel
 from assistant.adapters.fakes.document_store import FakeDocumentStore
+from assistant.adapters.fakes.ingestion_queue import InlineIngestionQueue
 from assistant.adapters.keyword_index import KeywordChunkIndex
+from assistant.adapters.text_document_parser import TextDocumentParser
 from assistant.domain.answers import (
     NO_RELEVANT_PASSAGE,
     AnswerCitation,
@@ -12,7 +14,6 @@ from assistant.domain.answers import (
     AnswerEvent,
     AnswerText,
 )
-from assistant.domain.documents import split_into_chunks
 from assistant.services.documents import DocumentService
 from assistant.services.questions import QuestionService
 
@@ -23,9 +24,15 @@ POLICY = (
 
 
 @pytest.fixture
-def services() -> tuple[DocumentService, QuestionService]:
-    store, index = FakeDocumentStore(), KeywordChunkIndex()
-    return DocumentService(store, index), QuestionService(index, FakeExtractiveChatModel(), store)
+def store() -> FakeDocumentStore:
+    return FakeDocumentStore()
+
+
+@pytest.fixture
+def services(store: FakeDocumentStore) -> tuple[DocumentService, QuestionService]:
+    index = KeywordChunkIndex()
+    documents = DocumentService(store, index, TextDocumentParser(), InlineIngestionQueue())
+    return documents, QuestionService(index, FakeExtractiveChatModel(), store)
 
 
 def ask(service: QuestionService, question: str) -> list[AnswerEvent]:
@@ -64,7 +71,7 @@ def test_answer_text_comes_from_the_model(
 
 
 def test_citations_quote_their_chunk_verbatim(
-    services: tuple[DocumentService, QuestionService],
+    services: tuple[DocumentService, QuestionService], store: FakeDocumentStore
 ) -> None:
     documents, questions = services
     document = documents.upload("policy.txt", POLICY)
@@ -72,7 +79,7 @@ def test_citations_quote_their_chunk_verbatim(
     events = ask(questions, "How long do providers keep logs?")
 
     citations = [event.citation for event in events if isinstance(event, AnswerCitation)]
-    chunks = {chunk.id: chunk.text for chunk in split_into_chunks(document.id, POLICY.decode())}
+    chunks = {chunk.id: chunk.text for chunk in store.load_chunks(document.id)}
     assert citations
     for citation in citations:
         assert citation.quote in chunks[citation.chunk_id]
@@ -115,3 +122,17 @@ def test_without_a_shared_word_no_relevant_passage_is_reported(
 
     assert not any(isinstance(event, AnswerCitation) for event in events)
     assert events[-1] == AnswerEnd(model_id="fake-extractive", found=False, is_test_model=True)
+
+
+def test_citations_carry_the_location_of_their_chunk(
+    services: tuple[DocumentService, QuestionService], store: FakeDocumentStore
+) -> None:
+    documents, questions = services
+    document = documents.upload("policy.md", b"# Logs\n\n" + POLICY)
+
+    events = ask(questions, "Who may inspect the logs?")
+
+    [citation] = [event.citation for event in events if isinstance(event, AnswerCitation)]
+    cited = next(chunk for chunk in store.load_chunks(document.id) if chunk.id == citation.chunk_id)
+    assert citation.location == cited.location
+    assert citation.location.heading_path == ("Logs",)

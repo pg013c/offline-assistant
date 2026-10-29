@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Literal
 
-from pydantic import ValidationError
+from pydantic import Field, ValidationError, ValidationInfo, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ENV_PREFIX = "ASSISTANT_"
@@ -15,6 +15,17 @@ class Settings(BaseSettings):
     data_dir: Path
     # The only chat model until F-06 adds real ones.
     chat_model: Literal["fake-extractive"] = "fake-extractive"
+    # `docling` reads every supported format; `text-only` reads .txt and .md without models.
+    document_parser: Literal["docling", "text-only"] = "docling"
+    # Where `make models` put the parsing models; required by the Docling parser (ADR 0004).
+    models_dir: Path | None = Field(default=None, validate_default=True)
+
+    @field_validator("models_dir")
+    @classmethod
+    def _required_by_docling(cls, value: Path | None, info: ValidationInfo) -> Path | None:
+        if value is None and info.data.get("document_parser") == "docling":
+            raise ValueError("required by the Docling document parser; run `make models`")
+        return value
 
 
 class SettingsError(Exception):

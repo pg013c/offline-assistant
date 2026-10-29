@@ -1,7 +1,9 @@
 """What a streamed answer is made of."""
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+
+from assistant.domain.documents import ChunkLocation
 
 NO_RELEVANT_PASSAGE = "No relevant passage was found in the uploaded documents."
 QUOTE_SENTENCES = 2
@@ -14,6 +16,7 @@ class Citation:
     document_id: str
     document_title: str
     quote: str
+    location: ChunkLocation = field(default_factory=ChunkLocation)
 
 
 @dataclass(frozen=True, slots=True)

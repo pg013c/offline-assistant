@@ -28,6 +28,7 @@ const FOUND = [
     document_id: 'a1',
     document_title: 'policy',
     quote: QUOTE,
+    location: { heading_path: ['Article 12'], article: '12', paragraph: '2', page: 4 },
   },
   { type: 'end', model_id: 'fake-extractive', found: true, is_test_model: true },
 ]
@@ -91,6 +92,36 @@ describe('ChatView', () => {
     expect(within(dialog).getByText(QUOTE)).toBeInTheDocument()
     await userEvent.click(within(dialog).getByRole('button', { name: 'Close' }))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('shows where each cited passage is, in the list and in the source', async () => {
+    serveAnswer(FOUND)
+    renderWithQueryClient(<ChatView />)
+    await ask('How long are logs kept?')
+
+    const citation = await screen.findByRole('button', { name: /policy/ })
+    expect(citation).toHaveTextContent('policy · Art. 12(2), p. 4')
+    await userEvent.click(citation)
+    expect(
+      within(screen.getByRole('dialog', { name: 'policy' })).getByText('Art. 12(2), p. 4'),
+    ).toBeInTheDocument()
+  })
+
+  it('shows only the title of a citation whose location is unknown', async () => {
+    serveAnswer(
+      FOUND.map((event) =>
+        event.type === 'citation'
+          ? {
+              ...event,
+              location: { heading_path: [], article: null, paragraph: null, page: null },
+            }
+          : event,
+      ),
+    )
+    renderWithQueryClient(<ChatView />)
+    await ask('How long are logs kept?')
+
+    expect(await screen.findByRole('button', { name: /policy/ })).toHaveTextContent(/^policy$/)
   })
 
   it('can be used from the keyboard: focus moves into the source and Escape returns it', async () => {
