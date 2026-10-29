@@ -1,0 +1,569 @@
+{
+  "metrics": {
+    "cites_expected": {
+      "value": 0.8636363636363636,
+      "cases": 22
+    },
+    "language_match": {
+      "value": 1.0,
+      "cases": 22
+    },
+    "valid_first_try": {
+      "value": 1.0,
+      "cases": 22
+    },
+    "answer_failed": {
+      "value": 0.0,
+      "cases": 22
+    },
+    "out_of_scope_refused": {
+      "value": 1.0,
+      "cases": 3
+    }
+  },
+  "performance": {
+    "mean_attempts": 1.0,
+    "first_token_ms_median": 866.1500000000001,
+    "first_token_ms_p95": 1558.4,
+    "tokens_per_second_median": 55.28418785451116
+  },
+  "missed": {
+    "pl-ai-literacy": "cites no expected passage",
+    "ref-annex-iii": "cites no expected passage",
+    "ref-article-83": "cites no expected passage"
+  },
+  "results": {
+    "en-ai-prohibited-practices": {
+      "answer": "AI practices that exploit the vulnerabilities of people, such as those based on age, disability, or specific social or economic situations, are prohibited. These practices aim to distort behavior in a manner that causes significant harm.",
+      "cited": [
+        "bba630444b3278e8:224",
+        "bba630444b3278e8:46",
+        "bba630444b3278e8:49"
+      ],
+      "error": null,
+      "usage": {
+        "prompt_tokens": 1316,
+        "completion_tokens": 67,
+        "first_token_ms": 1413.0,
+        "total_ms": 2585.8,
+        "attempts": 1
+      }
+    },
+    "en-ai-transparency-chatbots": {
+      "answer": "Providers must ensure that people are informed they are interacting with an AI system, unless it is obvious from the context.",
+      "cited": [
+        "bba630444b3278e8:442"
+      ],
+      "error": null,
+      "usage": {
+        "prompt_tokens": 818,
+        "completion_tokens": 38,
+        "first_token_ms": 687.5,
+        "total_ms": 1303.1,
+        "attempts": 1
+      }
+    },
+    "en-ai-fines-prohibited": {
+      "answer": "Fines for using a prohibited AI practice can be up to EUR 35 000 000 or 7 % of the offender's total worldwide annual turnover for the preceding financial year, whichever is higher.",
+      "cited": [
+        "bba630444b3278e8:691",
+        "16f2a07dfd566aac:712"
+      ],
+      "error": null,
+      "usage": {
+        "prompt_tokens": 527,
+        "completion_tokens": 64,
+        "first_token_ms": 443.5,
+        "total_ms": 1582.3,
+        "attempts": 1
+      }
+    },
+    "en-gdpr-breach-72-hours": {
+      "answer": "The controller must notify a personal data breach to the supervisory authority within 72 hours after becoming aware of it.",
+      "cited": [
+        "bd84e63f5b622b73:238",
+        "bd84e63f5b622b73:66"
+      ],
+      "error": null,
+      "usage": {
+        "prompt_tokens": 776,
+        "completion_tokens": 42,
+        "first_token_ms": 658.5,
+        "total_ms": 1349.6,
+        "attempts": 1
+      }
+    },
+    "en-gdpr-erasure": {
+      "answer": "A data subject has the right to have personal data erased when the data are no longer necessary for the purposes they were collected, when the data subject withdraws consent and there is no other legal basis for processing, when the data subject objects to processing and there are no overriding legitimate grounds, or when the data have been unlawfully processed.",
+      "cited": [
+        "bd84e63f5b622b73:178",
+        "bd84e63f5b622b73:53"
+      ],
+      "error": null,
+      "usage": {
+        "prompt_tokens": 1183,
+        "completion_tokens": 85,
+        "first_token_ms": 996.4,
+        "total_ms": 2582.2,
+        "attempts": 1
+      }
+    },
+    "en-gdpr-dpo": {
+      "answer": "A controller must designate a data protection officer if the processing is carried out by a public authority or body, or if their core activities involve processing operations requiring regular and systematic monitoring of data subjects on a large scale, or processing of special categories of data on a large scale.",
+      "cited": [
+        "bd84e63f5b622b73:263"
+      ],
+      "error": null,
+      "usage": {
+        "prompt_tokens": 524,
+        "completion_tokens": 69,
+        "first_token_ms": 464.4,
+        "total_ms": 1701.1,
+        "attempts": 1
+      }
+    },
+    "pl-ai-deployer-duties": {
+      "answer": "Podmioty stosujące systemy AI wysokiego ryzyka mają obowiązek monitorowania działania systemu AI w oparciu o instrukcję obsługi, informowania dostawców i odpowiednich organów nadzoru w przypadku podejrzewania ryzyka lub wystąpienia incydentów, a także zapewniać zgodność z instrukcją obsługi poprzez środki techniczne i organizacyjne.",
+      "cited": [
+        "16f2a07dfd566aac:346",
+        "16f2a07dfd566aac:342"
+      ],
+      "error": null,
+      "usage": {
+        "prompt_tokens": 1038,
+        "completion_tokens": 121,
+        "first_token_ms": 911.6,
+        "total_ms": 3189.3,
+        "attempts": 1
+      }
+    },
+    "pl-ai-serious-incident": {
+      "answer": "Dostawca systemu AI wysokiego ryzyka musi zgłosić poważny incydent natychmiast po ustaleniu związku przyczynowego między systemem AI a incydentem, nie później jednak niż w terminie 15 dni od dnia, w którym dowiedział się o wystąpieniu incydentu. W przypadku śmierci osoby termin ten skraca się do 10 dni.",
+      "cited": [
+        "16f2a07dfd566aac:598",
+        "16f2a07dfd566aac:600",
+        "16f2a07dfd566aac:597"
+      ],
+      "error": null,
+      "usage": {
+        "prompt_tokens": 714,
+        "completion_tokens": 119,
+        "first_token_ms": 576.6,
+        "total_ms": 2843.4,
+        "attempts": 1
+      }
+    },
+    "pl-ai-literacy": {
+      "answer": "Personel dostawców i podmiotów stosujących powinien mieć kompetencje w zakresie AI umożliwiające podejmowanie świadomych decyzji w odniesieniu do systemów AI, co pozwala czerpać największe korzyści z systemów AI, a jednocześnie chronić prawa podstawowe, zdrowie i bezpieczeństwo oraz sprawować kontrolę demokratyczną.",
+      "cited": [
+        "16f2a07dfd566aac:41"
+      ],
+      "error": null,
+      "usage": {
+        "prompt_tokens": 1749,
+        "completion_tokens": 112,
+        "first_token_ms": 1558.4,
+        "total_ms": 3692.6,
+        "attempts": 1
+      }
+    },
+    "pl-gdpr-access": {
+      "answer": "Osoba, której dane dotyczą, ma dostęp do informacji o celach przetwarzania, kategoriach danych, odbiorcach danych, planowanym okresie przechowywania, prawie do żądania sprostowania, usunięcia lub ograniczenia przetwarzania, prawie do wniesienia skargi do organu nadzorczego, źródle danych (jeśli nie zostały zebrane od osoby, której dane dotyczą), oraz informacjach o zautomatyzowanym podejmowaniu decyzji, w tym profilowaniu.",
+      "cited": [
+        "61bddbf0f0749097:193"
+      ],
+      "error": null,
+      "usage": {
+        "prompt_tokens": 1875,
+        "completion_tokens": 151,
+        "first_token_ms": 1683.7,
+        "total_ms": 4637.8,
+        "attempts": 1
+      }
+    },
+    "pl-gdpr-portability": {
+      "answer": "Prawo do przenoszenia danych pozwala osobie, której dane dotyczą, otrzymać dane w formacie maszynowym oraz przesłać je innemu administratorowi, o ile przetwarzanie odbywało się na podstawie zgody lub umowy i w sposób zautomatyzowany.",
+      "cited": [
+        "61bddbf0f0749097:206",
+        "61bddbf0f0749097:205"
+      ],
+      "error": null,
+      "usage": {
+        "prompt_tokens": 591,
+        "completion_tokens": 87,
+        "first_token_ms": 482.6,
+        "total_ms": 2090.6,
+        "attempts": 1
+      }
+    },
+    "pl-gdpr-max-fine": {
+      "answer": "Najwyższa administracyjna kara pieniężna za naruszenie podstawowych zasad przetwarzania wynosi do 20 000 000 EUR.",
+      "cited": [
+        "61bddbf0f0749097:501"
+      ],
+      "error": null,
+      "usage": {
+        "prompt_tokens": 1343,
+        "completion_tokens": 58,
+        "first_token_ms": 1132.5,
+        "total_ms": 2168.6,
+        "attempts": 1
+      }
+    },
+    "x-pl-to-en-annex-iii": {
+      "answer": "Systemy AI z załącznika III uznaje się za systemy wysokiego ryzyka, jeśli spełniają warunki określone w art. 6 ust. 2, takie jak biometria w zakresie stosowania dozwolonego na podstawie przepisów prawa Unii lub krajowego, np. systemy zdalnej identyfikacji biometrycznej.",
+      "cited": [
+        "16f2a07dfd566aac:254",
+        "16f2a07dfd566aac:766",
+        "16f2a07dfd566aac:253"
+      ],
+      "error": null,
+      "usage": {
+        "prompt_tokens": 921,
+        "completion_tokens": 115,
+        "first_token_ms": 792.7,
+        "total_ms": 2985.0,
+        "attempts": 1
+      }
+    },
+    "x-pl-to-en-breach": {
+      "answer": "Administrator zgłasza naruszenie ochrony danych osobowych organowi nadzorczemu nie później niż w terminie 72 godzin po stwierdzeniu naruszenia.",
+      "cited": [
+        "61bddbf0f0749097:258",
+        "61bddbf0f0749097:79"
+      ],
+      "error": null,
+      "usage": {
+        "prompt_tokens": 1145,
+        "completion_tokens": 61,
+        "first_token_ms": 995.5,
+        "total_ms": 2086.2,
+        "attempts": 1
+      }
+    },
+    "x-en-to-pl-prohibited": {
+      "answer": "The AI Act prohibits AI practices that use subliminal or manipulative techniques to distort behavior, exploit vulnerabilities of individuals or groups, and make social scoring leading to unjust treatment. It also prohibits AI systems for risk assessments and biometric categorization that infer personal characteristics.",
+      "cited": [
+        "bba630444b3278e8:224",
+        "16f2a07dfd566aac:242",
+        "bba630444b3278e8:49"
+      ],
+      "error": null,
+      "usage": {
+        "prompt_tokens": 1629,
+        "completion_tokens": 78,
+        "first_token_ms": 1114.9,
+        "total_ms": 2530.2,
+        "attempts": 1
+      }
+    },
+    "x-en-to-pl-erasure": {
+      "answer": "The right to erasure, also known as the 'right to be forgotten', allows a data subject to request the deletion of their personal data without undue delay under specific conditions such as when the data is no longer necessary, was unlawfully processed, or the data subject objects to the processing.",
+      "cited": [
+        "bd84e63f5b622b73:178",
+        "bd84e63f5b622b73:56"
+      ],
+      "error": null,
+      "usage": {
+        "prompt_tokens": 941,
+        "completion_tokens": 80,
+        "first_token_ms": 640.7,
+        "total_ms": 2089.6,
+        "attempts": 1
+      }
+    },
+    "ref-annex-iii": {
+      "answer": "Annex III of the AI Act lists high-risk AI systems, including those used for law enforcement, border management, justice, and democracy, as well as systems covered under points 6, 7, and 8 of the annex.",
+      "cited": [
+        "bba630444b3278e8:245",
+        "bba630444b3278e8:594",
+        "bba630444b3278e8:439"
+      ],
+      "error": null,
+      "usage": {
+        "prompt_tokens": 633,
+        "completion_tokens": 73,
+        "first_token_ms": 588.4,
+        "total_ms": 1865.6,
+        "attempts": 1
+      }
+    },
+    "ref-article-50": {
+      "answer": "Article 50 of the AI Act requires providers and deployers of certain AI systems to ensure transparency by marking AI-generated content in a machine-readable format and informing users when interacting with AI systems. It also mandates disclosure of artificially generated or manipulated content, with exceptions for specific cases like criminal investigations or artistic works.",
+      "cited": [
+        "bba630444b3278e8:443",
+        "bba630444b3278e8:442",
+        "bba630444b3278e8:445"
+      ],
+      "error": null,
+      "usage": {
+        "prompt_tokens": 807,
+        "completion_tokens": 87,
+        "first_token_ms": 711.7,
+        "total_ms": 2283.4,
+        "attempts": 1
+      }
+    },
+    "ref-article-83": {
+      "answer": "The question refers to Article 83 of the GDPR, but none of the provided passages mention Article 83 specifically.",
+      "cited": [
+        "bd84e63f5b622b73:59",
+        "bd84e63f5b622b73:106",
+        "bd84e63f5b622b73:11"
+      ],
+      "error": null,
+      "usage": {
+        "prompt_tokens": 1278,
+        "completion_tokens": 46,
+        "first_token_ms": 1113.2,
+        "total_ms": 1895.5,
+        "attempts": 1
+      }
+    },
+    "span-providers-and-deployers": {
+      "answer": "Providers and deployers of high-risk AI systems must monitor the operation of the system based on the instructions for use and inform providers and authorities if risks are identified. They must also register their AI systems in an EU database and document each use in police files, making this information available to relevant authorities upon request.",
+      "cited": [
+        "bba630444b3278e8:327",
+        "bba630444b3278e8:149",
+        "bba630444b3278e8:333"
+      ],
+      "error": null,
+      "usage": {
+        "prompt_tokens": 1062,
+        "completion_tokens": 82,
+        "first_token_ms": 897.6,
+        "total_ms": 2419.9,
+        "attempts": 1
+      }
+    },
+    "span-access-and-rectification": {
+      "answer": "A data subject has the right to access personal data and obtain information about its processing, including the purposes of processing, categories of data, recipients, and storage periods. They also have the right to rectify inaccurate personal data and request its erasure under certain conditions.",
+      "cited": [
+        "bd84e63f5b622b73:173",
+        "bd84e63f5b622b73:177",
+        "bd84e63f5b622b73:53"
+      ],
+      "error": null,
+      "usage": {
+        "prompt_tokens": 939,
+        "completion_tokens": 78,
+        "first_token_ms": 834.7,
+        "total_ms": 2228.9,
+        "attempts": 1
+      }
+    },
+    "oos-pasta": {
+      "answer": "No relevant passage was found in the uploaded documents.",
+      "cited": [],
+      "error": null,
+      "usage": null
+    },
+    "oos-weather-krakow": {
+      "answer": "No relevant passage was found in the uploaded documents.",
+      "cited": [],
+      "error": null,
+      "usage": null
+    },
+    "oos-world-cup": {
+      "answer": "No relevant passage was found in the uploaded documents.",
+      "cited": [],
+      "error": null,
+      "usage": null
+    },
+    "adv-no-citations": {
+      "answer": "An AI system is considered high-risk when it poses a significant risk of harm to the health, safety, or fundamental rights of natural persons, particularly if it materially influences decision-making. However, it is not considered high-risk if it performs narrow procedural tasks, improves previously completed human activities, detects decision-making patterns without replacing human assessment, or performs preparatory tasks for assessments listed in Annex III. Profiling of natural persons always classifies an AI system as high-risk.",
+      "cited": [
+        "bba630444b3278e8:78",
+        "bba630444b3278e8:236",
+        "bba630444b3278e8:77"
+      ],
+      "error": null,
+      "usage": {
+        "prompt_tokens": 1157,
+        "completion_tokens": 119,
+        "first_token_ms": 1082.9,
+        "total_ms": 3333.0,
+        "attempts": 1
+      }
+    }
+  },
+  "expected": {
+    "en-ai-prohibited-practices": [
+      "bba630444b3278e8:224",
+      "bba630444b3278e8:225",
+      "bba630444b3278e8:226"
+    ],
+    "en-ai-transparency-chatbots": [
+      "bba630444b3278e8:442"
+    ],
+    "en-ai-fines-prohibited": [
+      "bba630444b3278e8:691"
+    ],
+    "en-gdpr-breach-72-hours": [
+      "bd84e63f5b622b73:238"
+    ],
+    "en-gdpr-erasure": [
+      "bd84e63f5b622b73:178"
+    ],
+    "en-gdpr-dpo": [
+      "bd84e63f5b622b73:263"
+    ],
+    "pl-ai-deployer-duties": [
+      "16f2a07dfd566aac:342",
+      "16f2a07dfd566aac:343",
+      "16f2a07dfd566aac:344",
+      "16f2a07dfd566aac:345",
+      "16f2a07dfd566aac:346",
+      "16f2a07dfd566aac:347",
+      "16f2a07dfd566aac:348",
+      "16f2a07dfd566aac:349",
+      "16f2a07dfd566aac:350",
+      "16f2a07dfd566aac:351",
+      "16f2a07dfd566aac:352",
+      "16f2a07dfd566aac:353",
+      "16f2a07dfd566aac:354"
+    ],
+    "pl-ai-serious-incident": [
+      "16f2a07dfd566aac:597"
+    ],
+    "pl-ai-literacy": [
+      "16f2a07dfd566aac:241"
+    ],
+    "pl-gdpr-access": [
+      "61bddbf0f0749097:193"
+    ],
+    "pl-gdpr-portability": [
+      "61bddbf0f0749097:205"
+    ],
+    "pl-gdpr-max-fine": [
+      "61bddbf0f0749097:501"
+    ],
+    "x-pl-to-en-annex-iii": [
+      "16f2a07dfd566aac:253",
+      "bba630444b3278e8:235"
+    ],
+    "x-pl-to-en-breach": [
+      "61bddbf0f0749097:258",
+      "bd84e63f5b622b73:238"
+    ],
+    "x-en-to-pl-prohibited": [
+      "16f2a07dfd566aac:242",
+      "16f2a07dfd566aac:243",
+      "16f2a07dfd566aac:244",
+      "bba630444b3278e8:224",
+      "bba630444b3278e8:225",
+      "bba630444b3278e8:226"
+    ],
+    "x-en-to-pl-erasure": [
+      "61bddbf0f0749097:198",
+      "bd84e63f5b622b73:178"
+    ],
+    "ref-annex-iii": [
+      "bba630444b3278e8:746",
+      "bba630444b3278e8:747",
+      "bba630444b3278e8:748",
+      "bba630444b3278e8:749",
+      "bba630444b3278e8:750",
+      "bba630444b3278e8:751"
+    ],
+    "ref-article-50": [
+      "bba630444b3278e8:442",
+      "bba630444b3278e8:443",
+      "bba630444b3278e8:444",
+      "bba630444b3278e8:445",
+      "bba630444b3278e8:446",
+      "bba630444b3278e8:447",
+      "bba630444b3278e8:448"
+    ],
+    "ref-article-83": [
+      "bd84e63f5b622b73:477",
+      "bd84e63f5b622b73:478",
+      "bd84e63f5b622b73:479",
+      "bd84e63f5b622b73:480",
+      "bd84e63f5b622b73:481",
+      "bd84e63f5b622b73:482",
+      "bd84e63f5b622b73:483",
+      "bd84e63f5b622b73:484",
+      "bd84e63f5b622b73:485"
+    ],
+    "span-providers-and-deployers": [
+      "bba630444b3278e8:284",
+      "bba630444b3278e8:323",
+      "bba630444b3278e8:324",
+      "bba630444b3278e8:325",
+      "bba630444b3278e8:326",
+      "bba630444b3278e8:327",
+      "bba630444b3278e8:328",
+      "bba630444b3278e8:329",
+      "bba630444b3278e8:330",
+      "bba630444b3278e8:331",
+      "bba630444b3278e8:332",
+      "bba630444b3278e8:333",
+      "bba630444b3278e8:334",
+      "bba630444b3278e8:335"
+    ],
+    "span-access-and-rectification": [
+      "bd84e63f5b622b73:173",
+      "bd84e63f5b622b73:174",
+      "bd84e63f5b622b73:175",
+      "bd84e63f5b622b73:176",
+      "bd84e63f5b622b73:177"
+    ],
+    "oos-pasta": [],
+    "oos-weather-krakow": [],
+    "oos-world-cup": [],
+    "adv-no-citations": [
+      "bba630444b3278e8:234",
+      "bba630444b3278e8:235",
+      "bba630444b3278e8:236",
+      "bba630444b3278e8:237",
+      "bba630444b3278e8:238",
+      "bba630444b3278e8:239",
+      "bba630444b3278e8:240",
+      "bba630444b3278e8:241"
+    ]
+  },
+  "metadata": {
+    "started_at": "2026-10-29T21:10:03+00:00",
+    "git_commit": "1dca0148dd6181a92fa44b5f881fcdd71b67ee6b",
+    "dataset": {
+      "path": "evals/datasets/answers.yaml",
+      "version": 1,
+      "sha256": "5b71af44fe42e953f72a2870ddcb81f8c06dce2a69afbddacf5f8bf3fc7195a4"
+    },
+    "models": {
+      "docling-project/docling-layout-heron": "8f39ad3c0b4c58e9c2d2c84a38465abf757272d8",
+      "docling-project/docling-models": "fc0f2d45e2218ea24bce5045f58a389aed16dc23",
+      "BAAI/bge-m3": "5617a9f61b028005a4858fdac845db406aefb181",
+      "BAAI/bge-reranker-v2-m3": "953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e"
+    },
+    "qdrant_version": "1.20.0",
+    "settings": {
+      "collection_prefix": "eval",
+      "threshold": 0.5,
+      "search_limit": 10,
+      "reranker": "on",
+      "rerank_candidates": 30,
+      "reranker_device": "mps",
+      "reranker_precision": "float16"
+    },
+    "hardware": {
+      "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+      "machine": "arm64",
+      "processor": "Apple M5 Pro",
+      "cpus": 18
+    },
+    "corpus": {
+      "ai-act-en.pdf": "bba630444b3278e881066774002a1d7824308934f49ccfa203e65be43692f55e",
+      "ai-act-pl.pdf": "16f2a07dfd566aac374b00e0cf92e551d1e1a7346878f746c1cdb7f531f804d9",
+      "gdpr-en.pdf": "bd84e63f5b622b739a83389afc3b30d240f792bb88d8eb03a816c9a82b0c2499",
+      "gdpr-pl.pdf": "61bddbf0f07490978b698f007e4641683b1d48ecd1481532e1a0c2afd4b63e0f"
+    },
+    "chat_model": "qwen3-8b",
+    "llm_server": {
+      "url": "http://127.0.0.1:8080",
+      "build": "b9960-a935fbffe",
+      "model_path": "data/models/llm/Qwen--Qwen3-8B-GGUF/Qwen3-8B-Q4_K_M.gguf"
+    }
+  }
+}

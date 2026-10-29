@@ -37,4 +37,5 @@ Small changes found during reviews, done as chores outside the feature that foun
 | Refuse a non-local `ASSISTANT_QDRANT_URL` unless network mode is on (Compose service names allowed) | F-03 review #15 | planned for F-10 |
 | Index each chunk with its article number and title, and keep section titles out of chunks (retrieval baseline causes 1 and 2) | F-04 baseline | became F-04a |
 | Record the highest out-of-scope similarity in the evaluation report, so the threshold margin is a measured figure | F-04a review #7 | done in F-05 |
+| Let an answer say the passages do not cover the question without citing unrelated passages (the schema requires a citation today) | F-06 answer baseline (`ref-article-83`) | planned for F-07 |
 | Decide whether paragraph-level cases accept a sibling paragraph that answers too (dataset-only commit; cross-language cases done in dataset version 2) | F-04 baseline | planned after the indexing change |

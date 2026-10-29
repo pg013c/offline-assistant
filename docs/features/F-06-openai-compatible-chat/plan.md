@@ -243,7 +243,7 @@ class ChatModel(Protocol):
   - the time to first token against NFR-03.
 - Commit the first `answer-baseline.json`.
 - If time to first token misses NFR-03 by far, or answers fail often, stop and bring the numbers to the human.
-- [ ] green
+- [x] green
 
 ### Step 12. Documentation
 
