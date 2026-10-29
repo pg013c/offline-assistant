@@ -164,7 +164,7 @@
   - **Gate:** it reads only the gated mode's metrics.
 - Change: `evals/promptfoo/retrieval.yaml`, `evals/harness/{promptfoo,metrics,report,run}.py`.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 6. Measure and record
 

@@ -51,6 +51,9 @@ def command_line(pnpm: Path, suite: Path, tests: Path, output: Path) -> list[str
         "--no-share",
         "--no-cache",
         "--no-progress-bar",
+        # One request at a time, so each latency is that of a search alone.
+        "--max-concurrency",
+        "1",
     ]
 
 
@@ -59,23 +62,20 @@ def environment(base: Mapping[str, str], api_url: str) -> dict[str, str]:
     return {**base, **OFFLINE, "EVAL_API_URL": api_url}
 
 
-def hits_by_case(results: Mapping[str, Any]) -> dict[str, tuple[Hit, ...]]:
-    """Ranked hits per case id, from Promptfoo's JSON output."""
-    found: dict[str, tuple[Hit, ...]] = {}
+def responses_by_mode(results: Mapping[str, Any]) -> dict[str, dict[str, Response]]:
+    """Ranked hits and latency per mode and case id, from Promptfoo's JSON output."""
+    found: dict[str, dict[str, Response]] = {}
     for entry in results["results"]["results"]:
+        mode = entry["provider"]["label"]
         case_id = entry["vars"]["case_id"]
         response = entry.get("response") or {}
         if "output" not in response:
             reason = response.get("error") or entry.get("error") or "no output"
-            raise PromptfooError(f"{case_id}: Promptfoo got no result ({reason})")
+            raise PromptfooError(f"{case_id} ({mode}): Promptfoo got no result ({reason})")
         passages = json.loads(response["output"])
-        found[case_id] = tuple(
+        hits = tuple(
             Hit(chunk_id=passage["chunk_id"], similarity=float(passage["similarity"]))
             for passage in passages
         )
+        found.setdefault(mode, {})[case_id] = Response(hits, float(entry["latencyMs"]))
     return found
-
-
-def responses_by_mode(results: Mapping[str, Any]) -> dict[str, dict[str, Response]]:
-    """Ranked hits and latency per mode and case id, from Promptfoo's JSON output."""
-    raise NotImplementedError

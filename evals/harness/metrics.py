@@ -1,5 +1,7 @@
 """Retrieval metrics from ranked hits and expected chunks (F-04)."""
 
+import math
+import statistics
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 
@@ -110,9 +112,18 @@ def _share(count: int, total: int) -> Metric:
 
 def latency(values_ms: Sequence[float]) -> Latency:
     """Median and 95th percentile (nearest rank) of request latencies."""
-    raise NotImplementedError
+    if not values_ms:
+        return Latency(median_ms=None, p95_ms=None)
+    ordered = sorted(values_ms)
+    return Latency(
+        median_ms=statistics.median(ordered),
+        p95_ms=ordered[math.ceil(0.95 * len(ordered)) - 1],
+    )
 
 
 def top_out_of_scope_similarity(results: Sequence[CaseResult]) -> float | None:
     """The best similarity any out-of-scope case reached: the margin below the threshold."""
-    raise NotImplementedError
+    similarities = [
+        hit.similarity for result in results if result.behaviour == "refuse" for hit in result.hits
+    ]
+    return max(similarities, default=None)

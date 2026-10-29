@@ -27,7 +27,7 @@ from harness.corpus import CorpusDocument, documents, sha256
 from harness.dataset import load_cases
 from harness.gate import check
 from harness.metrics import CaseResult, compute, latency, top_out_of_scope_similarity
-from harness.promptfoo import command_line, environment, hits_by_case
+from harness.promptfoo import Response, command_line, environment, responses_by_mode
 from harness.report import ModeResult, build_report, markdown
 from harness.resolve import ChunkRef, resolve
 
@@ -92,22 +92,21 @@ def run(config: RunConfig) -> Outcome:
             chunks = _chunk_refs(api, document_ids)
         cases = load_cases(config.dataset)
         expected = resolve(cases, chunks)
-        hits = _search_with_promptfoo(cases, api_url, config.results_dir, started_at)
+        responses = _search_with_promptfoo(cases, api_url, config.results_dir, started_at)
     finally:
         _stop(server)
         log.close()
 
-    results = [
-        CaseResult(case.id, case.behaviour, expected[case.id], hits[case.id]) for case in cases
-    ]
-    metrics = compute(results, config.threshold)
+    modes = {
+        mode: _score(cases, expected, by_case, config.threshold)
+        for mode, by_case in responses.items()
+    }
     metadata = {
         **_metadata(config, started_at),
         "corpus": corpus,
         "indexing_seconds": indexing_seconds,
     }
-    gated = ModeResult(metrics, latency([]), top_out_of_scope_similarity(results))
-    report = build_report({GATED_MODE: gated}, GATED_MODE, metadata, config.threshold, expected)
+    report = build_report(modes, GATED_MODE, metadata, config.threshold, expected)
     baseline = (
         json.loads(config.baseline.read_text(encoding="utf-8"))["metrics"]
         if config.baseline.exists()
@@ -284,7 +283,7 @@ def _chunk_refs(api: httpx.Client, document_ids: dict[str, str]) -> list[ChunkRe
 
 def _search_with_promptfoo(
     cases: list[Any], api_url: str, results_dir: Path, started_at: datetime
-) -> dict[str, Any]:
+) -> dict[str, dict[str, Response]]:
     tests = results_dir / "promptfoo-tests.yaml"
     tests.write_text(
         yaml.safe_dump(
@@ -300,7 +299,24 @@ def _search_with_promptfoo(
         check=True,
         timeout=PROMPTFOO_SECONDS,
     )
-    return hits_by_case(json.loads(output.read_text(encoding="utf-8")))
+    return responses_by_mode(json.loads(output.read_text(encoding="utf-8")))
+
+
+def _score(
+    cases: list[Any],
+    expected: Mapping[str, frozenset[str]],
+    responses: Mapping[str, Response],
+    threshold: float,
+) -> ModeResult:
+    results = [
+        CaseResult(case.id, case.behaviour, expected[case.id], responses[case.id].hits)
+        for case in cases
+    ]
+    return ModeResult(
+        metrics=compute(results, threshold),
+        latency=latency([response.latency_ms for response in responses.values()]),
+        out_of_scope_top_similarity=top_out_of_scope_similarity(results),
+    )
 
 
 def _stop(server: subprocess.Popen[bytes]) -> None:
