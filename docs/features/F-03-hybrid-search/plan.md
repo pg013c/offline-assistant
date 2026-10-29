@@ -141,7 +141,7 @@
     - the model loads from the pinned directory with `HF_HUB_OFFLINE=1`.
 - Change: `ports/embedder.py`, `adapters/fakes/embedder.py`, `adapters/sentence_transformer_embedder.py`.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 5. Chunk index port and in-memory fake
 
