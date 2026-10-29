@@ -1,6 +1,8 @@
 """In-memory DocumentStore for tests."""
 
-from assistant.domain.documents import Document
+from collections.abc import Sequence
+
+from assistant.domain.documents import Chunk, Document
 
 
 class FakeDocumentStore:
@@ -19,3 +21,18 @@ class FakeDocumentStore:
     def get(self, document_id: str) -> Document | None:
         stored = self._documents.get(document_id)
         return stored[0] if stored else None
+
+    def save_upload(self, document: Document, content: bytes) -> None:
+        raise NotImplementedError
+
+    def update(self, document: Document) -> None:
+        raise NotImplementedError
+
+    def load_original(self, document_id: str) -> bytes:
+        raise NotImplementedError
+
+    def save_chunks(self, document_id: str, chunks: Sequence[Chunk]) -> None:
+        raise NotImplementedError
+
+    def load_chunks(self, document_id: str) -> list[Chunk]:
+        raise NotImplementedError

@@ -12,12 +12,18 @@ _BLANK_LINES = re.compile(r"\n\s*\n")
 _SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
 
 
+type DocumentStatus = Literal["processing", "ready", "failed"]
+
+
 @dataclass(frozen=True, slots=True)
 class Document:
     id: str
     title: str
     filename: str
     chunk_count: int
+    status: DocumentStatus = "ready"
+    page_count: int | None = None
+    failure_reason: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

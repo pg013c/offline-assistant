@@ -1,10 +1,11 @@
 """Documents as files under the data directory: `documents/<id>.txt` and `<id>.json`."""
 
 import json
+from collections.abc import Sequence
 from dataclasses import asdict
 from pathlib import Path
 
-from assistant.domain.documents import Document
+from assistant.domain.documents import Chunk, Document
 
 
 class LocalFileDocumentStore:
@@ -45,3 +46,18 @@ class LocalFileDocumentStore:
     @staticmethod
     def _read_metadata(path: Path) -> Document:
         return Document(**json.loads(path.read_text(encoding="utf-8")))
+
+    def save_upload(self, document: Document, content: bytes) -> None:
+        raise NotImplementedError
+
+    def update(self, document: Document) -> None:
+        raise NotImplementedError
+
+    def load_original(self, document_id: str) -> bytes:
+        raise NotImplementedError
+
+    def save_chunks(self, document_id: str, chunks: Sequence[Chunk]) -> None:
+        raise NotImplementedError
+
+    def load_chunks(self, document_id: str) -> list[Chunk]:
+        raise NotImplementedError
