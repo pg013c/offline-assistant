@@ -76,3 +76,16 @@ def test_escapes_are_decoded_even_when_split_between_chunks() -> None:
 
 def test_nothing_after_the_answer_string_is_returned() -> None:
     assert feed(['{"answer": "Done."', ', "citations": [1, 2]}']) == ["Done.", ""]
+
+
+def test_a_malformed_escape_ends_the_streamed_text_instead_of_failing() -> None:
+    extractor = AnswerTextExtractor()
+
+    assert extractor.feed('{"answer": "Logs \\uZZZZ are kept."}') == "Logs "
+    assert extractor.feed(" more") == ""
+
+
+def test_a_high_surrogate_without_its_low_half_ends_the_streamed_text() -> None:
+    extractor = AnswerTextExtractor()
+
+    assert extractor.feed('{"answer": "Smile \\ud83d and \\u0041"}') == "Smile "

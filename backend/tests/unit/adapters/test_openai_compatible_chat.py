@@ -2,7 +2,7 @@
 
 import asyncio
 import json
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Callable
 
 import httpx
 import pytest
@@ -198,3 +198,47 @@ def test_a_stream_line_that_is_not_json_is_a_model_error_and_ends_the_answer() -
     assert isinstance(outcome, ModelFailed)
     assert outcome.code == "model_error"
     assert "not valid JSON" in outcome.detail
+
+
+def test_an_answer_written_after_its_citations_still_reaches_the_user() -> None:
+    events = answer(model(StubServer(json.dumps({"citations": [1], "answer": "Six months."}))))
+
+    streamed = "".join(event.text for event in events if isinstance(event, TextDelta))
+    outcome = events[-1]
+    assert isinstance(outcome, Answered)
+    assert streamed == outcome.answer.text == "Six months."
+
+
+def test_the_request_caps_the_answer_length() -> None:
+    server = StubServer(VALID)
+
+    answer(model(server))
+
+    assert server.requests[0]["max_tokens"] == 1024
+
+
+def test_an_attempt_that_never_ends_times_out_as_a_whole() -> None:
+    async def trickle() -> AsyncIterator[bytes]:
+        yield b'data: {"choices": [{"delta": {"content": "{\\"answer\\": \\""}}]}\n\n'
+        while True:
+            await asyncio.sleep(0.05)
+            yield b'data: {"choices": [{"delta": {"content": " "}}]}\n\n'
+
+    def server(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=trickle())
+
+    chat = OpenAICompatibleChat(
+        model_id="qwen3-8b",
+        server=LlmServer(base_url=URL, served_model="qwen3-8b", timeout_seconds=0.3, max_retries=2),
+        transport=httpx.MockTransport(server),
+    )
+
+    async def gather() -> list[ModelEvent]:
+        return [event async for event in chat.answer("How long are logs kept?", PASSAGES)]
+
+    # Bounded here too, so a missing deadline fails the test instead of hanging it.
+    events = asyncio.run(asyncio.wait_for(gather(), timeout=5))
+
+    assert events[-1] == ModelFailed(
+        "model_timeout", f"The model server at {URL} did not answer within 0.3 s."
+    )
