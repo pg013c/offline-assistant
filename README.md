@@ -69,7 +69,7 @@ make models
 make qdrant
 ```
 
-`make models` downloads the document parsing models (about 500 MB, pinned by commit and checked by hash) into `ASSISTANT_MODELS_DIR`. It is the only step that needs the network; nothing is downloaded at runtime ([ADR 0004](docs/adr/0004-offline-first-no-egress.md)). `make qdrant` starts the vector database in Docker, pinned by digest, with telemetry off and data under `ASSISTANT_DATA_DIR/qdrant` ([ADR 0017](docs/adr/0017-qdrant-and-bge-m3-for-hybrid-search.md)).
+`make models` downloads the models (about 2.6 GB: document parsing and embeddings, pinned by commit and checked by hash) into `ASSISTANT_MODELS_DIR`. It is the only step that needs the network; nothing is downloaded at runtime ([ADR 0004](docs/adr/0004-offline-first-no-egress.md)). `make qdrant` starts the vector database in Docker, pinned by digest, with telemetry off and data under `ASSISTANT_DATA_DIR/qdrant` ([ADR 0017](docs/adr/0017-qdrant-and-bge-m3-for-hybrid-search.md)).
 
 ```bash
 make dev

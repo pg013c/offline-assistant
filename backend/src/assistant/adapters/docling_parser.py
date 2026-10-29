@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 
 import pypdfium2 as pdfium
 
-from assistant.adapters.docling_models import PINNED_MODELS, ParserNotReady, verify_models
+from assistant.adapters.pinned_models import DOCLING_MODELS, ParserNotReady, verify_models
 from assistant.domain.documents import Block, ParsedDocument
 from assistant.domain.errors import DocumentUnreadable
 
@@ -42,7 +42,7 @@ class DoclingDocumentParser:
     @staticmethod
     def ensure_ready(models_dir: Path, tesseract: str = "tesseract") -> None:
         """Raise `ParserNotReady` unless the pinned models and Tesseract with eng and pol exist."""
-        verify_models(models_dir / "docling", PINNED_MODELS.files)
+        verify_models(models_dir, DOCLING_MODELS)
 
         executable = shutil.which(tesseract)
         if executable is None:

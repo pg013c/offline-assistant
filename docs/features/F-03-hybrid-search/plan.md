@@ -113,7 +113,7 @@
   - BGE-M3 is pinned with its weights and tokenizer files and without its ONNX, ColBERT and sparse files.
 - Change: `adapters/pinned_models.py` (from `docling_models.py`), `scripts/download_models.py`, the Docling parser's readiness check, the CI cache key.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 3. BM25 terms
 
