@@ -17,7 +17,9 @@ The index changes in two ways:
 - **Chunker version 3:** section titles join the heading path, and annex labels keep their title next to them.
 - **Index schema version 2:** chunks are indexed as their heading path followed by their text.
 
-Indexing the corpus from scratch took 106.4 s.
+Indexing the corpus from scratch took 103.3 s.
+
+The numbers below are from the run after the review fix of the title rule (commit `1b84c5b`, report `retrieval-20261029T135106Z.json`). The run before that fix, at `15e63fb`, gave the same metrics and the same ranks.
 
 ## Results
 
@@ -29,7 +31,7 @@ Indexing the corpus from scratch took 106.4 s.
 | Out-of-scope questions with no passage over the threshold | 100.0 % | 100.0 % | 0 | 3 |
 | In-scope questions with no passage over the threshold | 0.0 % | 0.0 % | 0 | 21 |
 
-Out-of-scope questions reach a similarity of at most 0.38, against 0.33 before. That is still clearly below the 0.5 threshold, which stays.
+Out-of-scope questions reach a similarity of at most 0.38 (`oos-pasta` 0.382, `oos-world-cup` 0.344, `oos-weather-krakow` 0.344). That is still clearly below the 0.5 threshold, which stays. The report does not record these figures: they are the highest `similarity` among each case's hits in the raw Promptfoo output (`promptfoo-20261029T135106Z.json`). The 0.33 of earlier documents came from the F-03 fixtures, not from this corpus. Recording the top out-of-scope similarity as a metric belongs to F-05, which measures the threshold.
 
 The first run of F-04a, without the annex rule, gave recall@3 90.5 %, recall@10 95.2 % and MRR 0.815. In that run `ref-annex-iii` was still outside the top 10, because the annex title had replaced "ANNEX III" in the heading path. That run led to chunker version 3.
 
@@ -45,6 +47,15 @@ The first run of F-04a, without the annex rule, gave recall@3 90.5 %, recall@10 
 | span-providers-and-deployers | rank 6 | rank 1 |
 | en-ai-fines-prohibited | rank 4 | rank 2 |
 | pl-ai-literacy | rank 4 | rank 2 |
+
+## Expected chunk ids
+
+Expected sources are resolved to chunk ids on every run, so the ids in `retrieval-baseline.json` follow the chunking. The passages themselves are the same.
+
+- **Against the F-04 baseline,** two Polish AI Act cases moved one position earlier, because a section title before them is now in the heading path instead of a chunk: `pl-ai-deployer-duties` (343–355 → 342–354) and `pl-ai-serious-incident` (598 → 597).
+- **Against the first F-04a run,** three cases moved one or two positions later, because short lines that are not titles are chunks again (review finding 1): `pl-gdpr-max-fine` (499 → 501), `x-pl-to-en-breach` (257 → 258 in the Polish GDPR) and `ref-article-83` (476–484 → 477–485).
+
+The ids pinned for the AI Act excerpts in the F-02 snapshot (`test_docling_parser.py`) did not change: in those pages the section titles are already parsed as headings. `make test-integration` passes with the snapshot unchanged (AC-6).
 
 ## What still misses the top 3
 

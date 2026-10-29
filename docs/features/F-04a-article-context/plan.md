@@ -137,3 +137,8 @@
 | AC-4 exact references found in the top 10 | 5 |
 | AC-5 metrics against the baseline, recorded | 5 |
 | AC-6 pinned ids change only where needed | 4 |
+
+## Changes during the build
+
+- **Annex titles (step 4a, chunker version 3).** The first measurement (step 5) failed AC-4: `ref-annex-iii` stayed outside the top 10, because the annex title replaced "ANNEX III" in the heading path. The human approved the annex rule on 2026-10-29; it is spec decision 6.
+- **Title rule narrowed (review finding 1).** A title-like paragraph becomes a title only when content or the section's first article or annex follows it. The chunker version stays 3, since version 3 was never released. The evaluation gave the same numbers (spec decision 2).

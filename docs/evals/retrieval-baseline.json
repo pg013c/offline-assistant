@@ -74,14 +74,14 @@
       "61bddbf0f0749097:205"
     ],
     "pl-gdpr-max-fine": [
-      "61bddbf0f0749097:499"
+      "61bddbf0f0749097:501"
     ],
     "x-pl-to-en-annex-iii": [
       "16f2a07dfd566aac:253",
       "bba630444b3278e8:235"
     ],
     "x-pl-to-en-breach": [
-      "61bddbf0f0749097:257",
+      "61bddbf0f0749097:258",
       "bd84e63f5b622b73:238"
     ],
     "x-en-to-pl-prohibited": [
@@ -114,7 +114,6 @@
       "bba630444b3278e8:448"
     ],
     "ref-article-83": [
-      "bd84e63f5b622b73:476",
       "bd84e63f5b622b73:477",
       "bd84e63f5b622b73:478",
       "bd84e63f5b622b73:479",
@@ -122,7 +121,8 @@
       "bd84e63f5b622b73:481",
       "bd84e63f5b622b73:482",
       "bd84e63f5b622b73:483",
-      "bd84e63f5b622b73:484"
+      "bd84e63f5b622b73:484",
+      "bd84e63f5b622b73:485"
     ],
     "span-providers-and-deployers": [
       "bba630444b3278e8:284",
@@ -153,8 +153,8 @@
   },
   "threshold": 0.5,
   "metadata": {
-    "started_at": "2026-10-29T13:32:35+00:00",
-    "git_commit": "15e63fb2fe2532bb33571aa64520d3d7228a277a",
+    "started_at": "2026-10-29T13:51:06+00:00",
+    "git_commit": "1b84c5b63b29bf1aee4bdff09894006b3913fcd0",
     "dataset": {
       "path": "evals/datasets/retrieval.yaml",
       "version": 2,
@@ -183,6 +183,6 @@
       "gdpr-en.pdf": "bd84e63f5b622b739a83389afc3b30d240f792bb88d8eb03a816c9a82b0c2499",
       "gdpr-pl.pdf": "61bddbf0f07490978b698f007e4641683b1d48ecd1481532e1a0c2afd4b63e0f"
     },
-    "indexing_seconds": 106.4
+    "indexing_seconds": 103.3
   }
 }

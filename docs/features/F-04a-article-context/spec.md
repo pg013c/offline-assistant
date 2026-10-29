@@ -16,7 +16,8 @@ This feature fixes both and measures the effect with `make eval`, before F-05 ad
 ## Scope
 
 - **Indexed text:** each chunk is indexed (dense and BM25) as its context (the heading path, which holds the article label and title) followed by its text. What answers quote and the UI shows stays the chunk text alone.
-- **Section titles:** a short paragraph that directly follows a heading, before any other content, and does not end like a sentence becomes part of the heading path instead of a chunk.
+- **Section titles:** a short paragraph that directly follows a heading, before any other content, and does not end like a sentence becomes part of the heading path instead of a chunk, when content or the section's first article follows it.
+- **Annex titles** (added during the build): the heading after "ANNEX III" or "ZAŁĄCZNIK III" is the annex's title, and both stay in the heading path.
 - **Rebuilding:** documents chunked by an earlier version of the chunker are parsed again at startup, and the index moves to a new schema version, so no stale chunk or vector survives.
 - **Measuring:** the evaluation runs before and after the change. The new result is recorded in `docs/evals/` and becomes the baseline.
 
@@ -50,7 +51,8 @@ The F-04 retrieval suite (24 cases, dataset version 2) measures this feature unc
 ## Decisions
 
 1. **Context format:** the heading path joined with " > ", a blank line, then the chunk text. Document titles stay out until F-08 gives documents real titles.
-2. **Section titles:** a paragraph is a title when it directly follows a heading, before any other block under it, has at most 200 characters, and does not end with `.`, `;`, `:`, `,`, `?`, `!` or `)`.
+2. **Section titles:** a paragraph is a title when it directly follows a heading, before any other block under it, has at most 200 characters, and does not end with `.`, `;`, `:`, `,`, `?`, `!` or `)`. It must also be followed by content or by the section's first article or annex; before another heading or at the end of a document it stays a chunk (review finding 1).
 3. **Re-parsing:** each document's chunks carry the chunker version; at startup, documents chunked by an older version are queued for parsing again.
 4. **Threshold:** stays at 0.5 unless the evaluation shows an out-of-scope question crossing it; any change is recorded with the measurement.
 5. **No new ADR:** what is indexed is a retrieval parameter within ADR 0017, recorded in `architecture.md` and judged by the evaluation (AI-31).
+6. **Annex titles** (added during the build, approved by the human on 2026-10-29): the first measurement left `ref-annex-iii` outside the top 10 because the annex title replaced "ANNEX III" in the heading path. The heading after an annex label is now its title, as for articles (chunker version 3).
