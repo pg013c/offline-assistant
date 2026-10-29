@@ -172,7 +172,7 @@
     - `ensure_ready` names the URL and `make qdrant` when Qdrant is down.
 - Change: `adapters/qdrant_chunk_index.py`; CI job `Integration` gets a Qdrant service.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 7. Similarity threshold for "no relevant passage"
 
