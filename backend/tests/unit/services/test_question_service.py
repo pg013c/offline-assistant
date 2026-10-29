@@ -428,3 +428,17 @@ def test_the_dense_threshold_still_refuses_what_the_reranker_scores_high() -> No
     end = events[-1]
     assert isinstance(end, AnswerEnd)
     assert end.found is False
+
+
+def test_with_a_reranker_answers_use_only_its_top_ten_like_the_evaluation() -> None:
+    # Ten weak passages the reranker likes, and one strong passage it ranks eleventh.
+    weak = [hit(n, f"Weak passage {n}.", 0.3) for n in range(10)]
+    strong = hit(10, "Strong but disliked passage.", 0.9)
+    reranker = ScriptedReranker({f"Weak passage {n}.": 1 - n / 100 for n in range(10)})
+    questions = QuestionService(
+        FixedIndex([strong, *weak]), FakeExtractiveChatModel(), FakeDocumentStore(), 0.5, reranker
+    )
+
+    events = ask(questions, "Anything?")
+
+    assert events[0] == AnswerText(text=NO_RELEVANT_PASSAGE)
