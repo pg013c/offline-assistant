@@ -28,7 +28,8 @@ export QDRANT_PORT ?= 6333
 
 # The local LLM for `make llm` (ADR 0021): llama.cpp's llama-server on LLM_PORT.
 export LLM_PORT ?= 8080
-LLM_FILE := $(ASSISTANT_MODELS_DIR)/llm/Qwen--Qwen3-8B-GGUF/Qwen3-8B-Q4_K_M.gguf
+# The model file's path comes from its pin (pinned_models.py), so the two cannot drift apart.
+LLM_FILE = $(shell $(BACKEND) python -c "from assistant.adapters.pinned_models import QWEN3_8B as m; print('$(ASSISTANT_MODELS_DIR)/' + m.directory + '/' + next(iter(m.files)))")
 
 # Evaluation corpus, fetched by `make eval-corpus` (ADR 0018).
 export EVAL_CORPUS_DIR := $(abspath $(or $(EVAL_CORPUS_DIR),data/eval-corpus))

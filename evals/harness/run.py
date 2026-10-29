@@ -189,6 +189,7 @@ def run_answers(config: RunConfig) -> Outcome:
         },
         "performance": metrics.performance,
         "missed": metrics.missed,
+        "per_case": metrics.per_case,
         "results": {
             case_id: {
                 "answer": result.answer,

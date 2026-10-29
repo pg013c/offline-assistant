@@ -69,34 +69,43 @@ def parse_chat_stream(text: str) -> ChatResult:
     return ChatResult("".join(answer), tuple(cited), error, usage, found, complete)
 
 
-# Frequent words of each language that the other does not use (F-06 decision 4).
+# Frequent words of each language (F-06 decision 4); words both write the same way, such as
+# "to" and "do", are left out of both.
 def _words(text: str) -> frozenset[str]:
     return frozenset(text.split())
 
 
 _STOP_WORDS = {
     "pl": _words(
-        "i w z na do nie się że jest są o od przez dla oraz lub co jak ten ta te który która "
+        "i w z na nie się że jest są o od przez dla oraz lub co jak ten ta te który która "
         "które przy po być może musi ich jego jej tym tych także albo jeżeli gdy"
     ),
     "en": _words(
-        "the and of to in is are for that with as by be on or an this which at from it must "
+        "the and of in is are for that with as by be on or an this which at from it must "
         "may not their its has have shall when within"
     ),
 }
 _WORD = re.compile(r"\w+", re.UNICODE)
 
 
+_POLISH_LETTERS = frozenset("ąćęłńóśźż")
+
+
 def language_of(text: str) -> str | None:
-    """`pl` or `en` by which language's common words the text uses more; None if neither."""
+    """`pl` or `en` by which language's common words the text uses more.
+
+    With no common word of either, Polish letters say Polish and plain letters English;
+    an empty text has no language.
+    """
     words = [word.lower() for word in _WORD.findall(text)]
     counts = {
         language: sum(word in stop for word in words) for language, stop in _STOP_WORDS.items()
     }
-    best = max(counts, key=lambda language: counts[language])
-    if counts[best] == 0 or list(counts.values()).count(counts[best]) > 1:
-        return None
-    return best
+    if counts["pl"] != counts["en"]:
+        return max(counts, key=lambda language: counts[language])
+    if _POLISH_LETTERS & set(text.lower()):
+        return "pl"
+    return "en" if words else None
 
 
 def score_answers(cases: Sequence[AnswerCase], results: Mapping[str, ChatResult]) -> AnswerMetrics:
@@ -139,6 +148,7 @@ def score_answers(cases: Sequence[AnswerCase], results: Mapping[str, ChatResult]
         else:
             missed[case.id] = "answered an out-of-scope question"
     first_token = latency(first_tokens)
+    per_case = {case.id: _case_result(case, results[case.id]) for case in answering}
     return AnswerMetrics(
         values={
             "cites_expected": _share(cites, len(answering)),
@@ -161,7 +171,25 @@ def score_answers(cases: Sequence[AnswerCase], results: Mapping[str, ChatResult]
             "tokens_per_second_median": statistics.median(speeds) if speeds else None,
         },
         missed=missed,
+        per_case=per_case,
     )
+
+
+def _case_result(case: AnswerCase, result: ChatResult) -> dict[str, Any]:
+    usage = result.usage or {}
+    first = usage.get("first_token_ms")
+    speed = None
+    if first is not None:
+        generating = (float(usage["total_ms"]) - float(first)) / 1000
+        speed = float(usage["completion_tokens"]) / generating if generating > 0 else None
+    return {
+        "cites_expected": bool(case.expected_chunk_ids & set(result.cited)),
+        "language": language_of(result.answer),
+        "attempts": usage.get("attempts"),
+        "first_token_ms": first,
+        "tokens_per_second": speed,
+        "error": result.error,
+    }
 
 
 def answers_markdown(metrics: AnswerMetrics, metadata: Mapping[str, Any]) -> str:
@@ -180,6 +208,20 @@ def answers_markdown(metrics: AnswerMetrics, metadata: Mapping[str, Any]) -> str
             else f"{value:.1f}"
         )
         lines.append(f"| {name} | {shown} |")
+    lines += [
+        "",
+        "| Case | Cites expected | Language | Attempts | First token (ms) | Tokens/s |",
+        "|---|---|---|---|---|---|",
+    ]
+    for case_id, row in metrics.per_case.items():
+        cells = [
+            "yes" if row["cites_expected"] else "no",
+            row["language"] or "?",
+            "n/a" if row["attempts"] is None else str(row["attempts"]),
+            "n/a" if row["first_token_ms"] is None else f"{row['first_token_ms']:.0f}",
+            "n/a" if row["tokens_per_second"] is None else f"{row['tokens_per_second']:.1f}",
+        ]
+        lines.append(f"| {case_id} | " + " | ".join(cells) + " |")
     lines += ["", "Missed cases:", ""]
     lines += [f"- {case}: {reason}" for case, reason in metrics.missed.items()] or ["- none"]
     lines += ["", "Run:", ""]
