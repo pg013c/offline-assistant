@@ -220,7 +220,7 @@
   - `DELETE` and re-index of an unknown id return `404` with the standard body;
   - re-index returns `202` with `processing`, and the document settles `ready`.
 - Change: `api/routes/documents.py`, `api/errors.py`, `make api-client`.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 11. Delete and re-index in the document panel

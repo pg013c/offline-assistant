@@ -177,3 +177,49 @@ def test_an_oversized_upload_is_not_read_beyond_the_limit(client: TestClient) ->
     upload(client, "big.txt", b"x" * (MAX_UPLOAD_BYTES * 2))
 
     assert documents.received == [MAX_UPLOAD_BYTES + 1]
+
+
+def test_a_deleted_document_leaves_the_list_and_the_answers(
+    client: TestClient, settle: Settle
+) -> None:
+    created = upload(client, "policy.txt", POLICY)["body"]
+    assert isinstance(created, dict)
+    settle(client, str(created["id"]))
+
+    response = client.delete(f"/api/documents/{created['id']}")
+
+    assert response.status_code == 204
+    assert client.get("/api/documents").json() == []
+    answer = client.post("/api/chat", json={"question": "Who may inspect the logs?"}).text
+    assert '"type":"citation"' not in answer.replace(" ", "")
+
+
+def test_reindexing_returns_the_document_as_processing_and_it_becomes_ready(
+    client: TestClient, settle: Settle
+) -> None:
+    created = upload(client, "policy.txt", POLICY)["body"]
+    assert isinstance(created, dict)
+    before = settle(client, str(created["id"]))
+
+    response = client.post(f"/api/documents/{created['id']}/reindex")
+
+    assert response.status_code == 202
+    assert response.json()["id"] == created["id"]
+    assert response.json()["status"] in {"processing", "ready"}
+    assert settle(client, str(created["id"])) == before
+
+
+@pytest.mark.parametrize(
+    ("method", "path"),
+    [("DELETE", "/api/documents/unknown"), ("POST", "/api/documents/unknown/reindex")],
+)
+def test_an_unknown_document_is_reported_as_not_found(
+    client: TestClient, method: str, path: str
+) -> None:
+    response = client.request(method, path)
+
+    assert response.status_code == 404
+    body = response.json()
+    assert body["code"] == "document_not_found"
+    assert body["message"]
+    assert body["details"] is None
