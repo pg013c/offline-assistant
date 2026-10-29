@@ -151,7 +151,7 @@ class ChatModel(Protocol):
   - **`end`:** it carries `usage`.
   - **Contract:** the OpenAPI document has the new events.
 - Change: `api/schemas.py`, `api/routes/chat.py`, `make api-client`.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 5. UI handles discard and error
