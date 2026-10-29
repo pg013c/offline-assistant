@@ -1,15 +1,15 @@
 {
   "metrics": {
     "recall@3": {
-      "value": 0.5238095238095238,
+      "value": 0.6190476190476191,
       "cases": 21
     },
     "recall@10": {
-      "value": 0.7619047619047619,
+      "value": 0.8095238095238095,
       "cases": 21
     },
     "mrr": {
-      "value": 0.4222222222222222,
+      "value": 0.573015873015873,
       "cases": 21
     },
     "out_of_scope_refused": {
@@ -26,21 +26,145 @@
     "pl-ai-deployer-duties": "first expected chunk at rank 5",
     "pl-ai-literacy": "first expected chunk at rank 4",
     "pl-gdpr-portability": "no expected chunk among the hits",
-    "x-pl-to-en-breach": "first expected chunk at rank 6",
-    "x-en-to-pl-erasure": "no expected chunk among the hits",
     "ref-annex-iii": "no expected chunk among the hits",
     "ref-article-50": "no expected chunk among the hits",
     "ref-article-83": "no expected chunk among the hits",
     "span-providers-and-deployers": "first expected chunk at rank 6"
   },
+  "expected": {
+    "en-ai-prohibited-practices": [
+      "bba630444b3278e8:224",
+      "bba630444b3278e8:225",
+      "bba630444b3278e8:226"
+    ],
+    "en-ai-transparency-chatbots": [
+      "bba630444b3278e8:442"
+    ],
+    "en-ai-fines-prohibited": [
+      "bba630444b3278e8:691"
+    ],
+    "en-gdpr-breach-72-hours": [
+      "bd84e63f5b622b73:238"
+    ],
+    "en-gdpr-erasure": [
+      "bd84e63f5b622b73:178"
+    ],
+    "en-gdpr-dpo": [
+      "bd84e63f5b622b73:263"
+    ],
+    "pl-ai-deployer-duties": [
+      "16f2a07dfd566aac:343",
+      "16f2a07dfd566aac:344",
+      "16f2a07dfd566aac:345",
+      "16f2a07dfd566aac:346",
+      "16f2a07dfd566aac:347",
+      "16f2a07dfd566aac:348",
+      "16f2a07dfd566aac:349",
+      "16f2a07dfd566aac:350",
+      "16f2a07dfd566aac:351",
+      "16f2a07dfd566aac:352",
+      "16f2a07dfd566aac:353",
+      "16f2a07dfd566aac:354",
+      "16f2a07dfd566aac:355"
+    ],
+    "pl-ai-serious-incident": [
+      "16f2a07dfd566aac:598"
+    ],
+    "pl-ai-literacy": [
+      "16f2a07dfd566aac:241"
+    ],
+    "pl-gdpr-access": [
+      "61bddbf0f0749097:193"
+    ],
+    "pl-gdpr-portability": [
+      "61bddbf0f0749097:205"
+    ],
+    "pl-gdpr-max-fine": [
+      "61bddbf0f0749097:501"
+    ],
+    "x-pl-to-en-annex-iii": [
+      "16f2a07dfd566aac:253",
+      "bba630444b3278e8:235"
+    ],
+    "x-pl-to-en-breach": [
+      "61bddbf0f0749097:258",
+      "bd84e63f5b622b73:238"
+    ],
+    "x-en-to-pl-prohibited": [
+      "16f2a07dfd566aac:242",
+      "16f2a07dfd566aac:243",
+      "16f2a07dfd566aac:244",
+      "bba630444b3278e8:224",
+      "bba630444b3278e8:225",
+      "bba630444b3278e8:226"
+    ],
+    "x-en-to-pl-erasure": [
+      "61bddbf0f0749097:198",
+      "bd84e63f5b622b73:178"
+    ],
+    "ref-annex-iii": [
+      "bba630444b3278e8:746",
+      "bba630444b3278e8:747",
+      "bba630444b3278e8:748",
+      "bba630444b3278e8:749",
+      "bba630444b3278e8:750",
+      "bba630444b3278e8:751"
+    ],
+    "ref-article-50": [
+      "bba630444b3278e8:442",
+      "bba630444b3278e8:443",
+      "bba630444b3278e8:444",
+      "bba630444b3278e8:445",
+      "bba630444b3278e8:446",
+      "bba630444b3278e8:447",
+      "bba630444b3278e8:448"
+    ],
+    "ref-article-83": [
+      "bd84e63f5b622b73:477",
+      "bd84e63f5b622b73:478",
+      "bd84e63f5b622b73:479",
+      "bd84e63f5b622b73:480",
+      "bd84e63f5b622b73:481",
+      "bd84e63f5b622b73:482",
+      "bd84e63f5b622b73:483",
+      "bd84e63f5b622b73:484",
+      "bd84e63f5b622b73:485"
+    ],
+    "span-providers-and-deployers": [
+      "bba630444b3278e8:284",
+      "bba630444b3278e8:323",
+      "bba630444b3278e8:324",
+      "bba630444b3278e8:325",
+      "bba630444b3278e8:326",
+      "bba630444b3278e8:327",
+      "bba630444b3278e8:328",
+      "bba630444b3278e8:329",
+      "bba630444b3278e8:330",
+      "bba630444b3278e8:331",
+      "bba630444b3278e8:332",
+      "bba630444b3278e8:333",
+      "bba630444b3278e8:334",
+      "bba630444b3278e8:335"
+    ],
+    "span-access-and-rectification": [
+      "bd84e63f5b622b73:173",
+      "bd84e63f5b622b73:174",
+      "bd84e63f5b622b73:175",
+      "bd84e63f5b622b73:176",
+      "bd84e63f5b622b73:177"
+    ],
+    "oos-pasta": [],
+    "oos-weather-krakow": [],
+    "oos-world-cup": []
+  },
   "threshold": 0.5,
   "metadata": {
-    "started_at": "2026-10-29T10:40:21+00:00",
-    "git_commit": "973e1a44e74902313e4b7dfb392a2117b13d15b8",
+    "started_at": "2026-10-29T11:21:03+00:00",
+    "git_commit": "40a5c436848f11020c02258e24d260c0ab417458",
     "dataset": {
       "path": "evals/datasets/retrieval.yaml",
-      "version": 1,
-      "sha256": "16afaf9e961099d466da2f1611e78ffca4d4838f024c18d01a17bc12483a2602"
+      "version": 2,
+      "sha256": "26e23fa8ac12e2c6c8c531661b72b970df950d2a86728532e10fa1e3e3fca523"
     },
     "models": {
       "docling-project/docling-layout-heron": "8f39ad3c0b4c58e9c2d2c84a38465abf757272d8",
@@ -58,6 +182,13 @@
       "machine": "arm64",
       "processor": "Apple M5 Pro",
       "cpus": 18
-    }
+    },
+    "corpus": {
+      "ai-act-en.pdf": "bba630444b3278e881066774002a1d7824308934f49ccfa203e65be43692f55e",
+      "ai-act-pl.pdf": "16f2a07dfd566aac374b00e0cf92e551d1e1a7346878f746c1cdb7f531f804d9",
+      "gdpr-en.pdf": "bd84e63f5b622b739a83389afc3b30d240f792bb88d8eb03a816c9a82b0c2499",
+      "gdpr-pl.pdf": "61bddbf0f07490978b698f007e4641683b1d48ecd1481532e1a0c2afd4b63e0f"
+    },
+    "indexing_seconds": 97.7
   }
 }

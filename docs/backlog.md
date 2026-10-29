@@ -35,4 +35,4 @@ Small changes found during reviews, done as chores outside the feature that foun
 | Use `found=false` in the UI for a proper "no answer" state | F-01 review #18 | planned for F-07 |
 | Refuse a non-local `ASSISTANT_QDRANT_URL` unless network mode is on (Compose service names allowed) | F-03 review #15 | planned for F-10 |
 | Index each chunk with its article number and title, and keep section titles out of chunks (retrieval baseline causes 1 and 2) | F-04 baseline | planned before F-05 |
-| Decide whether cross-language and paragraph-level cases accept the twin article or sibling paragraph (dataset-only commit) | F-04 baseline | planned after the indexing change |
+| Decide whether paragraph-level cases accept a sibling paragraph that answers too (dataset-only commit; cross-language cases done in dataset version 2) | F-04 baseline | planned after the indexing change |
