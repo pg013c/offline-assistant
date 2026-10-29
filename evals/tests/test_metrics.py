@@ -119,3 +119,28 @@ def test_the_top_out_of_scope_similarity_is_the_best_hit_of_any_refuse_case() ->
 
 def test_without_out_of_scope_hits_the_top_similarity_is_unknown() -> None:
     assert top_out_of_scope_similarity([]) is None
+
+
+def test_answerable_counts_an_expected_chunk_among_the_first_three_hits_over_the_threshold() -> (
+    None
+):
+    results = [
+        # Ranked first but too weak to be used: not answerable.
+        result("weak-first", {"d:1"}, [("d:1", 0.46), ("d:2", 0.6), ("d:3", 0.6)]),
+        # Fourth hit, but the first usable three skip a weak one: answerable.
+        result(
+            "usable-third",
+            {"d:4"},
+            [("d:1", 0.7), ("d:2", 0.4), ("d:3", 0.7), ("d:4", 0.6)],
+        ),
+        result("first", {"d:1"}, [("d:1", 0.8)]),
+        result("oos", set(), [("d:1", 0.3)], behaviour="refuse"),
+    ]
+
+    metrics = compute(results, threshold=0.5)
+
+    assert metrics["answerable@3"].value == pytest.approx(2 / 3)
+    assert metrics["answerable@3"].cases == 3
+    assert metrics.missed["weak-first"] == (
+        "expected chunk at rank 1 is below the threshold (0.46 < 0.50)"
+    )

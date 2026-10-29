@@ -22,6 +22,8 @@ class ModeResult:
     metrics: Metrics
     latency: Latency
     out_of_scope_top_similarity: float | None
+    # The first, unmeasured request of the mode.
+    warm_up_ms: float | None = None
 
 
 def build_report(

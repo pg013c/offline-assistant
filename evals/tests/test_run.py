@@ -87,6 +87,7 @@ def test_a_run_indexes_the_corpus_scores_the_cases_and_writes_a_report(config: R
         "mrr",
         "out_of_scope_refused",
         "in_scope_unanswered",
+        "answerable@3",
     }
     assert report["metrics"]["recall@3"]["cases"] == 2
     assert report["metrics"]["out_of_scope_refused"]["cases"] == 1
@@ -97,6 +98,12 @@ def test_a_run_indexes_the_corpus_scores_the_cases_and_writes_a_report(config: R
         assert mode["metrics"]["recall@3"]["cases"] == 2
         assert mode["latency_ms"]["median"] > 0
         assert mode["out_of_scope_top_similarity"] is not None
+        assert mode["warm_up_ms"] > 0
+    settings = report["metadata"]["settings"]
+    assert settings["reranker"] == "on"
+    assert settings["rerank_candidates"] == 30
+    assert settings["reranker_device"] in {"mps", "cpu"}
+    assert settings["reranker_precision"] in {"float16", "float32"}
     assert outcome.gate_failures == []
     # The API it started is gone, and no other collection was touched.
     with socket.socket() as probe:

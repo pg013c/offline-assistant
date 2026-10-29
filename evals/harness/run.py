@@ -188,6 +188,16 @@ def _reset(config: RunConfig) -> None:
         drop_collections(qdrant, config.collection_prefix)
 
 
+def api_environment(config: RunConfig, base: Mapping[str, str]) -> dict[str, str]:
+    """The evaluation API's environment: the caller's, without its ASSISTANT_* settings."""
+    raise NotImplementedError
+
+
+def warm_up(api: httpx.Client, mode: str) -> float:
+    """One unmeasured search in the mode, so measured ones find the models loaded; its ms."""
+    raise NotImplementedError
+
+
 def _start_api(config: RunConfig) -> tuple[subprocess.Popen[bytes], IO[bytes]]:
     # Only the run's own settings: nothing from a developer's ASSISTANT_* environment.
     inherited = {

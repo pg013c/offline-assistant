@@ -1,4 +1,5 @@
 import hashlib
+import json
 import socket
 from dataclasses import replace
 from pathlib import Path
@@ -10,10 +11,12 @@ from harness.corpus import CorpusDocument, documents
 from harness.run import (
     CorpusError,
     PortInUse,
+    api_environment,
     default_config,
     drop_collections,
     ensure_port_free,
     verify_corpus,
+    warm_up,
 )
 
 
@@ -88,3 +91,26 @@ def test_the_evaluation_settings_do_not_come_from_the_development_environment() 
     assert config.threshold == 0.5
     assert config.qdrant_url == "http://127.0.0.1:6340"
     assert config.collection_prefix == "eval"
+
+
+def test_the_evaluation_api_runs_with_the_reranker_whatever_the_environment_says() -> None:
+    config = default_config({})
+
+    env = api_environment(config, {"PATH": "/usr/bin", "ASSISTANT_RERANKER": "off"})
+
+    assert env["ASSISTANT_RERANKER"] == "on"
+    assert env["PATH"] == "/usr/bin"
+
+
+def test_a_warm_up_search_asks_for_its_mode_and_returns_its_time() -> None:
+    bodies: list[dict[str, object]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        bodies.append(json.loads(request.content))
+        return httpx.Response(200, json=[])
+
+    with httpx.Client(transport=httpx.MockTransport(handler), base_url="http://api") as api:
+        elapsed = warm_up(api, "hybrid")
+
+    assert bodies == [{"query": "warm-up", "limit": 10, "rerank": False}]
+    assert elapsed >= 0

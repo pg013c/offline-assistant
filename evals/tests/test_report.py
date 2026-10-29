@@ -75,3 +75,15 @@ def test_the_report_records_the_resolved_expected_chunks() -> None:
     built = build_report(MODES, "reranked", METADATA, threshold=0.5, expected=expected)
 
     assert built["expected"] == {"case-b": ["d:1", "d:3"], "oos": []}
+
+
+def test_each_mode_reports_its_warm_up_request_apart_from_the_measured_ones() -> None:
+    modes = {
+        "reranked": ModeResult(RERANKED.metrics, RERANKED.latency, 0.38, warm_up_ms=812.0),
+        "hybrid": ModeResult(HYBRID.metrics, HYBRID.latency, 0.35, warm_up_ms=41.0),
+    }
+
+    built = build_report(modes, "reranked", METADATA, threshold=0.5, expected={})
+
+    assert built["modes"]["reranked"]["warm_up_ms"] == 812.0
+    assert "| warm-up request | 812 ms | 41 ms | |" in markdown(built)
