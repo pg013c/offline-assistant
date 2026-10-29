@@ -193,7 +193,7 @@ class ChatModel(Protocol):
   - a server without the tools capability is refused before any request (AI-23).
 - Change: `ports/chat_model.py`, `adapters/openai_compatible_chat.py`.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 8. Model catalogue, settings, startup and make targets
 
