@@ -106,6 +106,8 @@ forbidden_modules = [
     "starlette",
     "uvicorn",
     "pydantic_settings",
+    # The model server's client (ADR 0021): services reach models through ports only.
+    "httpx",
     # Search (ADR 0017).
     "qdrant_client",
     "sentence_transformers",
