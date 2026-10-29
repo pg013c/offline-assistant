@@ -40,6 +40,8 @@ expect green scripts/ci/test-make.sh 2
 expect green evals/datasets/questions.yaml 2
 expect green evals/tests/test_metrics.py 2
 expect green evals/harness/metrics.py 0
+expect green evals/promptfoo/retrieval.yaml 2
+expect green evals/corpus.json 2
 expect green backend/src/assistant/services/retrieval.py 0
 expect green frontend/src/features/chat/ChatView.tsx 0
 expect green docs/features/F-01-walking-skeleton/plan.md 0
