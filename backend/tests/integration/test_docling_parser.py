@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from assistant.adapters.docling_parser import DoclingDocumentParser, ParserNotReady
-from assistant.domain.documents import Chunk, chunk_document
+from assistant.domain.documents import Chunk, chunk_document, document_id_for
 from assistant.domain.errors import DocumentUnreadable
 
 pytestmark = pytest.mark.integration
@@ -155,3 +155,39 @@ def test_missing_models_name_the_model_and_the_command(tmp_path: Path) -> None:
 def test_a_missing_ocr_engine_is_named(tmp_path: Path) -> None:
     with pytest.raises(ParserNotReady, match="tesseract"):
         DoclingDocumentParser.ensure_ready(MODELS_DIR, tesseract="tesseract-that-does-not-exist")
+
+
+# Chunk ids and locations the evaluation datasets (F-04) will reference. A Docling upgrade or
+# a new model pin that changes them must update this snapshot on purpose (ADR 0015, ADR 0016).
+ARTICLE_6_SNAPSHOT = [
+    (0, None, None, 1),
+    (1, None, None, 1),
+    (2, "6", "1", 1),
+    (3, "6", "2", 1),
+    (4, "6", "3", 2),
+    (5, "6", "4", 2),
+    (6, "6", "5", 2),
+    (7, "6", "6", 2),
+    (8, "6", "7", 2),
+    (9, "6", "8", 2),
+    (10, "7", "1", 2),
+]
+
+
+@pytest.mark.parametrize(
+    ("filename", "document_id"),
+    [("ai-act-art6-en.pdf", "2a911f89ef34001f"), ("ai-act-art6-pl.pdf", "352febcf5134828b")],
+)
+def test_chunk_ids_and_locations_match_the_snapshot(
+    parser: DoclingDocumentParser, filename: str, document_id: str
+) -> None:
+    content = (DOCUMENTS / filename).read_bytes()
+
+    chunks = chunk_document(document_id_for(content), parser.parse(filename, content))
+
+    assert document_id_for(content) == document_id
+    assert [chunk.id for chunk in chunks] == [f"{document_id}:{n}" for n in range(11)]
+    assert [
+        (chunk.position, chunk.location.article, chunk.location.paragraph, chunk.location.page)
+        for chunk in chunks
+    ] == ARTICLE_6_SNAPSHOT
