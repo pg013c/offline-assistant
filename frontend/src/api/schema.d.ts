@@ -39,7 +39,10 @@ export interface paths {
         put?: never;
         /**
          * Upload Document
-         * @description Upload a plain-text or Markdown document; known content returns the stored document.
+         * @description Upload a document to be parsed in the background; known content returns as stored.
+         *
+         *     Accepts PDF, DOCX, PNG, JPG, plain text and Markdown. The document is listed with status
+         *     `processing` until parsing ends with `ready` or `failed`.
          */
         post: operations["upload_document"];
         delete?: never;
@@ -95,6 +98,7 @@ export interface components {
             document_title: string;
             /** Quote */
             quote: string;
+            location: components["schemas"]["CitationLocation"];
         };
         /**
          * ChatEndEvent
@@ -136,6 +140,20 @@ export interface components {
             /** Text */
             text: string;
         };
+        /**
+         * CitationLocation
+         * @description Where the cited passage is; parts the document does not have are empty.
+         */
+        CitationLocation: {
+            /** Heading Path */
+            heading_path: string[];
+            /** Article */
+            article: string | null;
+            /** Paragraph */
+            paragraph: string | null;
+            /** Page */
+            page: number | null;
+        };
         /** DocumentResponse */
         DocumentResponse: {
             /** Id */
@@ -144,8 +162,17 @@ export interface components {
             title: string;
             /** Filename */
             filename: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "processing" | "ready" | "failed";
             /** Chunk Count */
             chunk_count: number;
+            /** Page Count */
+            page_count: number | null;
+            /** Failure Reason */
+            failure_reason: string | null;
         };
         /**
          * ErrorDetail
@@ -260,7 +287,7 @@ export interface operations {
         };
         responses: {
             /** @description Successful Response */
-            201: {
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };

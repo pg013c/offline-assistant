@@ -14,7 +14,10 @@ const POLICY: DocumentResponse = {
   id: 'a1',
   title: 'policy',
   filename: 'policy.txt',
+  status: 'ready',
   chunk_count: 2,
+  page_count: null,
+  failure_reason: null,
 }
 
 function serveDocuments(initial: DocumentResponse[]) {
@@ -26,9 +29,17 @@ function serveDocuments(initial: DocumentResponse[]) {
       if (!(file instanceof File)) {
         return HttpResponse.json({ code: 'bad_request', message: 'no file' }, { status: 400 })
       }
-      const created = { id: 'b2', title: 'notes', filename: file.name, chunk_count: 1 }
+      const created: DocumentResponse = {
+        id: 'b2',
+        title: 'notes',
+        filename: file.name,
+        status: 'ready',
+        chunk_count: 1,
+        page_count: null,
+        failure_reason: null,
+      }
       documents.push(created)
-      return HttpResponse.json(created, { status: 201 })
+      return HttpResponse.json(created, { status: 202 })
     }),
   )
 }
