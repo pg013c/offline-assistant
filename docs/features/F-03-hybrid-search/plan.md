@@ -232,7 +232,7 @@
   - "Re-index" shows the document as processing and the list refreshes until it is ready;
   - an API error is shown.
 - Change: `features/documents/useDocuments.ts`, `DocumentPanel.tsx`.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 12. Retrieval cases on the AI Act excerpts

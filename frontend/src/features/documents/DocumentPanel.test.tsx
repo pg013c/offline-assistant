@@ -41,6 +41,11 @@ function serveDocuments(initial: DocumentResponse[]) {
       documents.push(created)
       return HttpResponse.json(created, { status: 202 })
     }),
+    http.delete('*/api/documents/:id', ({ params }) => {
+      const index = documents.findIndex((document) => document.id === params.id)
+      documents.splice(index, 1)
+      return new HttpResponse(null, { status: 204 })
+    }),
   )
 }
 
@@ -170,5 +175,78 @@ describe('DocumentPanel', () => {
     )
 
     expect(await screen.findByRole('alert')).toHaveTextContent('slides.pptx: supported file types')
+  })
+
+  it('deletes a document after the user confirms', async () => {
+    serveDocuments([POLICY])
+    renderWithQueryClient(<DocumentPanel />)
+    await screen.findByText('policy')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Delete policy' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Confirm deleting policy' }))
+
+    expect(await screen.findByText(/no documents yet/i)).toBeInTheDocument()
+  })
+
+  it('keeps the document when the user cancels deleting it', async () => {
+    let deleted = false
+    serveDocuments([POLICY])
+    server.use(
+      http.delete('*/api/documents/:id', () => {
+        deleted = true
+        return new HttpResponse(null, { status: 204 })
+      }),
+    )
+    renderWithQueryClient(<DocumentPanel />)
+    await screen.findByText('policy')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Delete policy' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(screen.getByText('policy')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Delete policy' })).toBeInTheDocument()
+    expect(deleted).toBe(false)
+  })
+
+  it('re-indexes a document and shows it processing until it is ready', async () => {
+    let reindexed = false
+    server.use(
+      http.get('*/api/documents', () =>
+        HttpResponse.json([reindexed ? { ...POLICY, status: 'processing' } : POLICY]),
+      ),
+      http.post('*/api/documents/:id/reindex', () => {
+        reindexed = true
+        setTimeout(() => {
+          reindexed = false
+        }, 50)
+        return HttpResponse.json({ ...POLICY, status: 'processing' }, { status: 202 })
+      }),
+    )
+    renderWithQueryClient(<DocumentPanel pollIntervalMs={20} />)
+    await screen.findByText('policy.txt · 2 passages')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Re-index policy' }))
+
+    expect(await screen.findByText(/processing/i)).toBeInTheDocument()
+    expect(await screen.findByText('policy.txt · 2 passages')).toBeInTheDocument()
+  })
+
+  it('shows the reason when deleting fails', async () => {
+    serveDocuments([POLICY])
+    server.use(
+      http.delete('*/api/documents/:id', () =>
+        HttpResponse.json(
+          { code: 'document_not_found', message: 'No document has the id a1.' },
+          { status: 404 },
+        ),
+      ),
+    )
+    renderWithQueryClient(<DocumentPanel />)
+    await screen.findByText('policy')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Delete policy' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Confirm deleting policy' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('No document has the id a1.')
   })
 })
