@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Literal
 
-from pydantic import ValidationError
+from pydantic import Field, ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ENV_PREFIX = "ASSISTANT_"
@@ -21,7 +21,8 @@ class Settings(BaseSettings):
     models_dir: Path
     qdrant_url: str = "http://127.0.0.1:6333"
     qdrant_collection_prefix: str = "assistant"
-    min_similarity: float = 0.5
+    # Dense similarity a passage needs to be cited; tuned on the fixtures (F-03), measured in F-04.
+    min_similarity: float = Field(default=0.5, ge=0, le=1)
 
 
 class SettingsError(Exception):

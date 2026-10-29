@@ -10,9 +10,9 @@ class ScoredChunk:
     chunk: Chunk
     # Rank score of the fused result list; only its order means anything.
     score: float
-    # Dense cosine similarity to the query, comparable across queries; 0 when only the keyword
-    # half found the chunk.
-    similarity: float = 0.0
+    # Dense cosine similarity of the chunk to the query, comparable across queries, whichever
+    # half found it; negative similarities count as 0.
+    similarity: float
 
 
 class ChunkIndex(Protocol):
