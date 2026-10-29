@@ -182,7 +182,7 @@ class ChatModel(Protocol):
   - **Integration, marked `llm`, skipped unless `make llm` is up:** Qwen3 8B answers a Polish and an English question with valid citations.
 - Change: `adapters/openai_compatible_chat.py`, `prompts/answer.md`, `pyproject.toml` (httpx at runtime, `llm` marker).
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 7. Tool calls in the adapter
 
