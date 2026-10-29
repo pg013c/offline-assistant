@@ -169,7 +169,7 @@ Two projects side by side, apart from the backend and the frontend:
 - Run `make eval` on the full corpus.
 - Commit the record in `docs/evals/2026-10-29-retrieval-baseline.md` and the gate's baseline in `docs/evals/retrieval-baseline.json`, with the ingestion time against NFR-05.
 - Cases that miss are analysed (`eval-analyst`) and reported, not edited away (TEST-22).
-- [ ] green
+- [x] green
 
 ### Step 9. Documentation
 

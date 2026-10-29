@@ -1,0 +1,63 @@
+{
+  "metrics": {
+    "recall@3": {
+      "value": 0.5238095238095238,
+      "cases": 21
+    },
+    "recall@10": {
+      "value": 0.7619047619047619,
+      "cases": 21
+    },
+    "mrr": {
+      "value": 0.4222222222222222,
+      "cases": 21
+    },
+    "out_of_scope_refused": {
+      "value": 1.0,
+      "cases": 3
+    },
+    "in_scope_unanswered": {
+      "value": 0.0,
+      "cases": 21
+    }
+  },
+  "missed": {
+    "en-ai-fines-prohibited": "first expected chunk at rank 4",
+    "pl-ai-deployer-duties": "first expected chunk at rank 5",
+    "pl-ai-literacy": "first expected chunk at rank 4",
+    "pl-gdpr-portability": "no expected chunk among the hits",
+    "x-pl-to-en-breach": "first expected chunk at rank 6",
+    "x-en-to-pl-erasure": "no expected chunk among the hits",
+    "ref-annex-iii": "no expected chunk among the hits",
+    "ref-article-50": "no expected chunk among the hits",
+    "ref-article-83": "no expected chunk among the hits",
+    "span-providers-and-deployers": "first expected chunk at rank 6"
+  },
+  "threshold": 0.5,
+  "metadata": {
+    "started_at": "2026-10-29T10:40:21+00:00",
+    "git_commit": "973e1a44e74902313e4b7dfb392a2117b13d15b8",
+    "dataset": {
+      "path": "evals/datasets/retrieval.yaml",
+      "version": 1,
+      "sha256": "16afaf9e961099d466da2f1611e78ffca4d4838f024c18d01a17bc12483a2602"
+    },
+    "models": {
+      "docling-project/docling-layout-heron": "8f39ad3c0b4c58e9c2d2c84a38465abf757272d8",
+      "docling-project/docling-models": "fc0f2d45e2218ea24bce5045f58a389aed16dc23",
+      "BAAI/bge-m3": "5617a9f61b028005a4858fdac845db406aefb181"
+    },
+    "qdrant_version": "1.20.0",
+    "settings": {
+      "collection_prefix": "eval",
+      "threshold": 0.5,
+      "search_limit": 10
+    },
+    "hardware": {
+      "platform": "macOS-26.4-arm64-arm-64bit-Mach-O",
+      "machine": "arm64",
+      "processor": "Apple M5 Pro",
+      "cpus": 18
+    }
+  }
+}
