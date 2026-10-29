@@ -16,6 +16,9 @@ class FakeIngestionQueue:
     def submit(self, job: Callable[[], None]) -> None:
         self._jobs.append(job)
 
+    def close(self) -> None:
+        self._jobs.clear()
+
     def run_all(self) -> None:
         while self._jobs:
             self._jobs.pop(0)()
@@ -26,3 +29,6 @@ class InlineIngestionQueue:
 
     def submit(self, job: Callable[[], None]) -> None:
         job()
+
+    def close(self) -> None:
+        """Nothing runs later, so there is nothing to stop."""

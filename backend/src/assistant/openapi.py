@@ -7,15 +7,14 @@ import json
 import sys
 from pathlib import Path
 
-from assistant.app import create_app
+from assistant.app import create_app, schema_adapters
 from assistant.settings import Settings
 
 
 def openapi_json() -> str:
     """The OpenAPI schema as stable, pretty-printed JSON."""
-    # The schema does not depend on settings: the data directory is never touched, and the
-    # text parser needs no models.
-    app = create_app(Settings(data_dir=Path(), document_parser="text-only"))
+    # The schema depends on neither settings nor adapters; these need no models, Qdrant or disk.
+    app = create_app(Settings(data_dir=Path(), models_dir=Path()), schema_adapters())
     return json.dumps(app.openapi(), indent=2, ensure_ascii=False) + "\n"
 
 

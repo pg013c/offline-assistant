@@ -210,7 +210,7 @@
     - the new settings are read from the environment.
 - Change: `app.py`, `settings.py`, `tests/conftest.py`.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 10. Delete and re-index endpoints
 

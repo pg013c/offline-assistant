@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, ValidationError, ValidationInfo, field_validator
+from pydantic import ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ENV_PREFIX = "ASSISTANT_"
@@ -18,17 +18,10 @@ class Settings(BaseSettings):
     # `docling` reads every supported format; `text-only` reads .txt and .md without models.
     document_parser: Literal["docling", "text-only"] = "docling"
     # Where `make models` put the parsing and embedding models (ADR 0004).
-    models_dir: Path | None = Field(default=None, validate_default=True)
+    models_dir: Path
     qdrant_url: str = "http://127.0.0.1:6333"
     qdrant_collection_prefix: str = "assistant"
     min_similarity: float = 0.5
-
-    @field_validator("models_dir")
-    @classmethod
-    def _required_by_docling(cls, value: Path | None, info: ValidationInfo) -> Path | None:
-        if value is None and info.data.get("document_parser") == "docling":
-            raise ValueError("required by the Docling document parser; run `make models`")
-        return value
 
 
 class SettingsError(Exception):
