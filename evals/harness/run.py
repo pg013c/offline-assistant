@@ -12,6 +12,7 @@ import signal
 import subprocess
 import sys
 import time
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from hashlib import sha256
@@ -21,7 +22,7 @@ from typing import Any
 import httpx
 import yaml
 
-from harness.corpus import documents
+from harness.corpus import CorpusDocument, documents
 from harness.dataset import load_cases
 from harness.gate import check
 from harness.metrics import CaseResult, compute
@@ -37,8 +38,18 @@ INGESTION_SECONDS = 1800
 POLL_SECONDS = 1.0
 
 
+class CorpusError(Exception):
+    """A corpus file is missing or differs from its pin; the message says what to run."""
+
+
+class PortInUse(Exception):
+    """Something already listens on the evaluation port."""
+
+
 @dataclass(frozen=True)
 class RunConfig:
+    # The corpus files and their pins; `make eval` uses evals/corpus.json.
+    corpus: tuple[CorpusDocument, ...]
     corpus_dir: Path
     dataset: Path
     baseline: Path
@@ -94,6 +105,25 @@ def run(config: RunConfig) -> Outcome:
     report_json.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", "utf-8")
     report_markdown.write_text(markdown(report), encoding="utf-8")
     return Outcome(report_json, report_markdown, failures)
+
+
+def verify_corpus(corpus_dir: Path, pins: Sequence[CorpusDocument]) -> dict[str, str]:
+    """File name -> SHA-256 of every pinned corpus file, each checked against its pin."""
+    raise NotImplementedError
+
+
+def ensure_port_free(port: int) -> None:
+    raise NotImplementedError
+
+
+def drop_collections(qdrant: httpx.Client, prefix: str) -> None:
+    """Delete the collections a run with this prefix created."""
+    raise NotImplementedError
+
+
+def default_config(env: Mapping[str, str]) -> RunConfig:
+    """The configuration of `make eval`, independent of the development settings."""
+    raise NotImplementedError
 
 
 def _start_api(config: RunConfig) -> subprocess.Popen[bytes]:
@@ -288,6 +318,7 @@ def _executable(name: str) -> str:
 def main() -> None:
     """`make eval`: the retrieval suite on the full corpus, with the recorded baseline."""
     config = RunConfig(
+        corpus=tuple(documents()),
         corpus_dir=Path(os.environ.get("EVAL_CORPUS_DIR", ROOT / "data" / "eval-corpus")),
         dataset=ROOT / "evals" / "datasets" / "retrieval.yaml",
         baseline=BASELINE,

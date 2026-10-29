@@ -1,16 +1,19 @@
 """The whole harness on the F-02 excerpts. Needs `make models` and `make qdrant`."""
 
+import hashlib
 import json
 import os
 import shutil
 import socket
 import uuid
 from collections.abc import Iterator
+from dataclasses import replace
 from pathlib import Path
 
 import httpx
 import pytest
 
+from harness.corpus import documents
 from harness.run import RunConfig, run
 
 pytestmark = pytest.mark.integration
@@ -34,7 +37,14 @@ def config(tmp_path: Path) -> Iterator[RunConfig]:
     shutil.copy(EXCERPTS / "ai-act-art6-en.pdf", corpus / "ai-act-en.pdf")
     shutil.copy(EXCERPTS / "ai-act-art6-pl.pdf", corpus / "ai-act-pl.pdf")
     prefix = f"evaltest-{uuid.uuid4().hex[:8]}"
+    # Pinned like the real corpus, with the excerpts' own hashes.
+    pins = tuple(
+        replace(document, sha256=hashlib.sha256((corpus / document.file).read_bytes()).hexdigest())
+        for document in documents()
+        if (corpus / document.file).exists()
+    )
     yield RunConfig(
+        corpus=pins,
         corpus_dir=corpus,
         dataset=Path(__file__).parent / "fixtures" / "excerpts.yaml",
         baseline=tmp_path / "baseline.json",
@@ -49,6 +59,18 @@ def config(tmp_path: Path) -> Iterator[RunConfig]:
     for name in collections():
         if name.startswith(prefix):
             httpx.delete(f"{QDRANT_URL}/collections/{name}")
+
+
+def test_every_run_starts_from_an_empty_index_and_records_its_inputs(config: RunConfig) -> None:
+    run(config)
+
+    second = run(config)
+
+    report = json.loads(second.report_json.read_text(encoding="utf-8"))
+    metadata = report["metadata"]
+    assert metadata["indexing_seconds"] > 0
+    assert set(metadata["corpus"]) == {"ai-act-en.pdf", "ai-act-pl.pdf"}
+    assert report["expected"]["fixture-en-article-6"]
 
 
 def test_a_run_indexes_the_corpus_scores_the_cases_and_writes_a_report(config: RunConfig) -> None:
