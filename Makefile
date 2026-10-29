@@ -40,7 +40,7 @@ setup: node-version ## Install project dependencies
 	$(FRONTEND) exec playwright install chromium
 	uvx pre-commit install
 
-models: ## Download the parsing models into ASSISTANT_MODELS_DIR (the only step that needs the network)
+models: ## Download the parsing and embedding models into ASSISTANT_MODELS_DIR (the only step that needs the network)
 	$(BACKEND) python scripts/download_models.py "$(ASSISTANT_MODELS_DIR)"
 
 qdrant: ## Start Qdrant in Docker on QDRANT_PORT (data in ASSISTANT_DATA_DIR/qdrant, telemetry off)
@@ -52,7 +52,9 @@ qdrant: ## Start Qdrant in Docker on QDRANT_PORT (data in ASSISTANT_DATA_DIR/qdr
 	elif docker ps -a --format '{{.Names}}' | grep -qx $(QDRANT_CONTAINER); then \
 	  docker start $(QDRANT_CONTAINER) >/dev/null; \
 	elif lsof -nP -iTCP:$(QDRANT_PORT) -sTCP:LISTEN >/dev/null 2>&1; then \
-	  echo "Port $(QDRANT_PORT) is already used by another process. Stop it or set QDRANT_PORT."; exit 1; \
+	  owner="$$(docker ps --filter publish=$(QDRANT_PORT) --format 'container {{.Names}}' | head -1)"; \
+	  [ -n "$$owner" ] || owner="$$(lsof -nP -iTCP:$(QDRANT_PORT) -sTCP:LISTEN | awk 'NR==2 {print $$1 " (pid " $$2 ")"}')"; \
+	  echo "Port $(QDRANT_PORT) is already used by $$owner. Stop it or set QDRANT_PORT."; exit 1; \
 	else \
 	  mkdir -p "$(ASSISTANT_DATA_DIR)/qdrant"; \
 	  docker run -d --name $(QDRANT_CONTAINER) -p 127.0.0.1:$(QDRANT_PORT):6333 \
@@ -105,7 +107,7 @@ e2e: node-version ## Browser journeys on the full stack and the test model; need
 test-backend: ## Backend tests
 	$(BACKEND) pytest -q
 
-test-integration: ## Tests with real adapters; needs `make models` and Tesseract
+test-integration: ## Tests with real adapters; needs `make models`, `make qdrant` and Tesseract
 	HF_HUB_OFFLINE=1 $(BACKEND) pytest -q -m integration
 
 test-frontend: ## Frontend tests
