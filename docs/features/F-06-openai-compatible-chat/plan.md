@@ -163,7 +163,7 @@ class ChatModel(Protocol):
     - `error` ends the stream with the code's message and no "stopped before complete".
   - **`ChatView.test.tsx`:** the error alert shows the message for each code.
 - Change: `useChatStream.ts`, `ChatView.tsx`.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 6. OpenAI-compatible adapter: streamed JSON answer, retries, errors
