@@ -12,7 +12,7 @@ Status: `planned` → `spec` → `building` → `review` → `done`.
 | F-03 | Multilingual embeddings, Qdrant storage, hybrid search | FR-04, FR-05, FR-07 | 2 | done |
 | F-04 | Evaluation harness: Promptfoo wired to the API, first retrieval cases (recall@k against expected chunks) | FR-42, FR-43 | 2 | done |
 | F-04a | Article context in the index: article label and title indexed with each chunk, section titles not chunked, measured with `make eval` | FR-03, FR-05 | 2 | done |
-| F-05 | Reranker, switchable, measured with and without | FR-06, FR-43 | 2 | planned |
+| F-05 | Reranker, switchable, measured with and without | FR-06, FR-43 | 2 | spec |
 | F-06 | OpenAI-compatible chat adapter with tool calling, JSON schema output, validation and retries | FR-13, FR-40 | 2 | planned |
 | F-07 | Agent with tools, resolvable citations, refusal, prompt-injection defence | FR-10–FR-12, FR-14 | 2 | planned |
 | F-08 | Chat UI with clickable citations, document library, model selector, offline indicator | FR-60–FR-62 | 2 | planned |
