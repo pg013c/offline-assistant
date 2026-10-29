@@ -87,7 +87,6 @@ class DocumentService:
                 self._store.save_upload(document, content)
             self._queue_ingestion(document_id)
         # The queue may already have finished the job.
-        # The queue may already have finished the job.
         return self._store.get(document_id) or document
 
     def ingest(self, document_id: str) -> None:
