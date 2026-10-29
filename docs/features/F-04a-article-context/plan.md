@@ -83,7 +83,7 @@
     - a document with the current version is not parsed again.
 - Change: `domain/documents.py` (`Document`), `adapters/file_document_store.py`, `adapters/fakes/document_store.py`, `services/documents.py`.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 4. Both indexes use the indexed text; schema version 2
 
