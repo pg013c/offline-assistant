@@ -52,7 +52,21 @@ class QuestionService:
 
     async def search(self, query: str, limit: int) -> list[FoundPassage]:
         """The index's best passages for the query, best first, without any threshold."""
-        raise NotImplementedError
+        found = await asyncio.to_thread(self._index.search, query, limit)
+        titles: dict[str, str] = {}
+        for result in found:
+            document_id = result.chunk.document_id
+            if document_id not in titles:
+                document = self._store.get(document_id)
+                titles[document_id] = document.title if document else document_id
+        return [
+            FoundPassage(
+                chunk=result.chunk,
+                document_title=titles[result.chunk.document_id],
+                similarity=result.similarity,
+            )
+            for result in found
+        ]
 
     async def ask(self, question: str) -> AsyncIterator[AnswerEvent]:
         """Text pieces, then citations, then an end event; or a no-passage notice."""

@@ -275,6 +275,52 @@
           }
         }
       }
+    },
+    "/api/search": {
+      "post": {
+        "tags": [
+          "search"
+        ],
+        "summary": "Search Passages",
+        "description": "The best-matching passages for a query, best first, without a similarity threshold.\n\nUsed by the evaluation harness and for debugging retrieval.",
+        "operationId": "search_passages",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SearchHit"
+                  },
+                  "type": "array",
+                  "title": "Response Search Passages"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -618,6 +664,66 @@
           "version"
         ],
         "title": "HealthResponse"
+      },
+      "SearchHit": {
+        "properties": {
+          "chunk_id": {
+            "type": "string",
+            "title": "Chunk Id"
+          },
+          "document_id": {
+            "type": "string",
+            "title": "Document Id"
+          },
+          "document_title": {
+            "type": "string",
+            "title": "Document Title"
+          },
+          "location": {
+            "$ref": "#/components/schemas/CitationLocation"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "similarity": {
+            "type": "number",
+            "title": "Similarity"
+          }
+        },
+        "type": "object",
+        "required": [
+          "chunk_id",
+          "document_id",
+          "document_title",
+          "location",
+          "text",
+          "similarity"
+        ],
+        "title": "SearchHit",
+        "description": "A passage found for a query; `similarity` is the dense cosine similarity (0 to 1)."
+      },
+      "SearchRequest": {
+        "properties": {
+          "query": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Query"
+          },
+          "limit": {
+            "type": "integer",
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "Limit",
+            "default": 10
+          }
+        },
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "title": "SearchRequest"
       },
       "ValidationError": {
         "properties": {

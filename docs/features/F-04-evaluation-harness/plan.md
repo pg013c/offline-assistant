@@ -98,7 +98,7 @@ Two projects side by side, apart from the backend and the frontend:
     - an empty or too long query, and a limit out of range, give `422` with the standard body.
 - Change: `services/questions.py`, `api/routes/search.py`, `api/schemas.py`, `app.py`, `make api-client`.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 3. Chunk listing
 

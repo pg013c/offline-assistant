@@ -111,6 +111,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Search Passages
+         * @description The best-matching passages for a query, best first, without a similarity threshold.
+         *
+         *     Used by the evaluation harness and for debugging retrieval.
+         */
+        post: operations["search_passages"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -250,6 +272,33 @@ export interface components {
             status: "ok";
             /** Version */
             version: string;
+        };
+        /**
+         * SearchHit
+         * @description A passage found for a query; `similarity` is the dense cosine similarity (0 to 1).
+         */
+        SearchHit: {
+            /** Chunk Id */
+            chunk_id: string;
+            /** Document Id */
+            document_id: string;
+            /** Document Title */
+            document_title: string;
+            location: components["schemas"]["CitationLocation"];
+            /** Text */
+            text: string;
+            /** Similarity */
+            similarity: number;
+        };
+        /** SearchRequest */
+        SearchRequest: {
+            /** Query */
+            query: string;
+            /**
+             * Limit
+             * @default 10
+             */
+            limit: number;
         };
         /** ValidationError */
         ValidationError: {
@@ -462,6 +511,39 @@ export interface operations {
                 };
                 content: {
                     "text/event-stream": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_passages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SearchRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchHit"][];
                 };
             };
             /** @description Validation Error */
