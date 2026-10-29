@@ -164,7 +164,7 @@ class ChatModel(Protocol):
   - **`ChatView.test.tsx`:** the error alert shows the message for each code.
 - Change: `useChatStream.ts`, `ChatView.tsx`.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 6. OpenAI-compatible adapter: streamed JSON answer, retries, errors
 

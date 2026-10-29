@@ -7,6 +7,7 @@ import type { components } from '../../api/schema'
 type Schemas = components['schemas']
 export type ChatCitation = Schemas['ChatCitationEvent']
 type ChatEvent = Schemas['ChatEvent']
+type ChatErrorCode = Schemas['ChatErrorEvent']['code']
 
 export interface ChatAnswer {
   status: 'idle' | 'streaming' | 'done' | 'error'
@@ -38,18 +39,38 @@ function reduce(answer: ChatAnswer, action: Action): ChatAnswer {
           return { ...answer, text: answer.text + action.event.text }
         case 'citation':
           return { ...answer, citations: [...answer.citations, action.event] }
+        case 'discard':
+          return { ...answer, text: '', citations: [] }
+        case 'error':
+          return {
+            ...answer,
+            status: 'error',
+            text: '',
+            citations: [],
+            error: errorMessage(action.event.code, action.event.message),
+          }
         case 'end':
           return {
             ...answer,
-            status: 'done',
+            // An error event already ended the answer; the end event only closes the stream.
+            status: answer.status === 'error' ? 'error' : 'done',
             modelId: action.event.model_id,
             found: action.event.found,
             isTestModel: action.event.is_test_model,
           }
-        default:
-          // Discard and error events are handled with their UI (F-06 step 5).
-          return answer
       }
+  }
+}
+
+/** What the user reads when the model gives no answer (F-06). */
+function errorMessage(code: ChatErrorCode, message: string): string {
+  switch (code) {
+    case 'invalid_answer':
+      return 'The model could not produce a valid answer. Try asking again.'
+    case 'model_unreachable':
+      return `The language model is not reachable. ${message}`
+    case 'model_timeout':
+      return `The language model took too long to answer. ${message}`
   }
 }
 
@@ -58,7 +79,11 @@ function isChatEvent(value: unknown): value is ChatEvent {
     typeof value === 'object' &&
     value !== null &&
     'type' in value &&
-    (value.type === 'text' || value.type === 'citation' || value.type === 'end')
+    (value.type === 'text' ||
+      value.type === 'discard' ||
+      value.type === 'error' ||
+      value.type === 'citation' ||
+      value.type === 'end')
   )
 }
 
