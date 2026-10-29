@@ -33,7 +33,7 @@ export default defineConfig({
       reuseExistingServer: false,
     },
     {
-      command: `pnpm exec vite --port ${UI_PORT} --strictPort`,
+      command: `pnpm exec vite --host 127.0.0.1 --port ${UI_PORT} --strictPort`,
       url: `http://127.0.0.1:${UI_PORT}`,
       env: { API_PORT },
       reuseExistingServer: false,
