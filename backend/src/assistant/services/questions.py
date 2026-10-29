@@ -14,12 +14,21 @@ from assistant.ports.chunk_index import ChunkIndex
 from assistant.ports.document_store import DocumentStore
 
 PASSAGES_PER_ANSWER = 3
+# Dense similarity a passage needs to be used (F-03); tuned on fixtures, measured in F-04.
+MIN_SIMILARITY = 0.5
 
 
 class QuestionService:
     """Answers a question from the indexed documents, as a stream of events."""
 
-    def __init__(self, index: ChunkIndex, model: ChatModel, store: DocumentStore) -> None:
+    def __init__(
+        self,
+        index: ChunkIndex,
+        model: ChatModel,
+        store: DocumentStore,
+        min_similarity: float = MIN_SIMILARITY,
+    ) -> None:
+        self._min_similarity = min_similarity
         self._index = index
         self._model = model
         self._store = store

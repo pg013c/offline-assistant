@@ -14,6 +14,8 @@ from assistant.domain.answers import (
     AnswerEvent,
     AnswerText,
 )
+from assistant.domain.documents import Chunk
+from assistant.ports.chunk_index import ScoredChunk
 from assistant.services.documents import DocumentService
 from assistant.services.questions import QuestionService
 
@@ -32,7 +34,9 @@ def store() -> FakeDocumentStore:
 def services(store: FakeDocumentStore) -> tuple[DocumentService, QuestionService]:
     index = InMemoryChunkIndex()
     documents = DocumentService(store, index, TextDocumentParser(), InlineIngestionQueue())
-    return documents, QuestionService(index, FakeExtractiveChatModel(), store)
+    # The in-memory index returns only passages sharing a word with the question, so these
+    # tests need no similarity threshold.
+    return documents, QuestionService(index, FakeExtractiveChatModel(), store, min_similarity=0)
 
 
 def ask(service: QuestionService, question: str) -> list[AnswerEvent]:
@@ -136,3 +140,45 @@ def test_citations_carry_the_location_of_their_chunk(
     cited = next(chunk for chunk in store.load_chunks(document.id) if chunk.id == citation.chunk_id)
     assert citation.location == cited.location
     assert citation.location.heading_path == ("Logs",)
+
+
+class FixedIndex(InMemoryChunkIndex):
+    """Returns the given results whatever the query."""
+
+    def __init__(self, results: list[ScoredChunk]) -> None:
+        super().__init__()
+        self._results = results
+
+    def search(self, query: str, limit: int) -> list[ScoredChunk]:
+        return self._results[:limit]
+
+
+def hit(position: int, text: str, similarity: float) -> ScoredChunk:
+    return ScoredChunk(
+        chunk=Chunk(id=f"doc:{position}", document_id="doc", position=position, text=text),
+        score=1 / (position + 1),
+        similarity=similarity,
+    )
+
+
+def test_passages_below_the_minimum_similarity_are_not_used() -> None:
+    index = FixedIndex([hit(0, "Unrelated text.", 0.3), hit(1, "Barely related.", 0.49)])
+    questions = QuestionService(index, FakeExtractiveChatModel(), FakeDocumentStore(), 0.5)
+
+    events = ask(questions, "Anything?")
+
+    assert events[0] == AnswerText(text=NO_RELEVANT_PASSAGE)
+    assert not any(isinstance(event, AnswerCitation) for event in events)
+    end = events[-1]
+    assert isinstance(end, AnswerEnd)
+    assert end.found is False
+
+
+def test_the_best_passage_that_reaches_the_minimum_is_cited() -> None:
+    index = FixedIndex([hit(0, "Keyword-only match.", 0.2), hit(1, "Providers keep logs.", 0.7)])
+    questions = QuestionService(index, FakeExtractiveChatModel(), FakeDocumentStore(), 0.5)
+
+    events = ask(questions, "Do providers keep logs?")
+
+    [citation] = [event.citation for event in events if isinstance(event, AnswerCitation)]
+    assert citation.chunk_id == "doc:1"

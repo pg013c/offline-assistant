@@ -182,7 +182,7 @@
   - when none is left, the stream reports no relevant passage and `found=False`;
   - the best remaining hit is cited.
 - Change: `services/questions.py`.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 8. Delete, re-index and index reconciliation
