@@ -221,7 +221,7 @@
   - re-index returns `202` with `processing`, and the document settles `ready`.
 - Change: `api/routes/documents.py`, `api/errors.py`, `make api-client`.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 11. Delete and re-index in the document panel
 

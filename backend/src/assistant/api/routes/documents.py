@@ -51,3 +51,24 @@ async def upload_document(file: UploadFile, documents: Documents) -> DocumentRes
 def list_documents(documents: Documents) -> list[DocumentResponse]:
     """All uploaded documents."""
     return [_response(document) for document in documents.list_documents()]
+
+
+@router.delete(
+    "/{document_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={status.HTTP_404_NOT_FOUND: {"model": ErrorResponse}},
+)
+async def delete_document(document_id: str, documents: Documents) -> None:
+    """Delete a document, its files and its passages from the search index."""
+    await run_in_threadpool(documents.delete, document_id)
+
+
+@router.post(
+    "/{document_id}/reindex",
+    status_code=status.HTTP_202_ACCEPTED,
+    responses={status.HTTP_404_NOT_FOUND: {"model": ErrorResponse}},
+)
+async def reindex_document(document_id: str, documents: Documents) -> DocumentResponse:
+    """Parse and index a document again; it is `processing` until it is `ready` or `failed`."""
+    document = await run_in_threadpool(documents.reindex, document_id)
+    return _response(document)
