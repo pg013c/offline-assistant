@@ -9,8 +9,10 @@ from fastapi.routing import APIRoute
 
 from assistant import __version__
 from assistant.adapters.fakes.chat_model import FakeExtractiveChatModel
+from assistant.adapters.fakes.ingestion_queue import InlineIngestionQueue
 from assistant.adapters.file_document_store import LocalFileDocumentStore
 from assistant.adapters.keyword_index import KeywordChunkIndex
+from assistant.adapters.text_document_parser import TextDocumentParser
 from assistant.api.errors import register_error_handlers
 from assistant.api.routes import chat, documents, health
 from assistant.log import configure_logging
@@ -35,7 +37,8 @@ def create_app(settings: Settings) -> FastAPI:
     store = LocalFileDocumentStore(settings.data_dir)
     index = KeywordChunkIndex()
     model = CHAT_MODELS[settings.chat_model]()
-    document_service = DocumentService(store, index)
+    # Until the Docling parser and the background queue are wired in (F-02 step 9).
+    document_service = DocumentService(store, index, TextDocumentParser(), InlineIngestionQueue())
     question_service = QuestionService(index, model, store)
 
     @asynccontextmanager

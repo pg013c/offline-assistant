@@ -1,6 +1,5 @@
 """Documents and their chunks: identity and splitting."""
 
-import hashlib
 import re
 from dataclasses import dataclass, field
 from pathlib import PurePath
@@ -67,9 +66,9 @@ class ParsedDocument:
     blocks: tuple[Block, ...]
 
 
-def document_id_for(content: str) -> str:
-    """A stable id derived from the content, so identical uploads get the same id."""
-    return hashlib.sha256(content.encode()).hexdigest()[:DOCUMENT_ID_LENGTH]
+def document_id_for(content: bytes) -> str:
+    """A stable id derived from the uploaded bytes, so identical uploads get the same id."""
+    raise NotImplementedError
 
 
 def title_from_filename(filename: str) -> str:

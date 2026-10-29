@@ -6,8 +6,9 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
+from assistant.adapters.text_document_parser import TextDocumentParser
 from assistant.app import create_app
-from assistant.domain.documents import document_id_for, split_into_chunks
+from assistant.domain.documents import chunk_document, document_id_for
 from assistant.settings import Settings
 
 POLICY = (
@@ -68,8 +69,8 @@ def test_citation_events_carry_the_quoted_passage(client: TestClient) -> None:
 
     citation = next(event for event in events if event["type"] == "citation")
     assert citation["document_title"] == "policy"
-    text = POLICY.decode()
-    chunks = {chunk.id: chunk.text for chunk in split_into_chunks(document_id_for(text), text)}
+    parsed = TextDocumentParser().parse("policy.txt", POLICY)
+    chunks = {chunk.id: chunk.text for chunk in chunk_document(document_id_for(POLICY), parsed)}
     assert citation["quote"] in chunks[citation["chunk_id"]]
     assert citation["chunk_id"].startswith(citation["document_id"] + ":")
 
