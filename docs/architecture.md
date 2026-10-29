@@ -171,7 +171,7 @@ Chunk identity is stable across re-ingestion of the same file (derived from docu
 ## 7. Offline boundary
 
 - No component downloads anything at runtime. Models are fetched by an explicit `make models` step, which is the only step that needs the network, and can be replaced by copying from removable media.
-- Telemetry is disabled in every component that has it (Qdrant, Langfuse, Hugging Face libraries, Ollama, Docling).
+- Telemetry is disabled in every component that has it (Qdrant, Langfuse, Hugging Face libraries, Ollama, Docling, Promptfoo). Promptfoo also runs without update checks or sharing, and writes results only to the run's files (`--no-write`).
 - CI runs the end-to-end suite with container networking disabled (NFR-01).
 
 ## 8. Repository layout

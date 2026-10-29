@@ -70,6 +70,14 @@ Two projects side by side, apart from the backend and the frontend:
 - `make eval`: needs `make models`, `make qdrant` and `make eval-corpus`.
 - `make check-evals`: ruff, mypy and pytest for `evals/`, run by `make check` and by CI's Backend job.
 
+## Changes during the build
+
+- An expected source can also be a heading on the chunk's path (`heading`), for passages outside articles: Annex III is parsed under its title, not as an article.
+- Cases of the kind `spans-articles` count a hit on any of their sources. Whether retrieval finds all of them is not measured yet; F-09 adds answer-level checks that need several passages.
+- Cross-language cases accept the same article in either language (dataset version 2, review finding 8): the corpus holds both versions of each act.
+- Each run starts from an empty index and verifies the corpus against its pins (review findings 1 and 3), so `make eval` always measures the current code.
+- `scripts/lib/test-paths.sh` counts the datasets, tests, Promptfoo suite and corpus pins as evaluation inputs, not the harness code.
+
 ## Steps
 
 ### Step 1. Evaluation projects, corpus download and targets
