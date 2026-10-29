@@ -88,41 +88,14 @@ def chunk_document(
     """Split a parsed document into chunks along its structure.
 
     Each paragraph is a chunk, with the list items that follow it; a table is one chunk;
-    headings only set the location. Text longer than `max_chars` is split at sentence
-    boundaries, or between words when a sentence alone is too long; tables never are.
+    headings only set the location. In legal texts, each numbered paragraph of an article
+    is a chunk with everything up to the next one, and no chunk crosses an article. Text
+    longer than `max_chars` is split at sentence boundaries, or between words when a
+    sentence alone is too long; tables never are.
     """
-    pieces: list[tuple[str, ChunkLocation]] = []
-    headings: list[tuple[int, str]] = []
-    lines: list[str] = []
-    location = ChunkLocation()
-
-    def flush() -> None:
-        if lines:
-            pieces.extend((part, location) for part in _within_limit("\n".join(lines), max_chars))
-            lines.clear()
-
+    chunker = _Chunker(max_chars)
     for block in parsed.blocks:
-        text = block.text.strip()
-        if not text:
-            continue
-        if block.kind == "heading":
-            flush()
-            level = block.level or 1
-            headings = [*(entry for entry in headings if entry[0] < level), (level, text)]
-            continue
-        if block.kind == "list_item" and lines:
-            lines.append(text)
-            continue
-        flush()
-        location = ChunkLocation(
-            heading_path=tuple(title for _, title in headings), page=block.page
-        )
-        if block.kind == "table":
-            pieces.append((text, location))
-        else:
-            lines.append(text)
-    flush()
-
+        chunker.add(block)
     return [
         Chunk(
             id=f"{document_id}:{position}",
@@ -131,8 +104,94 @@ def chunk_document(
             text=text,
             location=location,
         )
-        for position, (text, location) in enumerate(pieces)
+        for position, (text, location) in enumerate(chunker.finish())
     ]
+
+
+# "Article 6", "Artykuł 6", "Art. 6a"; a heading may continue with the title.
+_ARTICLE = re.compile(r"^(?:Article|Artykuł|Art\.)\s+(\d+[a-z]*)\b", re.IGNORECASE)
+_NUMBERED_PARAGRAPH = re.compile(r"^(\d+[a-z]?)\.\s")
+
+
+class _Chunker:
+    """Walks blocks in reading order, keeping track of headings, article and paragraph."""
+
+    def __init__(self, max_chars: int) -> None:
+        self._max_chars = max_chars
+        self._pieces: list[tuple[str, ChunkLocation]] = []
+        self._headings: list[tuple[int, str]] = []
+        self._lines: list[str] = []
+        self._location = ChunkLocation()
+        self._article: str | None = None
+        self._article_level = 1
+        self._paragraph: str | None = None
+        # True between an article heading and its first content: the next heading is its title.
+        self._expecting_title = False
+
+    def add(self, block: Block) -> None:
+        text = block.text.strip()
+        if not text:
+            return
+        article = _ARTICLE.match(text)
+        if article and (block.kind == "heading" or article.end() == len(text)):
+            self._start_article(article.group(1), text, block.level)
+        elif block.kind == "heading":
+            self._heading(text, block.level or 1)
+        else:
+            self._content(block.kind, text, block.page)
+
+    def finish(self) -> list[tuple[str, ChunkLocation]]:
+        self._flush()
+        return self._pieces
+
+    def _start_article(self, number: str, text: str, level: int | None) -> None:
+        self._flush()
+        if level is None:
+            level = self._article_level if self._article else len(self._headings) + 1
+        self._set_heading(level, text)
+        self._article, self._article_level, self._paragraph = number, level, None
+        self._expecting_title = True
+
+    def _heading(self, text: str, level: int) -> None:
+        if self._expecting_title:
+            self._headings.append((level, text))
+            self._expecting_title = False
+            return
+        self._flush()
+        self._article = self._paragraph = None
+        self._set_heading(level, text)
+
+    def _set_heading(self, level: int, text: str) -> None:
+        self._headings = [*(entry for entry in self._headings if entry[0] < level), (level, text)]
+
+    def _content(self, kind: BlockKind, text: str, page: int | None) -> None:
+        self._expecting_title = False
+        numbered = _NUMBERED_PARAGRAPH.match(text) if self._article else None
+        if numbered and kind == "paragraph":
+            self._paragraph = numbered.group(1)
+        elif kind != "table" and self._lines and (self._article or kind == "list_item"):
+            # Inside an article everything up to the next numbered paragraph belongs together.
+            self._lines.append(text)
+            return
+        self._flush()
+        self._location = ChunkLocation(
+            heading_path=tuple(title for _, title in self._headings),
+            article=self._article,
+            paragraph=self._paragraph,
+            page=page,
+        )
+        if kind == "table":
+            self._pieces.append((text, self._location))
+        else:
+            self._lines.append(text)
+
+    def _flush(self) -> None:
+        if self._lines:
+            joined = "\n".join(self._lines)
+            self._pieces.extend(
+                (part, self._location) for part in _within_limit(joined, self._max_chars)
+            )
+            self._lines.clear()
 
 
 def _within_limit(text: str, max_chars: int) -> list[str]:

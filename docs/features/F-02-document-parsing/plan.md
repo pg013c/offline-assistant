@@ -65,7 +65,7 @@
 - Tests first: same file: `Article 6` and `Artykuł 6` set the article; `1.`, `2.` set the paragraph and start a chunk; points `(a)` join their paragraph; no chunk holds text from two articles; an article without numbered paragraphs is one chunk (or split by size).
 - Change: `domain/documents.py`.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 4. Parser port, text parser and fake
 
