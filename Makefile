@@ -97,7 +97,9 @@ api-client: node-version ## Regenerate the TypeScript client from the backend's 
 
 test: test-backend test-frontend ## Tests only
 
-e2e: node-version ## Browser journeys: real API with Docling and the fake model; needs `make models`
+e2e: node-version ## Browser journeys on the full stack and the test model; needs `make models` and `make qdrant`
+	@curl -fs http://127.0.0.1:$(QDRANT_PORT)/readyz >/dev/null || { \
+	  echo "Qdrant is not running on port $(QDRANT_PORT). Start it with: make qdrant"; exit 1; }
 	$(FRONTEND) e2e
 
 test-backend: ## Backend tests
