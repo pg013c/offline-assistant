@@ -125,12 +125,20 @@ def create_app(settings: Settings, adapters: Adapters | None = None) -> FastAPI:
         restored = await asyncio.to_thread(document_service.restore)
         structlog.get_logger(__name__).info("documents_restored", count=restored)
 
+    async def warm_up(reranker: Reranker) -> None:
+        # The reranker loads on its first score; doing it now spares the first question.
+        await asyncio.to_thread(reranker.score, "warm-up", ["warm-up"])
+        structlog.get_logger(__name__).info("reranker_loaded", model=reranker.model_id)
+
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         restoring = asyncio.create_task(restore())
+        warming = asyncio.create_task(warm_up(adapters.reranker)) if adapters.reranker else None
         yield
         adapters.queue.close()
         await restoring
+        if warming:
+            await warming
 
     app = FastAPI(
         lifespan=lifespan,
