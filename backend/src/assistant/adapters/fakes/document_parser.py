@@ -3,6 +3,7 @@
 from collections.abc import Mapping
 
 from assistant.domain.documents import ParsedDocument
+from assistant.domain.errors import DocumentUnreadable
 
 
 class FakeDocumentParser:
@@ -13,4 +14,6 @@ class FakeDocumentParser:
         self._unreadable = dict(unreadable or {})
 
     def parse(self, filename: str, content: bytes) -> ParsedDocument:
-        raise NotImplementedError
+        if filename in self._unreadable:
+            raise DocumentUnreadable(self._unreadable[filename])
+        return self._document
