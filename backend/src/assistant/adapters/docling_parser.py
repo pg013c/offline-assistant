@@ -5,7 +5,6 @@ seconds and is not needed by anything else.
 """
 
 import json
-import re
 import shutil
 import subprocess
 import threading
@@ -31,7 +30,6 @@ REQUIRED_MODELS = {
     "docling-project--docling-models": "docling-models (TableFormer)",
 }
 MANIFEST = "manifest.json"
-_NUMBERED = re.compile(r"^\d+[a-z]?\.$")
 
 
 class ParserNotReady(Exception):
@@ -185,10 +183,9 @@ def _blocks(document: "DoclingDocument") -> Iterator[Block]:
 
 
 def _list_item(marker: str, text: str, page: int | None) -> Block:
-    """Numbered paragraphs of legal texts arrive as list items with the number apart."""
+    """Docling keeps a list marker apart from the text; numbered paragraphs of legal texts
+    arrive this way too, and the chunker needs the number in the text."""
     marker = marker.strip()
-    if marker and _NUMBERED.match(marker):
-        return Block(kind="paragraph", text=f"{marker} {text}", page=page)
     if marker and not text.startswith(marker):
         text = f"{marker} {text}"
     return Block(kind="list_item", text=text, page=page)

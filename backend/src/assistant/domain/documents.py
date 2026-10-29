@@ -2,13 +2,15 @@
 
 import hashlib
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import PurePath
 from typing import Literal
 
 DOCUMENT_ID_LENGTH = 16
 MAX_CHUNK_CHARS = 2000
-_SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
+# A sentence: text up to and including its end mark, or to the end of the text.
+_SENTENCE = re.compile(r"\S.*?(?:[.!?](?=\s|$)|$)", re.DOTALL)
+_WORD = re.compile(r"\S+")
 
 
 type DocumentStatus = Literal["processing", "ready", "failed"]
@@ -114,7 +116,8 @@ class _Chunker:
         self._max_chars = max_chars
         self._pieces: list[tuple[str, ChunkLocation]] = []
         self._headings: list[tuple[int, str]] = []
-        self._lines: list[str] = []
+        # The text of the chunk being built, one entry per block, with the block's page.
+        self._lines: list[tuple[str, int | None]] = []
         self._location = ChunkLocation()
         self._article: str | None = None
         self._article_level = 1
@@ -160,12 +163,13 @@ class _Chunker:
 
     def _content(self, kind: BlockKind, text: str, page: int | None) -> None:
         self._expecting_title = False
-        numbered = _NUMBERED_PARAGRAPH.match(text) if self._article else None
-        if numbered and kind == "paragraph":
+        # Parsers deliver numbered paragraphs as paragraphs or as numbered list items.
+        numbered = _NUMBERED_PARAGRAPH.match(text) if self._article and kind != "table" else None
+        if numbered:
             self._paragraph = numbered.group(1)
         elif kind != "table" and self._lines and (self._article or kind == "list_item"):
             # Inside an article everything up to the next numbered paragraph belongs together.
-            self._lines.append(text)
+            self._lines.append((text, page))
             return
         self._flush()
         self._location = ChunkLocation(
@@ -177,32 +181,52 @@ class _Chunker:
         if kind == "table":
             self._pieces.append((text, self._location))
         else:
-            self._lines.append(text)
+            self._lines.append((text, page))
 
     def _flush(self) -> None:
-        if self._lines:
-            joined = "\n".join(self._lines)
-            self._pieces.extend(
-                (part, self._location) for part in _within_limit(joined, self._max_chars)
-            )
-            self._lines.clear()
+        if not self._lines:
+            return
+        joined = "\n".join(text for text, _ in self._lines)
+        # Where each block starts in the joined text, so each part gets the page it starts on.
+        starts: list[tuple[int, int | None]] = []
+        offset = 0
+        for text, page in self._lines:
+            starts.append((offset, page))
+            offset += len(text) + 1
+        for part, start in _within_limit(joined, self._max_chars):
+            page = next(page for begin, page in reversed(starts) if begin <= start)
+            self._pieces.append((part, replace(self._location, page=page)))
+        self._lines.clear()
 
 
-def _within_limit(text: str, max_chars: int) -> list[str]:
-    """Text in parts of at most `max_chars`, split at sentence ends, else between words."""
+def _within_limit(text: str, max_chars: int) -> list[tuple[str, int]]:
+    """Text in parts of at most `max_chars`, each with its start offset in `text`.
+
+    Splits at sentence ends, else between words; a word longer than the limit is cut.
+    """
     if len(text) <= max_chars:
-        return [text]
-    units: list[str] = []
-    for sentence in _SENTENCE_END.split(text):
-        units.extend([sentence] if len(sentence) <= max_chars else sentence.split())
-    parts: list[str] = []
-    current = ""
-    for unit in units:
+        return [(text, 0)]
+    units: list[tuple[str, int]] = []
+    for sentence in _SENTENCE.finditer(text):
+        if len(sentence.group()) <= max_chars:
+            units.append((sentence.group(), sentence.start()))
+            continue
+        for word in _WORD.finditer(sentence.group()):
+            start = sentence.start() + word.start()
+            units.extend(
+                (word.group()[cut : cut + max_chars], start + cut)
+                for cut in range(0, len(word.group()), max_chars)
+            )
+    parts: list[tuple[str, int]] = []
+    current, current_start = "", 0
+    for unit, start in units:
         candidate = f"{current} {unit}" if current else unit
-        if len(candidate) <= max_chars or not current:
+        if not current:
+            current, current_start = unit, start
+        elif len(candidate) <= max_chars:
             current = candidate
         else:
-            parts.append(current)
-            current = unit
-    parts.append(current)
+            parts.append((current, current_start))
+            current, current_start = unit, start
+    parts.append((current, current_start))
     return parts
