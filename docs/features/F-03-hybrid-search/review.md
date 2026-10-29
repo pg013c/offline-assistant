@@ -36,3 +36,20 @@ Decision is filled in by the human: `fix`, `backlog (F-xx)`, or `reject: <reason
 
 | # | Commits |
 |---|---|
+| 1 | `5a67077` test, `b18a72f` fix (ingestion jobs carry a generation; every write checks under the lock that the job is current) |
+| 2 | `9e4cbc4` test, `27a36c2` fix (search in a worker thread) |
+| 3 | `9e4cbc4` test, `27a36c2` fix (restore as a background task at startup) |
+| 4 | `11ca797` test, `49c6766` fix (ten candidates, then the threshold, then three; an exact-term hit below it is not cited, recorded for F-04) |
+| 5 | `49c6766` (`similarity` required, comment corrected) |
+| 6 | `fafecb2` test, `93e7bb1` fix |
+| 7 | `fafecb2` test, `93e7bb1` fix |
+| 8 | `11ca797` test, `49c6766` fix (one default in Settings, 0 to 1) |
+| 9 | `a380dd2` test (the Annex III case shows a closer competitor; the contract case keeps its form, see commit) |
+| 10 | `ec50c31` refactor, `86bdc78` test, `42ad837` refactor |
+| 11 | `24759fa` build |
+| 12 | `deaea26` refactor (`best_first` shared through the port) |
+| 13 | rejected: no change |
+| 14 | rejected: documented in `architecture.md` in `239a60c` |
+| 15 | moved to [backlog follow-ups](../../backlog.md#follow-ups) for F-10 in `4522773` |
+| 16 | `12c75a2` refactor |
+| 17 | `239a60c` docs (`plan.md`, "Changes during the build") |
