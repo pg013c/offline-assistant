@@ -1,6 +1,6 @@
 # 0015. Parse documents with Docling and Tesseract, models fetched ahead of time
 
-- Status: accepted
+- Status: accepted, amended by [0016](0016-docling-dependencies-and-pinned-models.md) (proposed)
 - Date: 2026-10-29
 - Related: FR-01, FR-02, FR-03, NFR-01, NFR-05, NFR-07, F-02, ADR 0002, ADR 0004
 

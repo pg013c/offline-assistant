@@ -68,7 +68,7 @@ make setup
 make models
 ```
 
-`make models` downloads the document parsing models (about 670 MB) into `ASSISTANT_MODELS_DIR`. It is the only step that needs the network; nothing is downloaded at runtime ([ADR 0004](docs/adr/0004-offline-first-no-egress.md)).
+`make models` downloads the document parsing models (about 500 MB, pinned by commit and checked by hash) into `ASSISTANT_MODELS_DIR`. It is the only step that needs the network; nothing is downloaded at runtime ([ADR 0004](docs/adr/0004-offline-first-no-egress.md)).
 
 ```bash
 make dev
@@ -104,6 +104,8 @@ Code: [MIT](LICENSE). Models, tools and datasets keep their own licences:
 | [docling-layout-heron](https://huggingface.co/docling-project/docling-layout-heron) | page layout model | Apache-2.0 |
 | [TableFormer](https://huggingface.co/docling-project/docling-models) | table structure model | CDLA-Permissive-2.0 |
 | [Tesseract](https://github.com/tesseract-ocr/tesseract) and its `eng`/`pol` data | OCR | Apache-2.0 |
-| [PyTorch](https://pytorch.org/) | runs the parsing models | BSD-3-Clause |
+| [PyTorch](https://pytorch.org/) and torchvision | run the parsing models | BSD-3-Clause |
 | [OpenCV](https://opencv.org/) (headless) | image handling for the table model | Apache-2.0 |
 | [SciPy](https://scipy.org/) | OCR region detection in Docling | BSD-3-Clause |
+| [pypdfium2](https://github.com/pypdfium2-team/pypdfium2) (PDFium) | PDF text and page checks | Apache-2.0 or BSD-3-Clause |
+| [huggingface_hub](https://github.com/huggingface/huggingface_hub) | `make models` downloads | Apache-2.0 |
