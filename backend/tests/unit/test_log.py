@@ -43,6 +43,9 @@ def test_events_below_the_configured_level_are_dropped(
 def test_app_factory_configures_logging(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("ASSISTANT_DATA_DIR", str(tmp_path))
     monkeypatch.setenv("ASSISTANT_DOCUMENT_PARSER", "text-only")
+    # main() sets these; recording them here restores them after the test.
+    monkeypatch.setenv("HF_HUB_OFFLINE", "0")
+    monkeypatch.setenv("TRANSFORMERS_OFFLINE", "0")
 
     main()
 

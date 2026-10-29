@@ -12,6 +12,9 @@ from assistant.settings import SettingsError, load_settings, variable_name
 def clean_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     for name in ("ASSISTANT_DATA_DIR", "ASSISTANT_MODELS_DIR", "ASSISTANT_DOCUMENT_PARSER"):
         monkeypatch.delenv(name, raising=False)
+    # main() sets these; recording them here restores them after each test.
+    monkeypatch.setenv("HF_HUB_OFFLINE", "0")
+    monkeypatch.setenv("TRANSFORMERS_OFFLINE", "0")
 
 
 def test_missing_data_dir_fails_with_the_variable_name() -> None:
@@ -80,8 +83,6 @@ def test_startup_fails_when_parsing_models_are_missing(
 def test_the_app_forbids_model_downloads(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("ASSISTANT_DATA_DIR", str(tmp_path))
     monkeypatch.setenv("ASSISTANT_DOCUMENT_PARSER", "text-only")
-    monkeypatch.delenv("HF_HUB_OFFLINE", raising=False)
-    monkeypatch.delenv("TRANSFORMERS_OFFLINE", raising=False)
 
     main()
 
