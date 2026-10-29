@@ -36,3 +36,8 @@ How each part of the system is verified ([ADR 0006](../adr/0006-tdd-for-code-eva
 - **TEST-21** The dataset covers both languages, out-of-scope questions, cross-article questions, and prompt-injection documents.
 - **TEST-22** Dataset files are not edited in the same commit as the code or prompt they evaluate.
 - **TEST-23** LLM-as-judge assertions use a fixed judge model and a written rubric committed with the dataset. Judge results are spot-checked by hand when a metric moves by more than 5 points.
+- **TEST-24** `make eval` fails when a metric of the default mode drops more than 5 points from the recorded baseline, or falls below its floor in ADR 0020. The floors are:
+  - answerable@3 ≥ 85 %, recall@3 ≥ 85 %, recall@10 ≥ 95 %, MRR ≥ 0.75;
+  - out-of-scope refused ≥ 90 %, in-scope unanswered ≤ 5 %.
+
+  Search latency is reported, not gated.
