@@ -1,4 +1,5 @@
 import asyncio
+import time
 
 import pytest
 
@@ -182,3 +183,31 @@ def test_the_best_passage_that_reaches_the_minimum_is_cited() -> None:
 
     [citation] = [event.citation for event in events if isinstance(event, AnswerCitation)]
     assert citation.chunk_id == "doc:1"
+
+
+class SlowIndex(InMemoryChunkIndex):
+    """Search blocks its thread for a while, as embedding and a Qdrant call do."""
+
+    def search(self, query: str, limit: int) -> list[ScoredChunk]:
+        time.sleep(0.2)
+        return []
+
+
+def test_searching_does_not_block_other_work_on_the_event_loop() -> None:
+    questions = QuestionService(SlowIndex(), FakeExtractiveChatModel(), FakeDocumentStore())
+    ticks = 0
+
+    async def ticker() -> None:
+        nonlocal ticks
+        while True:
+            await asyncio.sleep(0.01)
+            ticks += 1
+
+    async def run() -> None:
+        task = asyncio.create_task(ticker())
+        _ = [event async for event in questions.ask("Anything?")]
+        task.cancel()
+
+    asyncio.run(run())
+
+    assert ticks >= 5
