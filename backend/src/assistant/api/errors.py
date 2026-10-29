@@ -10,6 +10,7 @@ from assistant.domain.errors import (
     DocumentRejected,
     FileTooLarge,
     NotUtf8Text,
+    RerankerOff,
     UnsupportedFileType,
 )
 
@@ -42,6 +43,14 @@ async def _document_not_found(_: Request, error: Exception) -> JSONResponse:
     return JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content=body.model_dump())
 
 
+async def _reranker_off(_: Request, __: Exception) -> JSONResponse:
+    body = ErrorResponse(
+        code="reranker_off",
+        message="Reranking was asked for, but the server runs with ASSISTANT_RERANKER=off.",
+    )
+    return JSONResponse(status_code=status.HTTP_409_CONFLICT, content=body.model_dump())
+
+
 async def _invalid_request(_: Request, error: Exception) -> JSONResponse:
     issues = error.errors() if isinstance(error, RequestValidationError) else []
     body = ErrorResponse(
@@ -64,4 +73,5 @@ def register_error_handlers(app: FastAPI) -> None:
     """Install the handlers for every error the API can report."""
     app.add_exception_handler(DocumentRejected, _document_rejected)
     app.add_exception_handler(DocumentNotFound, _document_not_found)
+    app.add_exception_handler(RerankerOff, _reranker_off)
     app.add_exception_handler(RequestValidationError, _invalid_request)

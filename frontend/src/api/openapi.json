@@ -339,7 +339,7 @@
           "search"
         ],
         "summary": "Search Passages",
-        "description": "The best-matching passages for a query, best first, without a similarity threshold.\n\nUsed by the evaluation harness and for debugging retrieval.",
+        "description": "The best-matching passages for a query, best first, without a similarity threshold.\n\nUsed by the evaluation harness and for debugging retrieval. Asking for reranking when\nthe server has no reranker is a 409 `reranker_off`.",
         "operationId": "search_passages",
         "requestBody": {
           "content": {
@@ -769,6 +769,17 @@
           "similarity": {
             "type": "number",
             "title": "Similarity"
+          },
+          "rerank_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rerank Score"
           }
         },
         "type": "object",
@@ -778,10 +789,11 @@
           "document_title",
           "location",
           "text",
-          "similarity"
+          "similarity",
+          "rerank_score"
         ],
         "title": "SearchHit",
-        "description": "A passage found for a query; `similarity` is the dense cosine similarity (0 to 1)."
+        "description": "A passage found for a query; `similarity` is the dense cosine similarity (0 to 1).\n\n`rerank_score` is the reranker's score (0 to 1) when the hits were reranked, else null."
       },
       "SearchRequest": {
         "properties": {
@@ -797,6 +809,17 @@
             "minimum": 1.0,
             "title": "Limit",
             "default": 10
+          },
+          "rerank": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rerank"
           }
         },
         "type": "object",

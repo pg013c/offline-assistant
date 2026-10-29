@@ -15,9 +15,10 @@ Questions = Annotated[QuestionService, Depends(get_question_service)]
 async def search_passages(request: SearchRequest, questions: Questions) -> list[SearchHit]:
     """The best-matching passages for a query, best first, without a similarity threshold.
 
-    Used by the evaluation harness and for debugging retrieval.
+    Used by the evaluation harness and for debugging retrieval. Asking for reranking when
+    the server has no reranker is a 409 `reranker_off`.
     """
-    found = await questions.search(request.query, request.limit)
+    found = await questions.search(request.query, request.limit, request.rerank)
     return [
         SearchHit(
             chunk_id=passage.chunk.id,
@@ -31,6 +32,7 @@ async def search_passages(request: SearchRequest, questions: Questions) -> list[
             ),
             text=passage.chunk.text,
             similarity=passage.similarity,
+            rerank_score=passage.rerank_score,
         )
         for passage in found
     ]

@@ -8,6 +8,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from assistant.adapters.model_loading import MODEL_LOADING
 from assistant.adapters.pinned_models import BGE_M3, verify_models
 
 if TYPE_CHECKING:
@@ -52,11 +53,13 @@ class SentenceTransformerEmbedder:
     def _get_model(self) -> "SentenceTransformer":
         with self._lock:
             if self._model is None:
-                import torch
-                from sentence_transformers import SentenceTransformer
-
-                device = self._device or ("mps" if torch.backends.mps.is_available() else "cpu")
-                self._model = SentenceTransformer(
-                    str(self._path), device=device, local_files_only=True
-                )
+                self._model = self._load()
             return self._model
+
+    def _load(self) -> "SentenceTransformer":
+        with MODEL_LOADING:
+            import torch
+            from sentence_transformers import SentenceTransformer
+
+            device = self._device or ("mps" if torch.backends.mps.is_available() else "cpu")
+            return SentenceTransformer(str(self._path), device=device, local_files_only=True)

@@ -12,7 +12,7 @@ Status: `planned` → `spec` → `building` → `review` → `done`.
 | F-03 | Multilingual embeddings, Qdrant storage, hybrid search | FR-04, FR-05, FR-07 | 2 | done |
 | F-04 | Evaluation harness: Promptfoo wired to the API, first retrieval cases (recall@k against expected chunks) | FR-42, FR-43 | 2 | done |
 | F-04a | Article context in the index: article label and title indexed with each chunk, section titles not chunked, measured with `make eval` | FR-03, FR-05 | 2 | done |
-| F-05 | Reranker, switchable, measured with and without | FR-06, FR-43 | 2 | planned |
+| F-05 | Reranker, switchable, measured with and without | FR-06, FR-43 | 2 | done |
 | F-06 | OpenAI-compatible chat adapter with tool calling, JSON schema output, validation and retries | FR-13, FR-40 | 2 | planned |
 | F-07 | Agent with tools, resolvable citations, refusal, prompt-injection defence | FR-10–FR-12, FR-14 | 2 | planned |
 | F-08 | Chat UI with clickable citations, document library, model selector, offline indicator | FR-60–FR-62 | 2 | planned |
@@ -36,5 +36,5 @@ Small changes found during reviews, done as chores outside the feature that foun
 | Use `found=false` in the UI for a proper "no answer" state | F-01 review #18 | planned for F-07 |
 | Refuse a non-local `ASSISTANT_QDRANT_URL` unless network mode is on (Compose service names allowed) | F-03 review #15 | planned for F-10 |
 | Index each chunk with its article number and title, and keep section titles out of chunks (retrieval baseline causes 1 and 2) | F-04 baseline | became F-04a |
-| Record the highest out-of-scope similarity in the evaluation report, so the threshold margin is a measured figure | F-04a review #7 | planned for F-05 |
+| Record the highest out-of-scope similarity in the evaluation report, so the threshold margin is a measured figure | F-04a review #7 | done in F-05 |
 | Decide whether paragraph-level cases accept a sibling paragraph that answers too (dataset-only commit; cross-language cases done in dataset version 2) | F-04 baseline | planned after the indexing change |

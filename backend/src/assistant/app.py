@@ -11,6 +11,7 @@ from fastapi import FastAPI
 from fastapi.routing import APIRoute
 
 from assistant import __version__
+from assistant.adapters.bge_reranker import BgeReranker
 from assistant.adapters.docling_parser import DoclingDocumentParser
 from assistant.adapters.fakes.chat_model import FakeExtractiveChatModel
 from assistant.adapters.fakes.chunk_index import InMemoryChunkIndex
@@ -30,6 +31,7 @@ from assistant.ports.chunk_index import ChunkIndex
 from assistant.ports.document_parser import DocumentParser
 from assistant.ports.document_store import DocumentStore
 from assistant.ports.ingestion_queue import IngestionQueue
+from assistant.ports.reranker import Reranker
 from assistant.services.documents import DocumentService
 from assistant.services.questions import QuestionService
 from assistant.settings import Settings, load_settings
@@ -58,12 +60,28 @@ class Adapters:
     parser: DocumentParser
     queue: IngestionQueue
     chat_model: ChatModel
+    reranker: Reranker | None = None
+
+
+def reranker_for(settings: Settings, device: str | None = None) -> Reranker | None:
+    """The pinned reranker when reranking is on; it fails here if its model is missing.
+
+    `auto` turns it on for the device it would run on (`device`, by default the one torch
+    finds) only when that is an Apple GPU.
+    """
+    if settings.reranker == "off":
+        return None
+    if settings.reranker == "auto" and (device or BgeReranker.default_device()) != "mps":
+        return None
+    BgeReranker.ensure_ready(settings.models_dir)
+    return BgeReranker(settings.models_dir)
 
 
 def build_adapters(settings: Settings) -> Adapters:
     """The real adapters; each fails here, naming what is missing, if it cannot work."""
     parser = document_parser_for(settings)
     SentenceTransformerEmbedder.ensure_ready(settings.models_dir)
+    reranker = reranker_for(settings)
     embedder = SentenceTransformerEmbedder(settings.models_dir)
     index = QdrantChunkIndex.connect(
         settings.qdrant_url, embedder, prefix=settings.qdrant_collection_prefix
@@ -74,6 +92,7 @@ def build_adapters(settings: Settings) -> Adapters:
         parser=parser,
         queue=ThreadIngestionQueue(),
         chat_model=CHAT_MODELS[settings.chat_model](),
+        reranker=reranker,
     )
 
 
@@ -100,7 +119,11 @@ def create_app(settings: Settings, adapters: Adapters | None = None) -> FastAPI:
         adapters.store, adapters.index, adapters.parser, adapters.queue
     )
     question_service = QuestionService(
-        adapters.index, adapters.chat_model, adapters.store, settings.min_similarity
+        adapters.index,
+        adapters.chat_model,
+        adapters.store,
+        settings.min_similarity,
+        adapters.reranker,
     )
 
     async def restore() -> None:
@@ -108,12 +131,20 @@ def create_app(settings: Settings, adapters: Adapters | None = None) -> FastAPI:
         restored = await asyncio.to_thread(document_service.restore)
         structlog.get_logger(__name__).info("documents_restored", count=restored)
 
+    async def warm_up(reranker: Reranker) -> None:
+        # The reranker loads on its first score; doing it now spares the first question.
+        await asyncio.to_thread(reranker.score, "warm-up", ["warm-up"])
+        structlog.get_logger(__name__).info("reranker_loaded", model=reranker.model_id)
+
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         restoring = asyncio.create_task(restore())
+        warming = asyncio.create_task(warm_up(adapters.reranker)) if adapters.reranker else None
         yield
         adapters.queue.close()
         await restoring
+        if warming:
+            await warming
 
     app = FastAPI(
         lifespan=lifespan,

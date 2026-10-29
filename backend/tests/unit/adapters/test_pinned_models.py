@@ -6,6 +6,7 @@ import pytest
 
 from assistant.adapters.pinned_models import (
     BGE_M3,
+    BGE_RERANKER,
     PINNED_MODELS,
     ModelsNotReady,
     PinnedModel,
@@ -54,6 +55,7 @@ def test_every_model_is_pinned_to_a_commit_with_file_hashes() -> None:
         "docling-project/docling-layout-heron",
         "docling-project/docling-models",
         "BAAI/bge-m3",
+        "BAAI/bge-reranker-v2-m3",
     }
     for model in PINNED_MODELS:
         assert re.fullmatch(r"[0-9a-f]{40}", model.revision)
@@ -68,4 +70,22 @@ def test_bge_m3_keeps_the_dense_model_and_its_tokenizer_only() -> None:
     assert not any(
         path.startswith(("onnx/", "imgs/")) or path in {"colbert_linear.pt", "sparse_linear.pt"}
         for path in BGE_M3.files
+    )
+
+
+def test_the_reranker_is_pinned_to_the_revision_of_adr_0019() -> None:
+    assert BGE_RERANKER in PINNED_MODELS
+    assert BGE_RERANKER.repository == "BAAI/bge-reranker-v2-m3"
+    assert BGE_RERANKER.revision == "953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e"
+    assert {
+        "config.json",
+        "model.safetensors",
+        "sentencepiece.bpe.model",
+        "special_tokens_map.json",
+        "tokenizer.json",
+        "tokenizer_config.json",
+    } == set(BGE_RERANKER.files)
+    # Hashes of the large files as Hugging Face publishes them.
+    assert BGE_RERANKER.files["model.safetensors"] == (
+        "d9e3e081faff1eefb84019509b2f5558fd74c1a05a2c7db22f74174fcedb5286"
     )

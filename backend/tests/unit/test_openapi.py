@@ -16,3 +16,11 @@ def test_the_schema_is_exported_without_parsing_models(
     schema = json.loads(openapi_json())
 
     assert "/api/documents" in schema["paths"]
+
+
+def test_searches_can_choose_reranking_and_hits_carry_its_score() -> None:
+    schemas = json.loads(openapi_json())["components"]["schemas"]
+
+    assert "rerank" in schemas["SearchRequest"]["properties"]
+    assert "rerank" not in schemas["SearchRequest"].get("required", [])
+    assert "rerank_score" in schemas["SearchHit"]["properties"]

@@ -1,5 +1,7 @@
 # Retrieval with article context, 2026-10-29
 
+> Superseded by [retrieval with the reranker](2026-10-29-retrieval-reranker.md) (F-05), which `make eval` now gates against. This record is the hybrid mode of that comparison.
+
 The measurement of F-04a: each chunk is indexed with its heading path (article label and title, annex label and title), and section titles no longer become chunks. It replaces the [F-04 baseline](2026-10-29-retrieval-baseline.md) as the baseline `make eval` gates against (`retrieval-baseline.json`).
 
 ## Setup

@@ -1,12 +1,13 @@
-# Retrieval suite (F-04, ADR 0018). The harness (harness/run.py) writes the tests file and
+# Retrieval suite (F-04, F-05, ADR 0018). The harness (harness/run.py) writes the tests file and
 # sets EVAL_API_URL; Promptfoo only collects the ranked passages, and Python scores them.
 description: Retrieval on the AI Act and the GDPR
 prompts:
   - "{{question}}"
 providers:
+  # The same API and index, searched with and without the reranker (F-05).
   - id: https
-    label: api-search
-    config:
+    label: reranked
+    config: &search
       url: "{{ env.EVAL_API_URL }}/api/search"
       method: POST
       headers:
@@ -14,8 +15,17 @@ providers:
       body:
         query: "{{question}}"
         limit: 10
+        rerank: true
       # Keep only what the metrics need: the ranked chunk ids and their similarity.
       transformResponse: "JSON.stringify(json.map((p) => ({ chunk_id: p.chunk_id, similarity: p.similarity })))"
+  - id: https
+    label: hybrid
+    config:
+      <<: *search
+      body:
+        query: "{{question}}"
+        limit: 10
+        rerank: false
 defaultTest:
   assert:
     # Scoring happens in Python; here every response that parses as JSON passes.

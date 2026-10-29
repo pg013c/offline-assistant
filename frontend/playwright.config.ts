@@ -39,6 +39,9 @@ export default defineConfig({
         // A collection of its own: restore on the empty data directory clears it, and must not
         // clear the one `make dev` uses.
         ASSISTANT_QDRANT_COLLECTION_PREFIX: 'e2e',
+        // The journeys check the UI; reranking is covered by its tests and by `make eval`. On
+        // CI's CPU it costs seconds per question (F-05 record), more than the journeys wait.
+        ASSISTANT_RERANKER: 'off',
       },
       reuseExistingServer: false,
     },

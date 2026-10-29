@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 from qdrant_client import QdrantClient
 
+from assistant.adapters.pinned_models import ModelsNotReady
 from assistant.adapters.qdrant_chunk_index import IndexNotReady
 from assistant.app import main
 
@@ -51,3 +52,32 @@ def test_an_unreachable_qdrant_stops_the_app_with_the_variable_and_command(
 
     with pytest.raises(IndexNotReady, match=r"ASSISTANT_QDRANT_URL.*make qdrant"):
         main()
+
+
+def test_a_missing_reranker_stops_the_app_naming_it(
+    environment: str, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    # Every model but the reranker.
+    models = tmp_path / "models"
+    models.mkdir()
+    for kind in ("docling", "embeddings"):
+        (models / kind).symlink_to(MODELS_DIR / kind)
+    monkeypatch.setenv("ASSISTANT_MODELS_DIR", str(models))
+    # Explicitly on: the automatic default leaves the reranker off on a CPU, as in CI.
+    monkeypatch.setenv("ASSISTANT_RERANKER", "on")
+
+    with pytest.raises(ModelsNotReady, match=r"BAAI/bge-reranker-v2-m3.*make models"):
+        main()
+
+
+def test_with_reranking_off_the_app_starts_without_the_reranker(
+    environment: str, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    models = tmp_path / "models"
+    models.mkdir()
+    for kind in ("docling", "embeddings"):
+        (models / kind).symlink_to(MODELS_DIR / kind)
+    monkeypatch.setenv("ASSISTANT_MODELS_DIR", str(models))
+    monkeypatch.setenv("ASSISTANT_RERANKER", "off")
+
+    assert main().state.settings.reranker == "off"

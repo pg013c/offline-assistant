@@ -1,5 +1,6 @@
 import asyncio
 import time
+from collections.abc import Sequence
 
 import pytest
 
@@ -15,10 +16,11 @@ from assistant.domain.answers import (
     AnswerEvent,
     AnswerText,
 )
-from assistant.domain.documents import Chunk, Document
+from assistant.domain.documents import Chunk, ChunkLocation, Document, indexed_text
+from assistant.domain.errors import RerankerOff
 from assistant.ports.chunk_index import ScoredChunk
 from assistant.services.documents import DocumentService
-from assistant.services.questions import QuestionService
+from assistant.services.questions import RERANK_CANDIDATES, QuestionService
 
 POLICY = (
     b"Providers keep logs for six months. Logs record every access. Nothing else.\n\n"
@@ -254,3 +256,189 @@ def test_search_honours_the_limit() -> None:
     found = asyncio.run(questions.search("Passage?", limit=3))
 
     assert [p.chunk.id for p in found] == ["doc:0", "doc:1", "doc:2"]
+
+
+class RecordingIndex(FixedIndex):
+    """Remembers how many candidates each search asked for."""
+
+    def __init__(self, results: list[ScoredChunk]) -> None:
+        super().__init__(results)
+        self.limits: list[int] = []
+
+    def search(self, query: str, limit: int) -> list[ScoredChunk]:
+        self.limits.append(limit)
+        return super().search(query, limit)
+
+
+class ScriptedReranker:
+    """Scores passages from a table, 0 for any other; remembers what it was given."""
+
+    def __init__(self, scores: dict[str, float]) -> None:
+        self._scores = scores
+        self.passages: list[list[str]] = []
+
+    @property
+    def model_id(self) -> str:
+        return "scripted"
+
+    def score(self, query: str, passages: Sequence[str]) -> list[float]:
+        self.passages.append(list(passages))
+        return [
+            next((score for text, score in self._scores.items() if text in passage), 0.0)
+            for passage in passages
+        ]
+
+
+FOUR_HITS = [
+    hit(0, "Keyword match.", 0.7),
+    hit(1, "Providers keep logs.", 0.6),
+    hit(2, "Logs are kept.", 0.55),
+    hit(3, "Nothing relevant.", 0.2),
+]
+PREFERS_LOGS = {"Providers keep logs.": 0.9, "Logs are kept.": 0.8, "Keyword match.": 0.1}
+
+
+def test_with_a_reranker_search_returns_the_rerankers_order_and_scores() -> None:
+    index = RecordingIndex(FOUR_HITS)
+    questions = QuestionService(
+        index, FakeExtractiveChatModel(), FakeDocumentStore(), 0.5, ScriptedReranker(PREFERS_LOGS)
+    )
+
+    found = asyncio.run(questions.search("Do providers keep logs?", limit=3))
+
+    assert [(p.chunk.id, p.rerank_score, p.similarity) for p in found] == [
+        ("doc:1", 0.9, 0.6),
+        ("doc:2", 0.8, 0.55),
+        ("doc:0", 0.1, 0.7),
+    ]
+    assert index.limits == [RERANK_CANDIDATES]
+
+
+def test_the_reranker_scores_thirty_candidates_or_the_limit_if_larger() -> None:
+    index = RecordingIndex(FOUR_HITS)
+    questions = QuestionService(
+        index, FakeExtractiveChatModel(), FakeDocumentStore(), 0.5, ScriptedReranker({})
+    )
+
+    asyncio.run(questions.search("Logs?", limit=40))
+
+    assert RERANK_CANDIDATES == 30
+    assert index.limits == [40]
+
+
+def test_the_reranker_reads_each_passage_with_its_heading_path() -> None:
+    located = ScoredChunk(
+        chunk=Chunk(
+            id="doc:0",
+            document_id="doc",
+            position=0,
+            text="Fines shall be effective.",
+            location=ChunkLocation(heading_path=("Article 83", "General conditions")),
+        ),
+        score=1,
+        similarity=0.6,
+    )
+    reranker = ScriptedReranker({})
+    questions = QuestionService(
+        FixedIndex([located]), FakeExtractiveChatModel(), FakeDocumentStore(), 0.5, reranker
+    )
+
+    asyncio.run(questions.search("Article 83?", limit=1))
+
+    assert reranker.passages == [[indexed_text(located.chunk)]]
+
+
+def test_equal_reranker_scores_keep_the_index_order() -> None:
+    questions = QuestionService(
+        FixedIndex(FOUR_HITS),
+        FakeExtractiveChatModel(),
+        FakeDocumentStore(),
+        0.5,
+        ScriptedReranker({}),
+    )
+
+    found = asyncio.run(questions.search("Anything?", limit=4))
+
+    assert [p.chunk.id for p in found] == ["doc:0", "doc:1", "doc:2", "doc:3"]
+
+
+@pytest.mark.parametrize("configured", [True, False])
+def test_without_reranking_search_returns_the_index_order_unscored(configured: bool) -> None:
+    index = RecordingIndex(FOUR_HITS)
+    reranker = ScriptedReranker(PREFERS_LOGS) if configured else None
+    questions = QuestionService(
+        index, FakeExtractiveChatModel(), FakeDocumentStore(), 0.5, reranker
+    )
+
+    found = asyncio.run(questions.search("Do providers keep logs?", limit=3, rerank=False))
+
+    assert [(p.chunk.id, p.rerank_score) for p in found] == [
+        ("doc:0", None),
+        ("doc:1", None),
+        ("doc:2", None),
+    ]
+    assert index.limits == [3]
+
+
+def test_without_a_reranker_the_default_is_the_index_order() -> None:
+    questions = QuestionService(
+        FixedIndex(FOUR_HITS), FakeExtractiveChatModel(), FakeDocumentStore(), 0.5
+    )
+
+    found = asyncio.run(questions.search("Do providers keep logs?", limit=2))
+
+    assert [(p.chunk.id, p.rerank_score) for p in found] == [("doc:0", None), ("doc:1", None)]
+
+
+def test_asking_for_reranking_without_a_reranker_is_refused() -> None:
+    questions = QuestionService(
+        FixedIndex(FOUR_HITS), FakeExtractiveChatModel(), FakeDocumentStore(), 0.5
+    )
+
+    with pytest.raises(RerankerOff):
+        asyncio.run(questions.search("Logs?", limit=2, rerank=True))
+
+
+def test_with_a_reranker_the_answer_cites_the_reranked_best_passage() -> None:
+    index = RecordingIndex(FOUR_HITS)
+    questions = QuestionService(
+        index, FakeExtractiveChatModel(), FakeDocumentStore(), 0.5, ScriptedReranker(PREFERS_LOGS)
+    )
+
+    events = ask(questions, "Do providers keep logs?")
+
+    [citation] = [event.citation for event in events if isinstance(event, AnswerCitation)]
+    assert citation.chunk_id == "doc:1"
+    assert index.limits == [RERANK_CANDIDATES]
+
+
+def test_the_dense_threshold_still_refuses_what_the_reranker_scores_high() -> None:
+    weak = [hit(0, "Pasta boils in salted water.", 0.3), hit(1, "Logs.", 0.4)]
+    questions = QuestionService(
+        FixedIndex(weak),
+        FakeExtractiveChatModel(),
+        FakeDocumentStore(),
+        0.5,
+        ScriptedReranker({"Pasta boils in salted water.": 0.99}),
+    )
+
+    events = ask(questions, "How long should pasta boil?")
+
+    assert events[0] == AnswerText(text=NO_RELEVANT_PASSAGE)
+    end = events[-1]
+    assert isinstance(end, AnswerEnd)
+    assert end.found is False
+
+
+def test_with_a_reranker_answers_use_only_its_top_ten_like_the_evaluation() -> None:
+    # Ten weak passages the reranker likes, and one strong passage it ranks eleventh.
+    weak = [hit(n, f"Weak passage {n}.", 0.3) for n in range(10)]
+    strong = hit(10, "Strong but disliked passage.", 0.9)
+    reranker = ScriptedReranker({f"Weak passage {n}.": 1 - n / 100 for n in range(10)})
+    questions = QuestionService(
+        FixedIndex([strong, *weak]), FakeExtractiveChatModel(), FakeDocumentStore(), 0.5, reranker
+    )
+
+    events = ask(questions, "Anything?")
+
+    assert events[0] == AnswerText(text=NO_RELEVANT_PASSAGE)
