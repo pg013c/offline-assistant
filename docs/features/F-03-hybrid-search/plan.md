@@ -124,7 +124,7 @@
   - repeated terms saturate;
   - empty text gives no terms.
 - Change: `domain/keywords.py`.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 4. Embedder port, fake and BGE-M3
