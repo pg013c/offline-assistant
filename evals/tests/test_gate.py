@@ -93,3 +93,9 @@ def test_without_floors_a_run_fails_on_regressions_only() -> None:
     current = {**AT_THE_FLOORS, "recall@3": 0.50}
 
     assert gate_failures(current, {}, floors=False) == []
+
+
+def test_for_failed_answers_a_rise_is_the_regression() -> None:
+    failures = check(current={"answer_failed": 0.10}, baseline={"answer_failed": 0.0})
+
+    assert failures == ["answer_failed rose from 0.0 to 10.0 (more than 5 points)"]

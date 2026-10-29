@@ -88,6 +88,9 @@ def test_an_error_event_is_kept_and_a_stream_without_end_is_incomplete() -> None
         ("Dostawcy przechowują rejestry zdarzeń przez co najmniej sześć miesięcy.", "pl"),
         ("Administrator zgłasza naruszenie organowi nadzorczemu w ciągu 72 godzin.", "pl"),
         ("Providers keep the logs for at least six months.", "en"),
+        # Words both languages write the same way do not count for either.
+        ("To jest obowiązek dostawcy.", "pl"),
+        ("Do providers keep logs?", "en"),
         ("The controller shall notify the breach within 72 hours.", "en"),
         ("", None),
     ],
@@ -177,3 +180,27 @@ def test_the_answer_suite_posts_questions_to_the_chat_api_and_keeps_the_raw_stre
     assert provider["config"]["url"] == "{{ env.EVAL_API_URL }}/api/chat"
     assert provider["config"]["body"] == {"question": "{{question}}"}
     assert provider["config"]["transformResponse"] == "text"
+
+
+def test_each_case_is_reported_with_its_own_result() -> None:
+    metrics = score_answers(
+        CASES[:2],
+        {
+            "en-a": result("Logs are kept six months.", ("d:1",)),
+            "pl-b": result("Logs are kept six months.", ("d:9",), usage={**USAGE, "attempts": 2}),
+        },
+    )
+
+    assert metrics.per_case["en-a"] == {
+        "cites_expected": True,
+        "language": "en",
+        "attempts": 1,
+        "first_token_ms": 400.0,
+        "tokens_per_second": 20.0,
+        "error": None,
+    }
+    assert metrics.per_case["pl-b"]["cites_expected"] is False
+    text = answers_markdown(metrics, {})
+    assert "| Case | Cites expected | Language | Attempts | First token (ms) | Tokens/s |" in text
+    assert "| en-a | yes | en | 1 | 400 | 20.0 |" in text
+    assert "| pl-b | no | en | 2 | 400 | 20.0 |" in text

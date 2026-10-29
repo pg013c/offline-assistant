@@ -1,4 +1,4 @@
-# Answer suite (F-06, ADR 0018). The harness (harness/answer_run.py) writes the tests file and
+# Answer suite (F-06, ADR 0018). The harness (run_answers in harness/run.py) writes the tests file and
 # sets EVAL_API_URL; Promptfoo keeps the raw event stream, and Python scores it.
 description: Answers on the AI Act and the GDPR
 prompts:

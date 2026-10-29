@@ -36,6 +36,8 @@ class AnswerMetrics:
     # Reported, not gated: they depend on the machine.
     performance: dict[str, float | None]
     missed: dict[str, str] = field(default_factory=dict)
+    # Per case: whether it cites an expected chunk, its language, attempts, speed, error.
+    per_case: dict[str, dict[str, Any]] = field(default_factory=dict)
 
 
 def parse_chat_stream(text: str) -> ChatResult:
