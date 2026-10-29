@@ -1,9 +1,10 @@
 import json
+from pathlib import Path
 
 import pytest
 
 from harness.metrics import Hit
-from harness.promptfoo import PromptfooError, environment, hits_by_case
+from harness.promptfoo import PromptfooError, command_line, environment, hits_by_case
 
 
 def test_promptfoo_runs_without_telemetry_updates_or_sharing() -> None:
@@ -50,3 +51,10 @@ def test_a_case_without_output_is_reported_by_id() -> None:
 
     with pytest.raises(PromptfooError, match=r"broken.*connection refused"):
         hits_by_case(results)
+
+
+def test_promptfoo_keeps_results_in_the_runs_files_only(tmp_path: Path) -> None:
+    command = command_line(Path("pnpm"), Path("suite.yaml"), Path("tests.yaml"), Path("out.json"))
+
+    assert {"--no-write", "--no-share", "--no-cache"} <= set(command)
+    assert command[command.index("--output") + 1] == "out.json"

@@ -2,6 +2,7 @@
 
 import json
 from collections.abc import Mapping
+from pathlib import Path
 from typing import Any
 
 from harness.metrics import Hit
@@ -16,6 +17,11 @@ OFFLINE = {
 
 class PromptfooError(Exception):
     """Promptfoo returned no output for a case; the message names it."""
+
+
+def command_line(pnpm: Path, suite: Path, tests: Path, output: Path) -> list[str]:
+    """The Promptfoo command of a run; results go to `output` and nowhere else."""
+    raise NotImplementedError
 
 
 def environment(base: Mapping[str, str], api_url: str) -> dict[str, str]:
