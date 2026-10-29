@@ -22,10 +22,7 @@ if TYPE_CHECKING:
     from docling.document_converter import DocumentConverter
     from docling_core.types.doc.document import DoclingDocument
 
-__all__ = ["DoclingDocumentParser", "ModelsNotReady", "ParserNotReady"]
-
-# The parser's readiness error under the name its callers know.
-ParserNotReady = ModelsNotReady
+__all__ = ["DoclingDocumentParser", "ModelsNotReady"]
 
 MAX_PAGES = 500
 OCR_LANGUAGES = ("eng", "pol")

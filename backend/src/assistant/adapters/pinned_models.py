@@ -14,10 +14,6 @@ class ModelsNotReady(Exception):
     """A model or tool the app needs is missing; the message says how to install it."""
 
 
-# The former name, until the tests use the new one.
-ParserNotReady = ModelsNotReady
-
-
 @dataclass(frozen=True)
 class PinnedModel:
     repository: str
