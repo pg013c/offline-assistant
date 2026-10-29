@@ -5,11 +5,17 @@ from dataclasses import dataclass
 from assistant.domain.answers import (
     NO_RELEVANT_PASSAGE,
     AnswerCitation,
+    AnswerDiscarded,
+    Answered,
     AnswerEnd,
     AnswerEvent,
+    AnswerFailed,
     AnswerText,
+    AttemptDiscarded,
     Citation,
+    ModelFailed,
     TextDelta,
+    Usage,
     quote_from,
 )
 from assistant.domain.documents import Chunk, indexed_text
@@ -104,26 +110,34 @@ class QuestionService:
             return
 
         passages = [result.chunk for result in results]
+        usage: Usage | None = None
         async for event in self._model.answer(question, passages):
-            if isinstance(event, TextDelta):
-                yield AnswerText(text=event.text)
-
-        # The answer is built from the best passage, so that is the one cited.
-        best = passages[0]
-        document = self._store.get(best.document_id)
-        yield AnswerCitation(
-            citation=Citation(
-                chunk_id=best.id,
-                document_id=best.document_id,
-                document_title=document.title if document else best.document_id,
-                quote=quote_from(best.text),
-                location=best.location,
-            )
-        )
+            match event:
+                case TextDelta(text=text):
+                    yield AnswerText(text=text)
+                case AttemptDiscarded(reason=reason):
+                    yield AnswerDiscarded(reason=reason)
+                case ModelFailed(code=code, detail=detail):
+                    yield AnswerFailed(code=code, message=detail)
+                case Answered(answer=answer, usage=usage):
+                    # The passages the model says the answer rests on, in its order (AI-01).
+                    for number in dict.fromkeys(answer.cited):
+                        yield AnswerCitation(citation=self._citation(passages[number - 1]))
         yield AnswerEnd(
             model_id=self._model.model_id,
             found=True,
             is_test_model=self._model.is_test_model,
+            usage=usage,
+        )
+
+    def _citation(self, chunk: Chunk) -> Citation:
+        document = self._store.get(chunk.document_id)
+        return Citation(
+            chunk_id=chunk.id,
+            document_id=chunk.document_id,
+            document_title=document.title if document else chunk.document_id,
+            quote=quote_from(chunk.text),
+            location=chunk.location,
         )
 
     def _find(
