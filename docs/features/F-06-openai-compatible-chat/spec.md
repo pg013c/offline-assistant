@@ -32,19 +32,19 @@ Answers still come from `fake-extractive`, a test model that quotes the best pas
 
 ## Acceptance criteria
 
-- [ ] AC-1: Given a question with passages above the threshold, when it is asked with the local model configured, then the answer streams as text pieces, ends with citations of passages the model was given, and the end event names the model and says it is not a test model.
-- [ ] AC-2: Given the model returns malformed JSON or cites a passage it was not given, then the adapter retries with the validation error, at most `ASSISTANT_MAX_RETRIES` times; the stream tells the UI to discard a rejected attempt; after the last failure the user gets a typed "the model could not produce a valid answer" event, and the API does not fail.
-- [ ] AC-3: Given the model server is unreachable or exceeds its timeout, then the user gets a typed error event naming the server URL, and no unbounded wait or exception reaches the client.
-- [ ] AC-4: Given `ASSISTANT_CHAT_MODEL` names a configured model, then the API uses it without code changes; an unknown name or a missing model fails at startup with a message saying how to fix it.
-- [ ] AC-5: Given a stub OpenAI-compatible server, then the adapter's streaming, JSON-schema output and tool calls pass the `ChatModel` contract tests in CI.
-- [ ] AC-6: Given the evaluation corpus and the local model, when `make eval-answers` runs the answer suite, then the report gives, per case:
+- [x] AC-1: Given a question with passages above the threshold, when it is asked with the local model configured, then the answer streams as text pieces, ends with citations of passages the model was given, and the end event names the model and says it is not a test model. Proof: `tests/unit/services/test_question_service.py::test_citations_follow_the_passages_the_model_cites_in_its_order`; `tests/unit/api/test_chat_api.py::test_a_rejected_attempt_is_announced_with_a_discard_event` (model named, not a test model); `tests/integration/test_local_llm.py` (Qwen3 8B, Polish and English); [answer record](../../evals/2026-10-29-answers-qwen3-8b.md).
+- [x] AC-2: Given the model returns malformed JSON or cites a passage it was not given, then the adapter retries with the validation error, at most `ASSISTANT_MAX_RETRIES` times; the stream tells the UI to discard a rejected attempt; after the last failure the user gets a typed "the model could not produce a valid answer" event, and the API does not fail. Proof: `tests/unit/adapters/test_openai_compatible_chat.py::test_an_invalid_answer_is_retried_with_the_reason_and_the_retry_streams_again`, `::test_after_the_last_retry_the_answer_fails_as_invalid`; `test_chat_api.py::test_a_model_failure_is_an_error_event_and_the_stream_still_ends`; `frontend/src/features/chat/useChatStream.test.tsx` (discard and error).
+- [x] AC-3: Given the model server is unreachable or exceeds its timeout, then the user gets a typed error event naming the server URL, and no unbounded wait or exception reaches the client. Proof: `test_openai_compatible_chat.py::test_a_server_that_does_not_answer_is_unreachable_and_named`, `::test_a_slow_server_times_out`, `::test_an_attempt_that_never_ends_times_out_as_a_whole`, `::test_a_stream_line_that_is_not_json_is_a_model_error_and_ends_the_answer`; `ChatView.test.tsx` (error per code).
+- [x] AC-4: Given `ASSISTANT_CHAT_MODEL` names a configured model, then the API uses it without code changes; an unknown name or a missing model fails at startup with a message saying how to fix it. Proof: `tests/unit/adapters/test_chat_models.py` (catalogue, missing server, wrong model, malformed listing); `tests/unit/test_settings.py::test_a_local_model_is_chosen_by_configuration`, `::test_an_unknown_chat_model_names_the_variable`.
+- [x] AC-5: Given a stub OpenAI-compatible server, then the adapter's streaming, JSON-schema output and tool calls pass the `ChatModel` contract tests in CI. Proof: `tests/contract/test_chat_model.py` and `tests/contract/test_tool_calling_model.py`, each run against a stub OpenAI-compatible server in CI.
+- [x] AC-6: Given the evaluation corpus and the local model, when `make eval-answers` runs the answer suite, then the report gives, per case:
   - whether the answer cites an expected chunk;
   - whether the answer is in the question's language;
   - whether the output was valid on the first try, and the retries;
   - time to first token and tokens per second.
 
-  The result is recorded in `docs/evals/` as the first answer baseline.
-- [ ] AC-7: Given an out-of-scope question, then no model call is made and the refusal is unchanged (AI-02).
+  The result is recorded in `docs/evals/` as the first answer baseline. Proof: `make eval-answers`, report `answers-20261029T220004Z.json` with per-case results, recorded in [the answer record](../../evals/2026-10-29-answers-qwen3-8b.md) and `answer-baseline.json`; `evals/tests/test_answers.py`.
+- [x] AC-7: Given an out-of-scope question, then no model call is made and the refusal is unchanged (AI-02). Proof: `test_question_service.py::test_an_out_of_scope_question_never_reaches_the_model`; answer suite: 3/3 out-of-scope refused with no model call.
 
 ## Evaluation cases
 
