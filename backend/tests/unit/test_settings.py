@@ -159,11 +159,28 @@ def test_the_minimum_similarity_must_lie_between_0_and_1(
         load_settings()
 
 
-def test_reranking_is_on_by_default(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_reranking_follows_the_device_by_default(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     monkeypatch.setenv("ASSISTANT_DATA_DIR", str(tmp_path))
     monkeypatch.setenv("ASSISTANT_MODELS_DIR", str(tmp_path / "models"))
 
-    assert load_settings().reranker == "on"
+    assert load_settings().reranker == "auto"
+
+
+def test_automatic_reranking_is_on_with_an_apple_gpu(tmp_path: Path) -> None:
+    settings = Settings(data_dir=tmp_path, models_dir=tmp_path / "no-models", reranker="auto")
+
+    # On MPS the reranker is used, so its model must be there.
+    with pytest.raises(ModelsNotReady, match=r"BAAI/bge-reranker-v2-m3"):
+        reranker_for(settings, device="mps")
+
+
+def test_automatic_reranking_is_off_on_a_cpu(tmp_path: Path) -> None:
+    # On a CPU, reranking 30 passages takes seconds (F-05 record): no reranker, no check.
+    settings = Settings(data_dir=tmp_path, models_dir=tmp_path / "no-models", reranker="auto")
+
+    assert reranker_for(settings, device="cpu") is None
 
 
 def test_reranking_can_be_switched_off(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

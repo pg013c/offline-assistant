@@ -63,7 +63,7 @@ class Adapters:
     reranker: Reranker | None = None
 
 
-def reranker_for(settings: Settings) -> Reranker | None:
+def reranker_for(settings: Settings, device: str | None = None) -> Reranker | None:
     """The pinned reranker when reranking is on; it fails here if its model is missing."""
     if settings.reranker == "off":
         return None

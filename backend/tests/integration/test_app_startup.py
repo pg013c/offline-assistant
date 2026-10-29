@@ -63,6 +63,8 @@ def test_a_missing_reranker_stops_the_app_naming_it(
     for kind in ("docling", "embeddings"):
         (models / kind).symlink_to(MODELS_DIR / kind)
     monkeypatch.setenv("ASSISTANT_MODELS_DIR", str(models))
+    # Explicitly on: the automatic default leaves the reranker off on a CPU, as in CI.
+    monkeypatch.setenv("ASSISTANT_RERANKER", "on")
 
     with pytest.raises(ModelsNotReady, match=r"BAAI/bge-reranker-v2-m3.*make models"):
         main()
