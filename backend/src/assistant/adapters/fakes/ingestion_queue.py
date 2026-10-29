@@ -11,17 +11,18 @@ class FakeIngestionQueue:
 
     @property
     def pending(self) -> int:
-        raise NotImplementedError
+        return len(self._jobs)
 
     def submit(self, job: Callable[[], None]) -> None:
-        raise NotImplementedError
+        self._jobs.append(job)
 
     def run_all(self) -> None:
-        raise NotImplementedError
+        while self._jobs:
+            self._jobs.pop(0)()
 
 
 class InlineIngestionQueue:
     """Runs each job as soon as it is submitted."""
 
     def submit(self, job: Callable[[], None]) -> None:
-        raise NotImplementedError
+        job()

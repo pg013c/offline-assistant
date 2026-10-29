@@ -1,5 +1,6 @@
 """Documents and their chunks: identity and splitting."""
 
+import hashlib
 import re
 from dataclasses import dataclass, field
 from pathlib import PurePath
@@ -7,7 +8,6 @@ from typing import Literal
 
 DOCUMENT_ID_LENGTH = 16
 MAX_CHUNK_CHARS = 2000
-_BLANK_LINES = re.compile(r"\n\s*\n")
 _SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
 
 
@@ -68,23 +68,12 @@ class ParsedDocument:
 
 def document_id_for(content: bytes) -> str:
     """A stable id derived from the uploaded bytes, so identical uploads get the same id."""
-    raise NotImplementedError
+    return hashlib.sha256(content).hexdigest()[:DOCUMENT_ID_LENGTH]
 
 
 def title_from_filename(filename: str) -> str:
     """A readable title: the filename without its extension."""
     return PurePath(filename).stem
-
-
-def split_into_chunks(document_id: str, text: str) -> list[Chunk]:
-    """Split text into chunks at blank lines."""
-    pieces = (piece.strip() for piece in _BLANK_LINES.split(text))
-    return [
-        Chunk(
-            id=f"{document_id}:{position}", document_id=document_id, position=position, text=piece
-        )
-        for position, piece in enumerate(piece for piece in pieces if piece)
-    ]
 
 
 def chunk_document(

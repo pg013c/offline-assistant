@@ -89,7 +89,7 @@
 - Tests first: `tests/unit/services/test_document_service.py` rewritten with the fake parser and `InlineIngestionQueue`: upload returns `processing` and submits; after ingestion the document is `ready` with chunk and page counts and searchable; a `DocumentUnreadable` gives `failed` with the reason and nothing indexed; files over 50 MB and unknown types are rejected; the same bytes return the same document; `restore` indexes stored chunks of ready documents without parsing and resubmits processing ones; `tests/unit/adapters/test_thread_ingestion_queue.py`: jobs run one at a time, in order.
 - Change: `services/documents.py`, `ports/ingestion_queue.py`, `adapters/thread_ingestion_queue.py`, `adapters/fakes/ingestion_queue.py`.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 7. Citations carry the chunk location
 

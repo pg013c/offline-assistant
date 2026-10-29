@@ -1,23 +1,37 @@
+from dataclasses import replace
 from pathlib import PurePath
+
+import structlog
 
 from assistant.domain.documents import (
     Document,
+    chunk_document,
     document_id_for,
-    split_into_chunks,
     title_from_filename,
 )
-from assistant.domain.errors import FileTooLarge, NotUtf8Text, UnsupportedFileType
+from assistant.domain.errors import (
+    DocumentUnreadable,
+    FileTooLarge,
+    NotUtf8Text,
+    UnsupportedFileType,
+)
 from assistant.ports.chunk_index import ChunkIndex
 from assistant.ports.document_parser import DocumentParser
 from assistant.ports.document_store import DocumentStore
 from assistant.ports.ingestion_queue import IngestionQueue
 
-MAX_UPLOAD_BYTES = 5 * 1024 * 1024
-SUPPORTED_EXTENSIONS = frozenset({".txt", ".md"})
+MAX_UPLOAD_BYTES = 50 * 1024 * 1024
+TEXT_EXTENSIONS = frozenset({".txt", ".md"})
+SUPPORTED_EXTENSIONS = TEXT_EXTENSIONS | {".pdf", ".docx", ".png", ".jpg", ".jpeg"}
+# Shown when parsing fails for a reason the parser did not explain; details go to the log.
+UNREADABLE = "The document could not be read."
+NO_TEXT = "No text was found in the document."
+
+log = structlog.get_logger(__name__)
 
 
 class DocumentService:
-    """Uploading, listing and restoring documents."""
+    """Uploading, ingesting, listing and restoring documents."""
 
     def __init__(
         self,
@@ -34,47 +48,84 @@ class DocumentService:
         self._max_upload_bytes = max_upload_bytes
 
     def upload(self, filename: str, content: bytes) -> Document:
-        """Validate, store and index an uploaded file; known content returns the stored document."""
+        """Validate and store an upload, and queue its ingestion; known files return as stored."""
         extension = PurePath(filename).suffix.lower()
         if extension not in SUPPORTED_EXTENSIONS:
-            raise UnsupportedFileType(f"{filename}: only .txt and .md files are supported")
+            supported = ", ".join(sorted(SUPPORTED_EXTENSIONS))
+            raise UnsupportedFileType(f"{filename}: supported file types are {supported}")
         if len(content) > self._max_upload_bytes:
             raise FileTooLarge(f"{filename}: larger than {self._max_upload_bytes} bytes")
-        try:
-            text = content.decode("utf-8")
-        except UnicodeDecodeError as error:
-            raise NotUtf8Text(f"{filename}: not valid UTF-8 text") from error
+        if extension in TEXT_EXTENSIONS:
+            # Cheap to check now, so the user hears about it at once.
+            try:
+                content.decode("utf-8")
+            except UnicodeDecodeError as error:
+                raise NotUtf8Text(f"{filename}: not valid UTF-8 text") from error
 
         document_id = document_id_for(content)
         existing = self._store.get(document_id)
         if existing is not None:
             return existing
 
-        chunks = split_into_chunks(document_id, text)
         document = Document(
             id=document_id,
             title=title_from_filename(filename),
             filename=filename,
-            chunk_count=len(chunks),
+            chunk_count=0,
+            status="processing",
         )
         self._store.save_upload(document, content)
-        self._store.save_chunks(document_id, chunks)
-        self._index.add(chunks)
-        return document
+        self._queue_ingestion(document_id)
+        # The queue may already have finished the job.
+        return self._store.get(document_id) or document
 
     def ingest(self, document_id: str) -> None:
         """Parse, chunk and index a stored upload; record the outcome as its status."""
-        raise NotImplementedError
+        document = self._store.get(document_id)
+        if document is None:
+            return
+        try:
+            parsed = self._parser.parse(document.filename, self._store.load_original(document_id))
+        except DocumentUnreadable as error:
+            self._fail(document, error.reason)
+            return
+        except Exception:
+            log.exception("document_parsing_failed", document_id=document_id)
+            self._fail(document, UNREADABLE)
+            return
+
+        chunks = chunk_document(document_id, parsed)
+        if not chunks:
+            self._fail(document, NO_TEXT)
+            return
+        self._store.save_chunks(document_id, chunks)
+        self._index.add(chunks)
+        self._store.update(
+            replace(document, status="ready", chunk_count=len(chunks), page_count=parsed.page_count)
+        )
+        log.info("document_ingested", document_id=document_id, chunks=len(chunks))
 
     def list_documents(self) -> list[Document]:
         """All stored documents."""
         return self._store.list_documents()
 
     def restore(self) -> int:
-        """Index every stored document; returns how many were restored."""
-        ready = [
-            document for document in self._store.list_documents() if document.status == "ready"
-        ]
-        for document in ready:
-            self._index.add(self._store.load_chunks(document.id))
-        return len(ready)
+        """Index stored chunks of ready documents and requeue unfinished ones.
+
+        Returns how many documents were indexed.
+        """
+        ready = 0
+        for document in self._store.list_documents():
+            if document.status == "ready":
+                self._index.add(self._store.load_chunks(document.id))
+                ready += 1
+            elif document.status == "processing":
+                self._queue_ingestion(document.id)
+        return ready
+
+    def _queue_ingestion(self, document_id: str) -> None:
+        self._queue.submit(lambda: self.ingest(document_id))
+
+    def _fail(self, document: Document, reason: str) -> None:
+        self._store.update(replace(document, status="failed", failure_reason=reason))
+        log.info("document_failed", document_id=document.id, reason=reason)
