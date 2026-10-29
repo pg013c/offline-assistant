@@ -116,7 +116,7 @@
   - check the out-of-scope similarities against the 0.5 threshold.
 - Commit the record `docs/evals/2026-10-29-retrieval-article-context.md` (before and after, per-case changes, analysis of what still misses) and the new `retrieval-baseline.json`.
 - If a criterion fails, stop and bring the numbers to the human before changing anything else.
-- [ ] green
+- [x] green
 
 ### Step 6. Documentation
 
