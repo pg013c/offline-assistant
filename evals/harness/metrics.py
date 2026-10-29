@@ -82,11 +82,15 @@ def compute(results: Sequence[CaseResult], threshold: float) -> Metrics:
     )
 
     missed: dict[str, str] = {}
-    for case_id, rank in ranks.items():
+    for result in in_scope:
+        rank = ranks[result.case_id]
         if rank is None:
-            missed[case_id] = "no expected chunk among the hits"
+            missed[result.case_id] = "no expected chunk among the hits"
         elif rank > CITED_PASSAGES:
-            missed[case_id] = f"first expected chunk at rank {rank}"
+            missed[result.case_id] = f"first expected chunk at rank {rank}"
+        elif refused(result):
+            best = max((hit.similarity for hit in result.hits), default=0.0)
+            missed[result.case_id] = f"best hit {best:.2f} is below the threshold {threshold:.2f}"
     for result in out_of_scope:
         if not refused(result):
             best = max(hit.similarity for hit in result.hits)

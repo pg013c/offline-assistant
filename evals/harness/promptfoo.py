@@ -27,8 +27,13 @@ def hits_by_case(results: Mapping[str, Any]) -> dict[str, tuple[Hit, ...]]:
     """Ranked hits per case id, from Promptfoo's JSON output."""
     found: dict[str, tuple[Hit, ...]] = {}
     for entry in results["results"]["results"]:
-        passages = json.loads(entry["response"]["output"])
-        found[entry["vars"]["case_id"]] = tuple(
+        case_id = entry["vars"]["case_id"]
+        response = entry.get("response") or {}
+        if "output" not in response:
+            reason = response.get("error") or entry.get("error") or "no output"
+            raise PromptfooError(f"{case_id}: Promptfoo got no result ({reason})")
+        passages = json.loads(response["output"])
+        found[case_id] = tuple(
             Hit(chunk_id=passage["chunk_id"], similarity=float(passage["similarity"]))
             for passage in passages
         )

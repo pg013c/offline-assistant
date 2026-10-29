@@ -78,7 +78,7 @@ def run(config: RunConfig) -> Outcome:
         CaseResult(case.id, case.behaviour, expected[case.id], hits[case.id]) for case in cases
     ]
     metrics = compute(results, config.threshold)
-    report = build_report(metrics, _metadata(config, started_at), config.threshold, {})
+    report = build_report(metrics, _metadata(config, started_at), config.threshold, expected)
     baseline = (
         json.loads(config.baseline.read_text(encoding="utf-8"))["metrics"]
         if config.baseline.exists()

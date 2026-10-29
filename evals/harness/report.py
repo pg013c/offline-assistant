@@ -32,6 +32,8 @@ def build_report(
             for name, metric in metrics.by_name.items()
         },
         "missed": dict(metrics.missed),
+        # What each case was scored against, so a change in resolution shows up.
+        "expected": {case: sorted(ids) for case, ids in expected.items()},
         "threshold": threshold,
         "metadata": dict(metadata),
     }

@@ -13,7 +13,11 @@ def check(current: Mapping[str, float | None], baseline: Mapping[str, float | No
     Values are shares from 0 to 1; points are percentage points. Metrics without a value in
     either run are skipped.
     """
-    failures = []
+    failures = [
+        f"{name} is in the baseline but missing from this run"
+        for name in baseline
+        if name not in current
+    ]
     for name, now in current.items():
         before = baseline.get(name)
         if now is None or before is None:

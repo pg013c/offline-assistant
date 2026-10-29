@@ -40,24 +40,26 @@ def sha256(path: Path) -> str:
 
 
 def fetch(directory: Path, client: httpx.Client | None = None) -> None:
+    """Download each pinned file that is missing or differs; keep only matching downloads."""
     directory.mkdir(parents=True, exist_ok=True)
-    for document in documents():
-        target = directory / document.file
-        if target.exists() and sha256(target) == document.sha256:
-            print(f"present    {document.file}")
-            continue
-        response = httpx.get(
-            SOURCE.format(celex=document.celex),
-            headers={"Accept": document.accept, "Accept-Language": document.language},
-            follow_redirects=True,
-            timeout=TIMEOUT_SECONDS,
-        )
-        response.raise_for_status()
-        actual = hashlib.sha256(response.content).hexdigest()
-        if actual != document.sha256:
-            sys.exit(f"{document.file}: SHA-256 {actual} differs from the pinned {document.sha256}")
-        target.write_bytes(response.content)
-        print(f"downloaded {document.file}")
+    with client or httpx.Client(follow_redirects=True, timeout=TIMEOUT_SECONDS) as http:
+        for document in documents():
+            target = directory / document.file
+            if target.exists() and sha256(target) == document.sha256:
+                print(f"present    {document.file}")
+                continue
+            response = http.get(
+                SOURCE.format(celex=document.celex),
+                headers={"Accept": document.accept, "Accept-Language": document.language},
+            )
+            response.raise_for_status()
+            actual = hashlib.sha256(response.content).hexdigest()
+            if actual != document.sha256:
+                sys.exit(
+                    f"{document.file}: SHA-256 {actual} differs from the pinned {document.sha256}"
+                )
+            target.write_bytes(response.content)
+            print(f"downloaded {document.file}")
 
 
 if __name__ == "__main__":
