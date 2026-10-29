@@ -419,3 +419,48 @@ def test_a_deleted_document_is_not_written_back_as_failed(
     queue.run_all()
 
     assert store.get(document.id) is None
+
+
+class PartlyWritingIndex(InMemoryChunkIndex):
+    """Stores the chunks, then reports a failure, as a timed-out write that was applied."""
+
+    def add(self, chunks: Sequence[Chunk]) -> None:
+        super().add(chunks)
+        raise OSError("timed out")
+
+
+def test_a_document_that_failed_while_indexing_leaves_no_vectors(
+    store: FakeDocumentStore, queue: FakeIngestionQueue
+) -> None:
+    index = PartlyWritingIndex()
+    service = DocumentService(store, index, FakeDocumentParser(PARSED), queue)
+    document = service.upload("policy.pdf", PDF)
+
+    queue.run_all()
+
+    failed = store.get(document.id)
+    assert failed is not None
+    assert failed.status == "failed"
+    assert index.document_ids() == set()
+
+
+def test_restore_removes_vectors_of_documents_that_are_not_ready(
+    store: FakeDocumentStore, index: InMemoryChunkIndex, queue: FakeIngestionQueue
+) -> None:
+    store.save_upload(
+        Document(
+            id="bad",
+            title="bad",
+            filename="bad.pdf",
+            chunk_count=0,
+            status="failed",
+            failure_reason="The PDF is password-protected.",
+        ),
+        PDF,
+    )
+    index.add([Chunk(id="bad:0", document_id="bad", position=0, text="Stale vectors.")])
+    service = DocumentService(store, index, FakeDocumentParser(PARSED), queue)
+
+    service.restore()
+
+    assert index.document_ids() == set()
