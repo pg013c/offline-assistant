@@ -11,7 +11,9 @@ class Embedder(Protocol):
         ...
 
     @property
-    def dimensions(self) -> int: ...
+    def dimensions(self) -> int:
+        """Length of every vector the model returns; the index is created with it."""
+        ...
 
     def embed(self, texts: Sequence[str]) -> list[list[float]]:
         """Vectors of passages, in order."""
