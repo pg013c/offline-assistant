@@ -27,7 +27,7 @@ from harness.corpus import CorpusDocument, documents, sha256
 from harness.dataset import load_cases
 from harness.gate import check
 from harness.metrics import CaseResult, compute
-from harness.promptfoo import environment, hits_by_case
+from harness.promptfoo import command_line, environment, hits_by_case
 from harness.report import build_report, markdown
 from harness.resolve import ChunkRef, resolve
 
@@ -292,22 +292,7 @@ def _search_with_promptfoo(
     )
     output = results_dir / f"promptfoo-{started_at:%Y%m%dT%H%M%SZ}.json"
     subprocess.run(  # noqa: S603 (fixed command)
-        [
-            _executable("pnpm"),
-            "--dir",
-            str(ROOT / "evals"),
-            "exec",
-            "promptfoo",
-            "eval",
-            "--config",
-            str(PROMPTFOO_CONFIG),
-            "--tests",
-            str(tests),
-            "--output",
-            str(output),
-            "--no-cache",
-            "--no-progress-bar",
-        ],
+        command_line(Path(_executable("pnpm")), PROMPTFOO_CONFIG, tests, output),
         env=environment(os.environ, api_url),
         check=True,
         timeout=PROMPTFOO_SECONDS,

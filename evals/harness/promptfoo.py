@@ -19,9 +19,30 @@ class PromptfooError(Exception):
     """Promptfoo returned no output for a case; the message names it."""
 
 
+EVALS_PROJECT = Path(__file__).parents[1]
+
+
 def command_line(pnpm: Path, suite: Path, tests: Path, output: Path) -> list[str]:
-    """The Promptfoo command of a run; results go to `output` and nowhere else."""
-    raise NotImplementedError
+    """The Promptfoo command of a run; results go to `output` and nowhere else: not to
+    Promptfoo's database in the home directory, not to a share link, not to a cache."""
+    return [
+        str(pnpm),
+        "--dir",
+        str(EVALS_PROJECT),
+        "exec",
+        "promptfoo",
+        "eval",
+        "--config",
+        str(suite),
+        "--tests",
+        str(tests),
+        "--output",
+        str(output),
+        "--no-write",
+        "--no-share",
+        "--no-cache",
+        "--no-progress-bar",
+    ]
 
 
 def environment(base: Mapping[str, str], api_url: str) -> dict[str, str]:
