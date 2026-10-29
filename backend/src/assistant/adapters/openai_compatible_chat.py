@@ -49,6 +49,8 @@ class LlmServer:
     max_retries: int
     # Capabilities are declared, not guessed from the model's name (AI-23).
     tools: bool = True
+    # A cap on each answer, so a runaway generation ends (AI-22).
+    max_tokens: int = 1024
 
 
 @dataclass
@@ -107,8 +109,11 @@ class OpenAICompatibleChat:
             while True:
                 tally.attempts += 1
                 output: list[str] = []
+                streamed: list[str] = []
                 try:
                     async for event in self._attempt(client, messages, tally, output):
+                        if isinstance(event, TextDelta):
+                            streamed.append(event.text)
                         yield event
                 except _Unanswered as error:
                     yield error.failure
@@ -135,6 +140,12 @@ class OpenAICompatibleChat:
                         },
                     ]
                     continue
+                shown = "".join(streamed)
+                if shown != answer.text:
+                    # The answer was not written first, so it did not stream; send it whole.
+                    if shown:
+                        yield AttemptDiscarded("the streamed text differs from the answer")
+                    yield TextDelta(answer.text)
                 yield Answered(answer, tally.usage())
                 return
 
@@ -148,6 +159,8 @@ class OpenAICompatibleChat:
         """One streamed completion: its answer text as deltas, its raw output into `output`."""
         url = self._server.base_url
         extractor = AnswerTextExtractor()
+        # The client's timeout covers each read; this covers the whole attempt (AI-22).
+        deadline = time.monotonic() + self._server.timeout_seconds
         try:
             async with client.stream(
                 "POST", "/v1/chat/completions", json=self._body(messages)
@@ -156,6 +169,8 @@ class OpenAICompatibleChat:
                     await response.aread()
                     raise _Unanswered(_error_status(url, response))
                 async for line in response.aiter_lines():
+                    if time.monotonic() > deadline:
+                        raise _Unanswered(_timed_out(url, self._server.timeout_seconds))
                     chunk = _chunk(line)
                     if chunk is None:
                         continue
@@ -266,6 +281,7 @@ class OpenAICompatibleChat:
             },
             # Answers should follow the passages, not vary between runs.
             "temperature": 0,
+            "max_tokens": self._server.max_tokens,
         }
 
 

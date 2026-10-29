@@ -170,6 +170,13 @@ _ANSWER_START = re.compile(r'\{\s*"answer"\s*:\s*"')
 _ESCAPES = {'"': '"', "\\": "\\", "/": "/", "b": "\b", "f": "\f", "n": "\n", "r": "\r", "t": "\t"}
 
 
+def _hex(digits: str) -> int | None:
+    try:
+        return int(digits, 16)
+    except ValueError:
+        return None
+
+
 class AnswerTextExtractor:
     """Pulls the answer text out of the structured answer while it is being written.
 
@@ -219,12 +226,19 @@ class AnswerTextExtractor:
                 continue
             if position + 6 > len(text):
                 break
-            unit = int(text[position + 2 : position + 6], 16)
+            unit = _hex(text[position + 2 : position + 6])
+            if unit is None:
+                # Not JSON any more; parse_answer will say so. Stop streaming this attempt.
+                self._done = True
+                break
             if _HIGH_SURROGATES <= unit < _LOW_SURROGATES:
                 # A high surrogate needs the low one that follows it.
                 if position + 12 > len(text):
                     break
-                low = int(text[position + 8 : position + 12], 16)
+                low = _hex(text[position + 8 : position + 12])
+                if text[position + 6 : position + 8] != "\\u" or low is None:
+                    self._done = True
+                    break
                 out.append(
                     chr(0x10000 + ((unit - _HIGH_SURROGATES) << 10) + (low - _LOW_SURROGATES))
                 )
