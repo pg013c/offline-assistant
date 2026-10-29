@@ -53,3 +53,18 @@ def test_listing_and_fetching_read_only_metadata(tmp_path: Path) -> None:
 
     assert store.list_documents() == [POLICY]
     assert store.get(POLICY.id) == POLICY
+
+
+def test_metadata_without_a_status_loads_as_processing(tmp_path: Path) -> None:
+    # F-01 stored no status; such documents need parsing again.
+    directory = tmp_path / "documents"
+    directory.mkdir()
+    (directory / "f01.txt").write_text("Old text.", encoding="utf-8")
+    (directory / "f01.json").write_text(
+        '{"id": "f01", "title": "old", "filename": "old.txt", "chunk_count": 1}', encoding="utf-8"
+    )
+
+    document = LocalFileDocumentStore(tmp_path).get("f01")
+
+    assert document is not None
+    assert document.status == "processing"

@@ -26,6 +26,7 @@ SUPPORTED_EXTENSIONS = TEXT_EXTENSIONS | {".pdf", ".docx", ".png", ".jpg", ".jpe
 # Shown when parsing fails for a reason the parser did not explain; details go to the log.
 UNREADABLE = "The document could not be read."
 NO_TEXT = "No text was found in the document."
+INGESTION_FAILED = "The document could not be processed."
 
 log = structlog.get_logger(__name__)
 
