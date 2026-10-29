@@ -22,6 +22,7 @@ BM25 = "bm25"
 # Each half returns this many candidates per requested result before fusion.
 PREFETCH_FACTOR = 4
 MIN_PREFETCH = 20
+TIE_MARGIN = 4
 _POINT_NAMESPACE = uuid.UUID("6f1c9a3e-2b7d-4c8e-9f10-3a5b7c9d1e2f")
 
 
@@ -35,8 +36,20 @@ def point_id(chunk_id: str) -> str:
 
 
 def best_first(results: Sequence[ScoredChunk]) -> list[ScoredChunk]:
-    """Fused order, with ties broken by dense similarity, then by position."""
-    raise NotImplementedError
+    """Fused order, with ties broken by dense similarity, then by position.
+
+    Reciprocal rank fusion often ties: first in one ranking and second in the other scores
+    the same as the reverse, and Qdrant breaks such ties arbitrarily.
+    """
+    return sorted(
+        results,
+        key=lambda result: (
+            -result.score,
+            -result.similarity,
+            result.chunk.document_id,
+            result.chunk.position,
+        ),
+    )
 
 
 def collection_name(prefix: str, model_id: str) -> str:
@@ -95,15 +108,16 @@ class QdrantChunkIndex:
         terms = bm25_terms(query)
         if terms:
             prefetch.append(models.Prefetch(query=_sparse(terms), using=BM25, limit=candidates))
+        # A few more than asked for, so that ties at the cut are settled here, not by Qdrant.
         response = self._client.query_points(
             self._collection,
             prefetch=prefetch,
             query=models.FusionQuery(fusion=models.Fusion.RRF),
-            limit=limit,
+            limit=limit + TIE_MARGIN,
             with_payload=True,
             with_vectors=[DENSE],
         )
-        return [
+        results = [
             ScoredChunk(
                 chunk=_chunk(point.payload or {}),
                 score=point.score,
@@ -111,6 +125,7 @@ class QdrantChunkIndex:
             )
             for point in response.points
         ]
+        return best_first(results)[:limit]
 
     def remove_document(self, document_id: str) -> None:
         self._client.delete(

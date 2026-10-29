@@ -49,7 +49,8 @@ class InMemoryChunkIndex:
             ordered = sorted((key for key in ranking if ranking[key] > 0), key=ranking.__getitem__)
             for rank, key in enumerate(reversed(ordered)):
                 fused[key] = fused.get(key, 0.0) + 1 / (RRF_K + rank + 1)
-        best = sorted(fused, key=lambda key: (-fused[key], key))[:limit]
+        # Ties go to the closer meaning, as in the Qdrant index.
+        best = sorted(fused, key=lambda key: (-fused[key], -similarity[key], key))[:limit]
         return [
             ScoredChunk(
                 chunk=self._entries[key].chunk,

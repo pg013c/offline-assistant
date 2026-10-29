@@ -257,7 +257,7 @@
   - `make e2e` requires Qdrant;
   - the CI job `E2E` gets the Qdrant service and the models.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 14. Documentation
 
