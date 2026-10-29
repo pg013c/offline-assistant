@@ -5,6 +5,7 @@ writes it, and an invalid answer is retried with the reason fed back (AI-21).
 """
 
 import json
+import re
 import time
 from collections.abc import AsyncIterator, Sequence
 from dataclasses import dataclass, field, replace
@@ -13,7 +14,6 @@ from string import Template
 from typing import Any
 
 import httpx
-from pydantic import ValidationError
 
 from assistant.domain.answers import (
     ANSWER_SCHEMA,
@@ -35,11 +35,16 @@ from assistant.domain.tools import (
     ToolCalls,
     ToolSpec,
     ToolsUnsupported,
+    parse_tool_calls,
 )
 
-ANSWER_PROMPT = files("assistant").joinpath("prompts/answer.md").read_text(encoding="utf-8")
-USER_PROMPT = Template("")
-RETRY_PROMPT = Template("")
+_PROMPTS = files("assistant").joinpath("prompts")
+# The system prompt, the user message with $passages and $question, and the retry with $reason.
+ANSWER_PROMPT = _PROMPTS.joinpath("answer.md").read_text(encoding="utf-8")
+USER_PROMPT = Template(_PROMPTS.joinpath("answer_user.md").read_text(encoding="utf-8"))
+RETRY_PROMPT = Template(_PROMPTS.joinpath("retry.md").read_text(encoding="utf-8"))
+# A passage's own text must not open or close a passage block (AI-10).
+_PASSAGE_TAG = re.compile(r"<(/?)(passage)", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -139,11 +144,7 @@ class OpenAICompatibleChat:
                         return
                     messages += [
                         {"role": "assistant", "content": raw},
-                        {
-                            "role": "user",
-                            "content": f"Your reply was rejected: {reason}. Reply again with "
-                            "the JSON object only, citing passages by their numbers.",
-                        },
+                        {"role": "user", "content": RETRY_PROMPT.substitute(reason=reason)},
                     ]
                     continue
                 shown = "".join(streamed)
@@ -336,27 +337,17 @@ def _parse_calls(
     raw_calls: list[dict[str, Any]], tools: dict[str, ToolSpec]
 ) -> tuple[list[ToolCall], list[tuple[str, str]]]:
     """The valid calls, and (call id, error) for each invalid one."""
-    calls: list[ToolCall] = []
-    errors: list[tuple[str, str]] = []
-    for raw in raw_calls:
-        call_id = str(raw.get("id", ""))
-        function = raw.get("function", {})
-        name = function.get("name", "")
-        tool = tools.get(name)
-        if tool is None:
-            errors.append((call_id, f"there is no tool {name}; use one of {', '.join(tools)}"))
-            continue
-        try:
-            arguments = tool.arguments.model_validate_json(function.get("arguments") or "{}")
-        except ValidationError as error:
-            problems = "; ".join(
-                f"{'.'.join(str(part) for part in issue['loc'])}: {issue['msg']}"
-                for issue in error.errors()
+    return parse_tool_calls(
+        [
+            (
+                str(raw.get("id", "")),
+                str(raw.get("function", {}).get("name", "")),
+                raw.get("function", {}).get("arguments") or "{}",
             )
-            errors.append((call_id, f"invalid arguments for {name}: {problems}"))
-            continue
-        calls.append(ToolCall(id=call_id, name=name, arguments=arguments))
-    return calls, errors
+            for raw in raw_calls
+        ],
+        tools,
+    )
 
 
 def _unreachable(url: str) -> ModelFailed:
@@ -384,13 +375,18 @@ def _error_status(url: str, response: httpx.Response) -> ModelFailed:
     )
 
 
+def _neutralised(text: str) -> str:
+    """The text with any passage tag broken up, so it stays inside its block."""
+    return _PASSAGE_TAG.sub(r"<\1 \2", text)
+
+
 def _user_message(question: str, passages: Sequence[Chunk]) -> str:
     # Passages are delimited data, each with its heading path for context (AI-10).
     blocks = [
-        f'<passage number="{number}">\n{indexed_text(chunk)}\n</passage>'
+        f'<passage number="{number}">\n{_neutralised(indexed_text(chunk))}\n</passage>'
         for number, chunk in enumerate(passages, start=1)
     ]
-    return "\n\n".join([*blocks, f"Question: {question}"])
+    return USER_PROMPT.substitute(passages="\n\n".join(blocks), question=question)
 
 
 def _chunk(line: str) -> dict[str, Any] | None:
