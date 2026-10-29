@@ -1,0 +1,13 @@
+{
+  "name": "offline-assistant-evals",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "packageManager": "pnpm@12.16.1",
+  "engines": {
+    "node": ">=24"
+  },
+  "devDependencies": {
+    "promptfoo": "0.124.1"
+  }
+}

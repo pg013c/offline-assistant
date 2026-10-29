@@ -85,7 +85,7 @@ Two projects side by side, apart from the backend and the frontend:
   - README licences and setup;
   - CI Backend job runs `make check-evals`.
 - Done when: `make eval-corpus` fetches and verifies four files, and a second run reports them present without downloading.
-- [ ] green
+- [x] green
 
 ### Step 2. Search endpoint
 

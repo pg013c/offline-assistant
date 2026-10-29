@@ -114,3 +114,6 @@ Code: [MIT](LICENSE). Models, tools and datasets keep their own licences:
 | [BGE-M3](https://huggingface.co/BAAI/bge-m3) | multilingual embeddings | MIT |
 | [sentence-transformers](https://www.sbert.net/) | runs the embedding model | Apache-2.0 |
 | [scikit-learn](https://scikit-learn.org/) | dependency of sentence-transformers | BSD-3-Clause |
+| [Promptfoo](https://www.promptfoo.dev/) | evaluation runner (`evals/`, telemetry off) | MIT |
+| [PyYAML](https://pyyaml.org/), [jsonschema](https://python-jsonschema.readthedocs.io/), [httpx](https://www.python-httpx.org/) | evaluation harness | MIT, MIT, BSD-3-Clause |
+| AI Act and GDPR (Official Journal PDFs) | evaluation corpus, fetched by `make eval-corpus`, not committed | reuse under Commission Decision 2011/833/EU |

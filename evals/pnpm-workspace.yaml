@@ -1,0 +1,3 @@
+# Install scripts allowed to run; everything else is blocked by default.
+allowBuilds:
+  esbuild: true

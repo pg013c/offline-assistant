@@ -29,6 +29,8 @@ test-results/
 models/
 data/raw/
 data/storage/
+data/eval/
+data/eval-corpus/
 evals/results/
 *.gguf
 *.safetensors

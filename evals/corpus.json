@@ -1,0 +1,37 @@
+{
+  "source": "Publications Office of the European Union, reused under Commission Decision 2011/833/EU",
+  "documents": [
+    {
+      "file": "ai-act-en.pdf",
+      "title": "AI Act (EN)",
+      "celex": "32024R1689",
+      "language": "eng",
+      "accept": "application/pdf",
+      "sha256": "bba630444b3278e881066774002a1d7824308934f49ccfa203e65be43692f55e"
+    },
+    {
+      "file": "ai-act-pl.pdf",
+      "title": "AI Act (PL)",
+      "celex": "32024R1689",
+      "language": "pol",
+      "accept": "application/pdf",
+      "sha256": "16f2a07dfd566aac374b00e0cf92e551d1e1a7346878f746c1cdb7f531f804d9"
+    },
+    {
+      "file": "gdpr-en.pdf",
+      "title": "GDPR (EN)",
+      "celex": "32016R0679",
+      "language": "eng",
+      "accept": "application/pdf;type=pdfa1a",
+      "sha256": "bd84e63f5b622b739a83389afc3b30d240f792bb88d8eb03a816c9a82b0c2499"
+    },
+    {
+      "file": "gdpr-pl.pdf",
+      "title": "GDPR (PL)",
+      "celex": "32016R0679",
+      "language": "pol",
+      "accept": "application/pdf;type=pdfa1a",
+      "sha256": "61bddbf0f07490978b698f007e4641683b1d48ecd1481532e1a0c2afd4b63e0f"
+    }
+  ]
+}
