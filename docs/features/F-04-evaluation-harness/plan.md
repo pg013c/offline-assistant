@@ -160,7 +160,7 @@ Two projects side by side, apart from the backend and the frontend:
   - the report has every metric;
   - Promptfoo ran with telemetry, updates and sharing disabled.
 - Change: `evals/harness/run.py`, `evals/promptfoo/retrieval.yaml` and its assertion script, `make eval`.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 8. Baseline

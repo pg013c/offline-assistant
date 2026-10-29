@@ -1,0 +1,18 @@
+# Three cases over the F-02 excerpts of the AI Act (Articles 5-7), for testing the harness.
+version: 1
+cases:
+  - id: fixture-en-article-6
+    kind: single-article
+    language: en
+    question: When is an AI system intended as a safety component considered high-risk?
+    expected: {behaviour: answer, sources: [{document: ai-act-en, article: "6", paragraph: "1"}]}
+  - id: fixture-pl-to-en
+    kind: cross-language
+    language: pl
+    question: Kiedy system AI z załącznika III uznaje się za system wysokiego ryzyka?
+    expected: {behaviour: answer, sources: [{document: ai-act-en, article: "6", paragraph: "2"}]}
+  - id: fixture-out-of-scope
+    kind: out-of-scope
+    language: en
+    question: How long should pasta boil?
+    expected: {behaviour: refuse, sources: []}
