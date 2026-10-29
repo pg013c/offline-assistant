@@ -77,7 +77,7 @@ test-backend: ## Backend tests
 	$(BACKEND) pytest -q
 
 test-integration: ## Tests with real adapters; needs `make models` and Tesseract
-	$(BACKEND) pytest -q -m integration
+	HF_HUB_OFFLINE=1 $(BACKEND) pytest -q -m integration
 
 test-frontend: ## Frontend tests
 	$(FRONTEND) test
