@@ -135,3 +135,9 @@ def _sha256(path: Path) -> str:
         for block in iter(lambda: file.read(1 << 20), b""):
             digest.update(block)
     return digest.hexdigest()
+
+
+# The local LLM, served by llama-server rather than loaded by the API (ADR 0021); fetched by
+# `make llm-models`, not `make models`, so CI and the test model need no 5 GB download.
+QWEN3_8B = PinnedModel(repository="", revision="", directory="", files={})
+LLM_MODELS: tuple[PinnedModel, ...] = ()

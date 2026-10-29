@@ -209,7 +209,7 @@ class ChatModel(Protocol):
   - `settings.py`, `app.py`, `adapters/chat_models.py`, `adapters/pinned_models.py`;
   - `scripts/download_models.py` (LLM group);
   - `Makefile`, `.env.example`.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 9. Answer evaluation cases

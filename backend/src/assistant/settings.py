@@ -13,8 +13,10 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix=ENV_PREFIX)
 
     data_dir: Path
-    # The only chat model until F-06 adds real ones.
-    chat_model: Literal["fake-extractive"] = "fake-extractive"
+    chat_model: Literal["fake-extractive", "qwen3-8b"] = "fake-extractive"
+    llm_url: str = ""
+    llm_timeout: float = 0
+    max_retries: int = 0
     # `docling` reads every supported format; `text-only` reads .txt and .md without models.
     document_parser: Literal["docling", "text-only"] = "docling"
     # Where `make models` put the parsing and embedding models (ADR 0004).
