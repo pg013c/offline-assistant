@@ -219,3 +219,10 @@
   - p95 search latency 1599 ms, above the 1 s limit of spec decision 4.
 
   Scoring 30 pairs took 785 ms in float32 and 353 ms in float16 on MPS, with scores equal to three decimals. The human approved trying float16 on MPS before deciding the default (2026-10-29). Decision 4 is unchanged.
+- **`ref-annex-iii` stays outside the top 3 (review finding 4).** It ends at rank 6 with the reranker. The human accepted the miss on 2026-10-29, and the case moves to F-09.
+- **Review fixes.**
+  - Answers use the reranker's top 10.
+  - The reranker loads at startup.
+  - `make eval` adds answerable@3, a warm-up search per mode and the reranker's settings.
+
+  The measurement after them is the baseline.

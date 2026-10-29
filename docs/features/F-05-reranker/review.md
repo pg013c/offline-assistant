@@ -30,3 +30,12 @@ Decision is filled in by the human: `fix`, `backlog (F-xx)`, or `reject: <reason
 
 | # | Commits |
 |---|---|
+| 1 | `67d7051` test, `98df458` fix (answerable@3, gated; the case is flagged in `missed`); record restated in the docs commit after the run |
+| 2 | `1aa3b6f` test, `46e89d6` fix |
+| 3 | `c8a51c8` test, `3c76dd0` feat (reranker loaded at startup); `67d7051` test, `98df458` fix (warm-up search per mode, reported apart) |
+| 4 | docs commit after the run (plan "Changes during the build", evaluation record) |
+| 5 | `67d7051` test, `98df458` fix |
+| 6 | `67d7051` test, `98df458` fix (candidates, device and precision in the metadata) |
+| 7 | `c8a51c8` test (startup with every model but the reranker, on and off) |
+| 8 | docs commit after the run (evaluation record) |
+| 9 | `1aa3b6f` test, `46e89d6` fix (by finding 2); `architecture.md` in the docs commit |
