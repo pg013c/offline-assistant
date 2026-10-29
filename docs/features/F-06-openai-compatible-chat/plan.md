@@ -181,7 +181,7 @@ class ChatModel(Protocol):
   - **Usage:** tokens and time to first token are recorded.
   - **Integration, marked `llm`, skipped unless `make llm` is up:** Qwen3 8B answers a Polish and an English question with valid citations.
 - Change: `adapters/openai_compatible_chat.py`, `prompts/answer.md`, `pyproject.toml` (httpx at runtime, `llm` marker).
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 7. Tool calls in the adapter

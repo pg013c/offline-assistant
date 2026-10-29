@@ -16,7 +16,39 @@ from assistant.domain.answers import (
 from assistant.domain.documents import Chunk
 from assistant.ports.chat_model import ChatModel
 
-ADAPTERS: list[Callable[[], ChatModel]] = [FakeExtractiveChatModel]
+
+def stub_openai_compatible() -> ChatModel:
+    """The real adapter against a stub server that answers validly (AC-5)."""
+    import json  # noqa: PLC0415
+
+    import httpx  # noqa: PLC0415
+
+    from assistant.adapters.openai_compatible_chat import LlmServer, OpenAICompatibleChat  # noqa: PLC0415
+
+    content = json.dumps({"answer": "Logs are kept for six months.", "citations": [1]})
+    pieces = [content[i : i + 7] for i in range(0, len(content), 7)]
+    lines: list[dict[str, object]] = [
+        {"choices": [{"index": 0, "delta": {"content": piece}}]} for piece in pieces
+    ]
+    lines.append({"choices": [], "usage": {"prompt_tokens": 50, "completion_tokens": 12}})
+    body = "".join(f"data: {json.dumps(line)}\n\n" for line in lines) + "data: [DONE]\n\n"
+
+    def server(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=body.encode())
+
+    return OpenAICompatibleChat(
+        model_id="stub",
+        server=LlmServer(
+            base_url="http://127.0.0.1:8080",
+            served_model="stub",
+            timeout_seconds=5,
+            max_retries=2,
+        ),
+        transport=httpx.MockTransport(server),
+    )
+
+
+ADAPTERS: list[Callable[[], ChatModel]] = [FakeExtractiveChatModel, stub_openai_compatible]
 
 PASSAGES = [
     Chunk(
