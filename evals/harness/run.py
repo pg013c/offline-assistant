@@ -66,6 +66,8 @@ class RunConfig:
     collection_prefix: str
     port: int
     threshold: float
+    # Whether the floors of ADR 0020 apply; `make eval` holds the corpus to them.
+    floors: bool = False
 
 
 @dataclass(frozen=True)

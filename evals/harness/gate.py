@@ -30,3 +30,23 @@ def check(current: Mapping[str, float | None], baseline: Mapping[str, float | No
                 f"(more than {TOLERANCE_POINTS} points)"
             )
     return failures
+
+
+# The floors and ceiling of ADR 0020, whatever the baseline says.
+FLOORS: dict[str, float] = {}
+CEILINGS: dict[str, float] = {}
+
+
+def below_floors(current: Mapping[str, float | None]) -> list[str]:
+    """One message per floored metric below its floor, above its ceiling, or missing."""
+    raise NotImplementedError
+
+
+def gate_failures(
+    current: Mapping[str, float | None],
+    baseline: Mapping[str, float | None],
+    *,
+    floors: bool,
+) -> list[str]:
+    """Everything that fails the run: regressions, and with `floors` the ADR 0020 floors."""
+    raise NotImplementedError
