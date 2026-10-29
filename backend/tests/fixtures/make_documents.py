@@ -66,6 +66,10 @@ def write_docx(path: Path) -> None:
     ):
         table.cell(row, 0).text = record
         table.cell(row, 1).text = period
+    document.add_heading("Backups", level=2)
+    document.add_paragraph("The team shall:")
+    document.add_paragraph("back up the logs every week;", style="List Number")
+    document.add_paragraph("test a restore every month.", style="List Number")
     document.add_heading("Review", level=2)
     document.add_paragraph("The policy is reviewed every year by the compliance officer.")
     document.save(str(path))

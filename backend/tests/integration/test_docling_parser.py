@@ -96,6 +96,16 @@ def test_word_documents_keep_headings_and_tables(parser: DoclingDocumentParser) 
     assert parsed.page_count is None
 
 
+def test_a_numbered_list_in_a_word_document_stays_with_its_paragraph(
+    parser: DoclingDocumentParser,
+) -> None:
+    chunks = chunks_of(parser, "retention-policy.docx")
+
+    backups = next(chunk for chunk in chunks if "The team shall:" in chunk.text)
+    assert "back up the logs every week;" in backups.text
+    assert "test a restore every month." in backups.text
+
+
 @pytest.mark.parametrize("filename", ["ai-act-art6-en-scan.pdf", "ai-act-art6-en-photo.jpg"])
 def test_scans_and_photos_are_read_with_ocr(parser: DoclingDocumentParser, filename: str) -> None:
     chunks = chunks_of(parser, filename)

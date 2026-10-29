@@ -237,3 +237,66 @@ def test_a_long_numbered_paragraph_is_split_and_keeps_its_labels() -> None:
 
     assert len(chunks) > 1
     assert {(chunk.location.article, chunk.location.paragraph) for chunk in chunks} == {("16", "1")}
+
+
+def test_a_numbered_list_outside_an_article_joins_its_paragraph() -> None:
+    document = parsed(
+        heading("Backups"),
+        paragraph("The team shall:"),
+        list_item("1. back up weekly;"),
+        list_item("2. test a restore every month."),
+    )
+
+    chunks = chunk_document("doc", document)
+
+    assert [chunk.text for chunk in chunks] == [
+        "The team shall:\n1. back up weekly;\n2. test a restore every month."
+    ]
+
+
+def test_numbered_list_items_inside_an_article_are_its_paragraphs() -> None:
+    document = parsed(
+        heading("Article 6"),
+        list_item("1. An AI system is high-risk where:"),
+        list_item("(a) it is a safety component."),
+        list_item("2. Annex III systems are high-risk."),
+    )
+
+    chunks = chunk_document("doc", document)
+
+    assert [(chunk.location.paragraph, chunk.text) for chunk in chunks] == [
+        ("1", "1. An AI system is high-risk where:\n(a) it is a safety component."),
+        ("2", "2. Annex III systems are high-risk."),
+    ]
+
+
+def test_a_word_longer_than_the_limit_is_cut_to_fit() -> None:
+    word = "x" * 250
+    document = parsed(paragraph(f"See {word} here."))
+
+    chunks = chunk_document("doc", document, max_chars=100)
+
+    assert all(len(chunk.text) <= 100 for chunk in chunks)
+    assert "".join(chunk.text for chunk in chunks).replace(" ", "") == f"See{word}here."
+
+
+def test_each_part_of_a_split_chunk_gets_the_page_it_starts_on() -> None:
+    first = " ".join(f"Page one sentence {n}." for n in range(6))
+    second = " ".join(f"Page two sentence {n}." for n in range(6))
+    document = parsed(
+        heading("Article 9", page=1),
+        paragraph(f"1. {first}", page=1),
+        paragraph(second, page=2),
+        page_count=2,
+    )
+
+    chunks = chunk_document("doc", document, max_chars=120)
+
+    pages = [(chunk.text.split()[0:2], chunk.location.page) for chunk in chunks]
+    assert chunks[0].location.page == 1
+    assert chunks[-1].location.page == 2
+    for words, page in pages:
+        if words == ["Page", "two"]:
+            assert page == 2
+        if words == ["Page", "one"]:
+            assert page == 1
