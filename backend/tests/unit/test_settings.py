@@ -144,3 +144,15 @@ def test_validation_error_locations_name_the_environment_variable(
     location: tuple[str, ...], expected: str
 ) -> None:
     assert variable_name(location) == expected
+
+
+@pytest.mark.parametrize("value", ["-0.1", "1.5"])
+def test_the_minimum_similarity_must_lie_between_0_and_1(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, value: str
+) -> None:
+    monkeypatch.setenv("ASSISTANT_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("ASSISTANT_MODELS_DIR", str(tmp_path / "models"))
+    monkeypatch.setenv("ASSISTANT_MIN_SIMILARITY", value)
+
+    with pytest.raises(SettingsError, match="ASSISTANT_MIN_SIMILARITY"):
+        load_settings()

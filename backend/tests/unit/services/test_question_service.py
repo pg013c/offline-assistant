@@ -194,7 +194,7 @@ class SlowIndex(InMemoryChunkIndex):
 
 
 def test_searching_does_not_block_other_work_on_the_event_loop() -> None:
-    questions = QuestionService(SlowIndex(), FakeExtractiveChatModel(), FakeDocumentStore())
+    questions = QuestionService(SlowIndex(), FakeExtractiveChatModel(), FakeDocumentStore(), 0.5)
     ticks = 0
 
     async def ticker() -> None:
@@ -211,3 +211,20 @@ def test_searching_does_not_block_other_work_on_the_event_loop() -> None:
     asyncio.run(run())
 
     assert ticks >= 5
+
+
+def test_a_relevant_passage_ranked_below_three_weak_ones_is_still_cited() -> None:
+    index = FixedIndex(
+        [
+            hit(0, "Keyword match one.", 0.3),
+            hit(1, "Keyword match two.", 0.35),
+            hit(2, "Keyword match three.", 0.4),
+            hit(3, "Providers keep logs.", 0.7),
+        ]
+    )
+    questions = QuestionService(index, FakeExtractiveChatModel(), FakeDocumentStore(), 0.5)
+
+    events = ask(questions, "Do providers keep logs?")
+
+    [citation] = [event.citation for event in events if isinstance(event, AnswerCitation)]
+    assert citation.chunk_id == "doc:3"

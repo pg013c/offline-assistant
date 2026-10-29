@@ -14,7 +14,7 @@ from assistant.adapters.docling_parser import DoclingDocumentParser
 from assistant.adapters.qdrant_chunk_index import QdrantChunkIndex
 from assistant.adapters.sentence_transformer_embedder import SentenceTransformerEmbedder
 from assistant.domain.documents import chunk_document, document_id_for
-from assistant.services.questions import MIN_SIMILARITY
+from assistant.settings import Settings
 
 pytestmark = pytest.mark.integration
 
@@ -23,6 +23,8 @@ MODELS_DIR = Path(
     os.environ.get("ASSISTANT_MODELS_DIR", Path(__file__).parents[3] / "data" / "models")
 )
 QDRANT_URL = os.environ.get("ASSISTANT_QDRANT_URL", "http://127.0.0.1:6333")
+# The threshold the app uses by default.
+MIN_SIMILARITY = Settings.model_fields["min_similarity"].default
 
 
 @pytest.fixture(scope="module")
