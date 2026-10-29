@@ -198,7 +198,7 @@
   - **README:** status, the model in the licence table, the size of `make models`;
   - **`.env.example`**;
   - **backlog:** the follow-up item for the top out-of-scope similarity is done.
-- [ ] green
+- [x] green
 
 ## Acceptance criteria mapping
 
