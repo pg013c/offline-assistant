@@ -14,6 +14,10 @@ OFFLINE = {
 }
 
 
+class PromptfooError(Exception):
+    """Promptfoo returned no output for a case; the message names it."""
+
+
 def environment(base: Mapping[str, str], api_url: str) -> dict[str, str]:
     """The environment Promptfoo runs with: the caller's, offline, with the API to call."""
     return {**base, **OFFLINE, "EVAL_API_URL": api_url}

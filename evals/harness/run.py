@@ -31,6 +31,7 @@ from harness.resolve import ChunkRef, resolve
 
 ROOT = Path(__file__).parents[2]
 PROMPTFOO_CONFIG = ROOT / "evals" / "promptfoo" / "retrieval.yaml"
+BASELINE = ROOT / "docs" / "evals" / "retrieval-baseline.json"
 STARTUP_SECONDS = 180
 INGESTION_SECONDS = 1800
 POLL_SECONDS = 1.0
@@ -77,7 +78,7 @@ def run(config: RunConfig) -> Outcome:
         CaseResult(case.id, case.behaviour, expected[case.id], hits[case.id]) for case in cases
     ]
     metrics = compute(results, config.threshold)
-    report = build_report(metrics, _metadata(config, started_at), config.threshold)
+    report = build_report(metrics, _metadata(config, started_at), config.threshold, {})
     baseline = (
         json.loads(config.baseline.read_text(encoding="utf-8"))["metrics"]
         if config.baseline.exists()
@@ -289,7 +290,7 @@ def main() -> None:
     config = RunConfig(
         corpus_dir=Path(os.environ.get("EVAL_CORPUS_DIR", ROOT / "data" / "eval-corpus")),
         dataset=ROOT / "evals" / "datasets" / "retrieval.yaml",
-        baseline=ROOT / "docs" / "evals" / "retrieval-baseline.json",
+        baseline=BASELINE,
         results_dir=ROOT / "evals" / "results",
         data_dir=ROOT / "data" / "eval",
         models_dir=Path(os.environ.get("ASSISTANT_MODELS_DIR", ROOT / "data" / "models")),

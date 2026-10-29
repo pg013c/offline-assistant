@@ -1,7 +1,9 @@
 import json
 
+import pytest
+
 from harness.metrics import Hit
-from harness.promptfoo import environment, hits_by_case
+from harness.promptfoo import PromptfooError, environment, hits_by_case
 
 
 def test_promptfoo_runs_without_telemetry_updates_or_sharing() -> None:
@@ -35,3 +37,16 @@ def test_hits_are_read_per_case_from_promptfoo_results() -> None:
         "a": (Hit("d:2", 0.8), Hit("d:5", 0.4)),
         "b": (),
     }
+
+
+def test_a_case_without_output_is_reported_by_id() -> None:
+    results = {
+        "results": {
+            "results": [
+                {"vars": {"case_id": "broken"}, "response": {"error": "connection refused"}},
+            ]
+        }
+    }
+
+    with pytest.raises(PromptfooError, match=r"broken.*connection refused"):
+        hits_by_case(results)

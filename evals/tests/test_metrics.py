@@ -78,3 +78,11 @@ def test_an_empty_group_has_no_value() -> None:
 
     assert metrics["out_of_scope_refused"].value is None
     assert metrics["out_of_scope_refused"].cases == 0
+
+
+def test_in_scope_cases_below_the_threshold_are_listed_as_missed() -> None:
+    results = [result("weak-but-first", {"d:1"}, [("d:1", 0.4)])]
+
+    metrics = compute(results, threshold=0.5)
+
+    assert metrics.missed == {"weak-but-first": "best hit 0.40 is below the threshold 0.50"}

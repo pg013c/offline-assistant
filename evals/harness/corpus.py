@@ -39,7 +39,7 @@ def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def fetch(directory: Path) -> None:
+def fetch(directory: Path, client: httpx.Client | None = None) -> None:
     directory.mkdir(parents=True, exist_ok=True)
     for document in documents():
         target = directory / document.file

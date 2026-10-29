@@ -21,3 +21,9 @@ def test_for_unanswered_in_scope_questions_a_rise_is_the_regression() -> None:
 
 def test_metrics_without_a_value_or_without_a_baseline_are_skipped() -> None:
     assert check(current={"recall@3": None, "mrr": 0.1}, baseline={"recall@3": 0.9}) == []
+
+
+def test_a_baseline_metric_missing_from_the_run_fails() -> None:
+    failures = check(current={"mrr": 0.5}, baseline={"recall@3": 0.8, "mrr": 0.5})
+
+    assert failures == ["recall@3 is in the baseline but missing from this run"]

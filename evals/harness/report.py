@@ -16,7 +16,12 @@ REQUIRED_METADATA = (
 )
 
 
-def build_report(metrics: Metrics, metadata: Mapping[str, Any], threshold: float) -> dict[str, Any]:
+def build_report(
+    metrics: Metrics,
+    metadata: Mapping[str, Any],
+    threshold: float,
+    expected: Mapping[str, frozenset[str]],
+) -> dict[str, Any]:
     """Everything needed to compare and reproduce a run; fails if metadata is incomplete."""
     missing = [name for name in REQUIRED_METADATA if name not in metadata]
     if missing:
