@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 
 import pypdfium2 as pdfium
 
+from assistant.adapters.model_loading import MODEL_LOADING
 from assistant.adapters.pinned_models import DOCLING_MODELS, ModelsNotReady, verify_models
 from assistant.domain.documents import Block, ParsedDocument
 from assistant.domain.errors import DocumentUnreadable
@@ -122,7 +123,7 @@ class DoclingDocumentParser:
             ),
             do_table_structure=True,
         )
-        return DocumentConverter(
+        converter = DocumentConverter(
             allowed_formats=[InputFormat.PDF, InputFormat.DOCX, InputFormat.IMAGE],
             format_options={
                 # Docling's own PDF text backend garbles some Polish letters in EUR-Lex PDFs;
@@ -133,6 +134,11 @@ class DoclingDocumentParser:
                 InputFormat.IMAGE: ImageFormatOption(pipeline_options=options),
             },
         )
+        # Docling would load its models halfway through the first document; load them now,
+        # one model at a time with the other adapters.
+        with MODEL_LOADING:
+            converter.initialize_pipeline(InputFormat.PDF)
+        return converter
 
 
 def _blocks(document: "DoclingDocument") -> Iterator[Block]:

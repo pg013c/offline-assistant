@@ -8,6 +8,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from assistant.adapters.model_loading import MODEL_LOADING
 from assistant.adapters.pinned_models import BGE_RERANKER, verify_models
 
 if TYPE_CHECKING:
@@ -71,14 +72,19 @@ class BgeReranker:
     def _get_model(self) -> "CrossEncoder":
         with self._lock:
             if self._model is None:
-                import torch
-                from sentence_transformers import CrossEncoder
-
-                device = self._device or self.default_device()
-                self._model = CrossEncoder(
-                    str(self._path),
-                    device=device,
-                    local_files_only=True,
-                    model_kwargs={"torch_dtype": getattr(torch, precision_for(device))},
-                )
+                self._model = self._load()
             return self._model
+
+    def _load(self) -> "CrossEncoder":
+        with MODEL_LOADING:
+            import torch
+            from sentence_transformers import CrossEncoder
+
+            device = self._device or self.default_device()
+            model: CrossEncoder = CrossEncoder(
+                str(self._path),
+                device=device,
+                local_files_only=True,
+                model_kwargs={"torch_dtype": getattr(torch, precision_for(device))},
+            )
+            return model
