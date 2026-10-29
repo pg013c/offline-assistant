@@ -5,7 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from assistant.adapters.docling_parser import DoclingDocumentParser, ParserNotReady
+from assistant.adapters.docling_parser import DoclingDocumentParser
+from assistant.adapters.pinned_models import ModelsNotReady
 from assistant.domain.documents import Chunk, chunk_document, document_id_for
 from assistant.domain.errors import DocumentUnreadable
 
@@ -146,14 +147,14 @@ def test_a_pdf_without_text_has_no_blocks(parser: DoclingDocumentParser) -> None
 
 
 def test_missing_models_name_the_model_and_the_command(tmp_path: Path) -> None:
-    with pytest.raises(ParserNotReady, match="make models") as raised:
+    with pytest.raises(ModelsNotReady, match="make models") as raised:
         DoclingDocumentParser.ensure_ready(tmp_path)
 
     assert "docling-layout-heron" in str(raised.value)
 
 
 def test_a_missing_ocr_engine_is_named(tmp_path: Path) -> None:
-    with pytest.raises(ParserNotReady, match="tesseract"):
+    with pytest.raises(ModelsNotReady, match="tesseract"):
         DoclingDocumentParser.ensure_ready(MODELS_DIR, tesseract="tesseract-that-does-not-exist")
 
 

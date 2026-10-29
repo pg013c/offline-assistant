@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from assistant.adapters.pinned_models import ParserNotReady
+from assistant.adapters.pinned_models import ModelsNotReady
 from assistant.adapters.sentence_transformer_embedder import SentenceTransformerEmbedder
 
 pytestmark = pytest.mark.integration
@@ -48,5 +48,5 @@ def test_a_polish_and_an_english_question_about_the_same_thing_are_close(
 
 
 def test_missing_weights_name_the_model_and_make_models(tmp_path: Path) -> None:
-    with pytest.raises(ParserNotReady, match=r"BAAI/bge-m3.*make models"):
+    with pytest.raises(ModelsNotReady, match=r"BAAI/bge-m3.*make models"):
         SentenceTransformerEmbedder.ensure_ready(tmp_path)

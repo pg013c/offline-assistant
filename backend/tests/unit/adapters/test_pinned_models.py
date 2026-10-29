@@ -7,7 +7,7 @@ import pytest
 from assistant.adapters.pinned_models import (
     BGE_M3,
     PINNED_MODELS,
-    ParserNotReady,
+    ModelsNotReady,
     PinnedModel,
     verify_models,
 )
@@ -38,14 +38,14 @@ def test_models_matching_their_hashes_pass(tmp_path: Path, model: PinnedModel) -
 def test_a_missing_file_names_the_model_and_the_command(tmp_path: Path, model: PinnedModel) -> None:
     (tmp_path / "kind" / "org--model" / "config.json").unlink()
 
-    with pytest.raises(ParserNotReady, match=r"org/model.*config\.json.*make models"):
+    with pytest.raises(ModelsNotReady, match=r"org/model.*config\.json.*make models"):
         verify_models(tmp_path, [model])
 
 
 def test_a_file_with_other_content_is_rejected(tmp_path: Path, model: PinnedModel) -> None:
     (tmp_path / "kind" / "org--model" / "sub" / "weights.safetensors").write_bytes(b"other")
 
-    with pytest.raises(ParserNotReady, match=r"sub/weights\.safetensors differs"):
+    with pytest.raises(ModelsNotReady, match=r"sub/weights\.safetensors differs"):
         verify_models(tmp_path, [model])
 
 

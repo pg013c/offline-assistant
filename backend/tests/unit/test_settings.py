@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from assistant.adapters.docling_parser import ParserNotReady
+from assistant.adapters.pinned_models import ModelsNotReady
 from assistant.app import main
 from assistant.settings import SettingsError, load_settings, variable_name
 
@@ -101,7 +101,7 @@ def test_startup_fails_when_the_embedding_model_is_missing(
     monkeypatch.setenv("ASSISTANT_MODELS_DIR", str(tmp_path / "models"))
     monkeypatch.setenv("ASSISTANT_DOCUMENT_PARSER", "text-only")
 
-    with pytest.raises(ParserNotReady, match=r"BAAI/bge-m3.*make models"):
+    with pytest.raises(ModelsNotReady, match=r"BAAI/bge-m3.*make models"):
         main()
 
 
@@ -120,7 +120,7 @@ def test_startup_fails_when_parsing_models_are_missing(
     monkeypatch.setenv("ASSISTANT_DATA_DIR", str(tmp_path))
     monkeypatch.setenv("ASSISTANT_MODELS_DIR", str(tmp_path / "models"))
 
-    with pytest.raises(ParserNotReady, match="make models"):
+    with pytest.raises(ModelsNotReady, match="make models"):
         main()
 
 
