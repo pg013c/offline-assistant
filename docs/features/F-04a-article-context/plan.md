@@ -125,7 +125,7 @@
   - `docs/architecture.md` (what is indexed, chunker version and re-parsing, schema version 2);
   - README status and numbers;
   - backlog.
-- [ ] green
+- [x] green
 
 ## Acceptance criteria mapping
 
