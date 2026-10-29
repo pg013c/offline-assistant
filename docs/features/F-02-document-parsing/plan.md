@@ -136,7 +136,7 @@
 - Kind: ui
 - Tests first: `frontend/e2e/ask-question.spec.ts`: upload the English AI Act excerpt PDF, wait for "ready", ask about high-risk classification, open the citation and see `Art. 6` and a page.
 - Change: Playwright starts the API with the Docling parser and `ASSISTANT_MODELS_DIR`; CI job `E2E` installs Tesseract and restores the model cache.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 13. Documentation
