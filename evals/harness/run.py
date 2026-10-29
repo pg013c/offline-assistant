@@ -167,6 +167,11 @@ def drop_collections(qdrant: httpx.Client, prefix: str) -> None:
             qdrant.delete(f"/collections/{name}").raise_for_status()
 
 
+def default_answers_config(env: Mapping[str, str]) -> RunConfig:
+    """`make eval-answers`: the answer suite against the local model (F-06)."""
+    raise NotImplementedError
+
+
 def default_config(env: Mapping[str, str]) -> RunConfig:
     """The configuration of `make eval`, independent of the development settings.
 

@@ -62,6 +62,11 @@ def environment(base: Mapping[str, str], api_url: str) -> dict[str, str]:
     return {**base, **OFFLINE, "EVAL_API_URL": api_url}
 
 
+def outputs_by_case(results: Mapping[str, Any]) -> dict[str, str]:
+    """The raw output per case id, from Promptfoo's JSON output of a single-provider suite."""
+    raise NotImplementedError
+
+
 def responses_by_mode(results: Mapping[str, Any]) -> dict[str, dict[str, Response]]:
     """Ranked hits and latency per mode and case id, from Promptfoo's JSON output."""
     found: dict[str, dict[str, Response]] = {}

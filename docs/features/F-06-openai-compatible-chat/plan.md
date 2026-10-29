@@ -231,7 +231,7 @@ class ChatModel(Protocol):
   - **Report and gate:** the report and the gate for the answer suite.
   - **`make eval-answers`:** it refuses to run when the LLM server is down.
 - Change: `evals/promptfoo/answers.yaml`, `evals/harness/` (answers module, run entry), `Makefile`.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 11. Measure and record
