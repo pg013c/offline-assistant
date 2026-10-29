@@ -33,6 +33,13 @@ class BgeReranker:
         self._lock = threading.Lock()
 
     @staticmethod
+    def default_device() -> str:
+        """The device the model runs on unless told otherwise: the Apple GPU if there is one."""
+        import torch
+
+        return "mps" if torch.backends.mps.is_available() else "cpu"
+
+    @staticmethod
     def ensure_ready(models_dir: Path) -> None:
         """Raise `ModelsNotReady` unless the pinned reranker files are in place."""
         verify_models(models_dir, [BGE_RERANKER])
@@ -67,7 +74,7 @@ class BgeReranker:
                 import torch
                 from sentence_transformers import CrossEncoder
 
-                device = self._device or ("mps" if torch.backends.mps.is_available() else "cpu")
+                device = self._device or self.default_device()
                 self._model = CrossEncoder(
                     str(self._path),
                     device=device,

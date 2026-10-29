@@ -64,8 +64,14 @@ class Adapters:
 
 
 def reranker_for(settings: Settings, device: str | None = None) -> Reranker | None:
-    """The pinned reranker when reranking is on; it fails here if its model is missing."""
+    """The pinned reranker when reranking is on; it fails here if its model is missing.
+
+    `auto` turns it on for the device it would run on (`device`, by default the one torch
+    finds) only when that is an Apple GPU.
+    """
     if settings.reranker == "off":
+        return None
+    if settings.reranker == "auto" and (device or BgeReranker.default_device()) != "mps":
         return None
     BgeReranker.ensure_ready(settings.models_dir)
     return BgeReranker(settings.models_dir)
