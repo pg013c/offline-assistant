@@ -129,7 +129,7 @@
 - Tests first: `features/chat/citationLabel.test.ts`: `Art. 6(2), p. 53`, `Art. 6, p. 53`, a heading with a page, a page only, nothing; `ChatView.test.tsx`: the citation list and the dialog show the label next to the title.
 - Change: `features/chat/citationLabel.ts`, `ChatView.tsx`, `CitationDialog.tsx`, `useChatStream.ts` types.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 12. Journey with a PDF
 

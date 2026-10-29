@@ -1,6 +1,7 @@
 import { useState, type JSX, type SubmitEvent } from 'react'
 
 import { CitationDialog } from './CitationDialog'
+import { citationLabel } from './citationLabel'
 import { useChatStream, type ChatCitation } from './useChatStream'
 
 export function ChatView(): JSX.Element {
@@ -67,7 +68,9 @@ export function ChatView(): JSX.Element {
                     }}
                     className="rounded border border-gray-300 px-2 py-1 text-xs"
                   >
-                    {citation.document_title}
+                    {[citation.document_title, citationLabel(citation.location)]
+                      .filter(Boolean)
+                      .join(' · ')}
                   </button>
                 </li>
               ))}
