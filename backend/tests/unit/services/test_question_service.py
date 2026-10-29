@@ -112,7 +112,9 @@ def test_end_event_names_the_model_and_reports_a_found_answer(
 
     events = ask(questions, "How long do providers keep logs?")
 
-    assert events[-1] == AnswerEnd(model_id="fake-extractive", found=True, is_test_model=True)
+    end = events[-1]
+    assert isinstance(end, AnswerEnd)
+    assert (end.model_id, end.found, end.is_test_model) == ("fake-extractive", True, True)
 
 
 def test_without_documents_no_relevant_passage_is_reported(
