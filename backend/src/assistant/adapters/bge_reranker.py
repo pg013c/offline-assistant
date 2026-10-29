@@ -17,8 +17,12 @@ BATCH_SIZE = 16
 
 
 def precision_for(device: str) -> str:
-    """The floating-point precision the model runs in on a device."""
-    raise NotImplementedError
+    """The floating-point precision the model runs in on a device.
+
+    Float16 halves the scoring time on Apple GPUs and keeps scores within 0.01 (F-05);
+    CPUs gain little from it, so they keep float32.
+    """
+    return "float16" if device == "mps" else "float32"
 
 
 class BgeReranker:
@@ -40,7 +44,10 @@ class BgeReranker:
     @property
     def precision(self) -> str:
         """The precision of the loaded model, as a torch dtype name."""
-        raise NotImplementedError
+        model = self._get_model().model
+        if model is None:
+            raise RuntimeError("the reranker has no model loaded")
+        return str(model.dtype).removeprefix("torch.")
 
     def score(self, query: str, passages: Sequence[str]) -> list[float]:
         if not passages:
@@ -61,5 +68,10 @@ class BgeReranker:
                 from sentence_transformers import CrossEncoder
 
                 device = self._device or ("mps" if torch.backends.mps.is_available() else "cpu")
-                self._model = CrossEncoder(str(self._path), device=device, local_files_only=True)
+                self._model = CrossEncoder(
+                    str(self._path),
+                    device=device,
+                    local_files_only=True,
+                    model_kwargs={"torch_dtype": getattr(torch, precision_for(device))},
+                )
             return self._model

@@ -176,7 +176,7 @@
     - its scores stay within 0.01 of float32 on CPU for the same pairs.
 - Change: `adapters/bge_reranker.py`.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 6. Measure and record
 
