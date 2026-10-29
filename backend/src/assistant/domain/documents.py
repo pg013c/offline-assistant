@@ -20,7 +20,7 @@ class Document:
     title: str
     filename: str
     chunk_count: int
-    status: DocumentStatus = "ready"
+    status: DocumentStatus
     page_count: int | None = None
     failure_reason: str | None = None
 

@@ -1,3 +1,4 @@
+import threading
 from dataclasses import replace
 from pathlib import PurePath
 
@@ -47,6 +48,9 @@ class DocumentService:
         self._parser = parser
         self._queue = queue
         self._max_upload_bytes = max_upload_bytes
+        # Uploads arrive on several threads; checking for a stored document and storing a new
+        # one must not interleave.
+        self._lock = threading.Lock()
 
     def upload(self, filename: str, content: bytes) -> Document:
         """Validate and store an upload, and queue its ingestion; known files return as stored."""
@@ -64,26 +68,33 @@ class DocumentService:
                 raise NotUtf8Text(f"{filename}: not valid UTF-8 text") from error
 
         document_id = document_id_for(content)
-        existing = self._store.get(document_id)
-        if existing is not None:
-            return existing
-
-        document = Document(
-            id=document_id,
-            title=title_from_filename(filename),
-            filename=filename,
-            chunk_count=0,
-            status="processing",
-        )
-        self._store.save_upload(document, content)
-        self._queue_ingestion(document_id)
+        with self._lock:
+            existing = self._store.get(document_id)
+            if existing is not None and existing.status != "failed":
+                return existing
+            if existing is not None:
+                # A failure may have been temporary; uploading the file again retries it.
+                document = replace(existing, status="processing", failure_reason=None)
+                self._store.update(document)
+            else:
+                document = Document(
+                    id=document_id,
+                    title=title_from_filename(filename),
+                    filename=filename,
+                    chunk_count=0,
+                    status="processing",
+                )
+                self._store.save_upload(document, content)
+            self._queue_ingestion(document_id)
+        # The queue may already have finished the job.
         # The queue may already have finished the job.
         return self._store.get(document_id) or document
 
     def ingest(self, document_id: str) -> None:
         """Parse, chunk and index a stored upload; record the outcome as its status."""
         document = self._store.get(document_id)
-        if document is None:
+        # Only processing documents are ingested, so a job queued twice runs once.
+        if document is None or document.status != "processing":
             return
         try:
             parsed = self._parser.parse(document.filename, self._store.load_original(document_id))
@@ -95,14 +106,26 @@ class DocumentService:
             self._fail(document, UNREADABLE)
             return
 
-        chunks = chunk_document(document_id, parsed)
-        if not chunks:
-            self._fail(document, NO_TEXT)
+        try:
+            chunks = chunk_document(document_id, parsed)
+            if not chunks:
+                self._fail(document, NO_TEXT)
+                return
+            self._store.save_chunks(document_id, chunks)
+            self._index.add(chunks)
+        except Exception:
+            log.exception("document_ingestion_failed", document_id=document_id)
+            self._store.save_chunks(document_id, [])
+            self._fail(document, INGESTION_FAILED)
             return
-        self._store.save_chunks(document_id, chunks)
-        self._index.add(chunks)
         self._store.update(
-            replace(document, status="ready", chunk_count=len(chunks), page_count=parsed.page_count)
+            replace(
+                document,
+                status="ready",
+                chunk_count=len(chunks),
+                page_count=parsed.page_count,
+                failure_reason=None,
+            )
         )
         log.info("document_ingested", document_id=document_id, chunks=len(chunks))
 
@@ -117,10 +140,14 @@ class DocumentService:
         """
         ready = 0
         for document in self._store.list_documents():
-            if document.status == "ready":
-                self._index.add(self._store.load_chunks(document.id))
+            chunks = self._store.load_chunks(document.id) if document.status == "ready" else []
+            if chunks:
+                self._index.add(chunks)
                 ready += 1
-            elif document.status == "processing":
+            elif document.status != "failed":
+                # Unfinished, or ready without stored chunks: parse it again.
+                if document.status == "ready":
+                    self._store.update(replace(document, status="processing"))
                 self._queue_ingestion(document.id)
         return ready
 

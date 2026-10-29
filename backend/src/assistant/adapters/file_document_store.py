@@ -5,6 +5,7 @@
 """
 
 import json
+import uuid
 from collections.abc import Sequence
 from dataclasses import asdict
 from pathlib import Path, PurePath
@@ -65,13 +66,17 @@ class LocalFileDocumentStore:
     @staticmethod
     def _write_json(path: Path, value: object) -> None:
         # Write then rename, so a reader never sees half a file.
-        partial = path.with_name(path.name + ".partial")
+        # A name per writer, so two threads saving the same document do not share a file.
+        partial = path.with_name(f"{path.name}.{uuid.uuid4().hex}.partial")
         partial.write_text(json.dumps(value), encoding="utf-8")
         partial.replace(path)
 
 
 def _read_metadata(path: Path) -> Document:
-    return Document(**json.loads(path.read_text(encoding="utf-8")))
+    record = json.loads(path.read_text(encoding="utf-8"))
+    # F-01 stored no status and no chunks; such documents are parsed again.
+    record.setdefault("status", "processing")
+    return Document(**record)
 
 
 def _chunk_from(record: dict[str, Any]) -> Chunk:
