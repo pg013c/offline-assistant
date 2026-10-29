@@ -36,14 +36,14 @@ From here on, every change to retrieval, prompts or models is accepted on measur
 
 ## Acceptance criteria
 
-- [ ] AC-1: Given `make eval-corpus`, then the four PDFs are downloaded, checked against their pinned hashes, and nothing is downloaded again if they are present.
-- [ ] AC-2: Given the corpus, when the evaluation runs, then it indexes the corpus through the API into its own collection and data directory, leaving the development data untouched.
-- [ ] AC-3: `POST /api/search` with a query and a limit returns at most that many passages, best first, each with chunk id, document, location, text and similarity; an empty or too long query returns `422` with the standard error body.
-- [ ] AC-4: Every case in the dataset validates against a schema (TEST-20), and every expected source resolves to at least one chunk of the indexed corpus; a case that resolves to nothing fails the run before any metric is computed.
-- [ ] AC-5: Given the indexed corpus, when `make eval` runs, then it reports recall@3, recall@10, MRR, the out-of-scope and in-scope refusal shares, each with its case count, and lists the cases that missed.
-- [ ] AC-6: Every run writes a report with model versions, collection, configuration, dataset version and hardware. The first run is committed as the baseline in `docs/evals/`.
-- [ ] AC-7: Given a recorded baseline, when a later run drops any metric by more than 5 points, then `make eval` exits with an error naming the metric. Otherwise it passes.
-- [ ] AC-8: The evaluation runs offline once the models and corpus are present. Evaluation tooling sends no telemetry.
+- [x] AC-1: Given `make eval-corpus`, then the four PDFs are downloaded, checked against their pinned hashes, and nothing is downloaded again if they are present. Proof: `evals/tests/test_corpus.py::test_only_missing_files_are_downloaded`, `::test_a_download_with_another_hash_stops_and_is_not_kept`, `::test_the_corpus_pins_the_ai_act_and_the_gdpr_in_english_and_polish`; `make eval-corpus` run twice.
+- [x] AC-2: Given the corpus, when the evaluation runs, then it indexes the corpus through the API into its own collection and data directory, leaving the development data untouched. Proof: `evals/tests/test_run.py` (own API, data directory and collection; other collections untouched; fresh index per run), `test_run_preparation.py` (busy port refused, only own collections dropped).
+- [x] AC-3: `POST /api/search` with a query and a limit returns at most that many passages, best first, each with chunk id, document, location, text and similarity; an empty or too long query returns `422` with the standard error body. Proof: `backend/tests/unit/api/test_search_api.py`, `test_question_service.py` search tests.
+- [x] AC-4: Every case in the dataset validates against a schema (TEST-20), and every expected source resolves to at least one chunk of the indexed corpus; a case that resolves to nothing fails the run before any metric is computed. Proof: `evals/tests/test_dataset.py`, `test_resolve.py`, `backend/tests/unit/api/test_documents_api.py` chunk listing tests; every source resolved in the baseline run.
+- [x] AC-5: Given the indexed corpus, when `make eval` runs, then it reports recall@3, recall@10, MRR, the out-of-scope and in-scope refusal shares, each with its case count, and lists the cases that missed. Proof: `evals/tests/test_metrics.py`, `test_run.py`; [baseline record](../../evals/2026-10-29-retrieval-baseline.md).
+- [x] AC-6: Every run writes a report with model versions, collection, configuration, dataset version and hardware. The first run is committed as the baseline in `docs/evals/`. Proof: `evals/tests/test_report.py`, `test_run.py` (corpus hashes, indexing time); `docs/evals/retrieval-baseline.json` and the baseline record.
+- [x] AC-7: Given a recorded baseline, when a later run drops any metric by more than 5 points, then `make eval` exits with an error naming the metric. Otherwise it passes. Proof: `evals/tests/test_gate.py`, `test_main.py::test_make_eval_exits_with_an_error_naming_each_regression`; a repeat `make eval` passes the gate.
+- [x] AC-8: The evaluation runs offline once the models and corpus are present. Evaluation tooling sends no telemetry. Proof: `evals/tests/test_promptfoo.py` (telemetry, updates and sharing off; `--no-write`), `test_run_preparation.py` (no development settings); `make eval` runs with `HF_HUB_OFFLINE=1`.
 
 ## Evaluation cases
 
