@@ -17,8 +17,11 @@ class Settings(BaseSettings):
     chat_model: Literal["fake-extractive"] = "fake-extractive"
     # `docling` reads every supported format; `text-only` reads .txt and .md without models.
     document_parser: Literal["docling", "text-only"] = "docling"
-    # Where `make models` put the parsing models; required by the Docling parser (ADR 0004).
+    # Where `make models` put the parsing and embedding models (ADR 0004).
     models_dir: Path | None = Field(default=None, validate_default=True)
+    qdrant_url: str = "http://127.0.0.1:6333"
+    qdrant_collection_prefix: str = "assistant"
+    min_similarity: float = 0.5
 
     @field_validator("models_dir")
     @classmethod

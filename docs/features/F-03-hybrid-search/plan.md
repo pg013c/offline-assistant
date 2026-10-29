@@ -209,7 +209,7 @@
     - startup fails naming `ASSISTANT_QDRANT_URL` and `make qdrant` when Qdrant is unreachable;
     - the new settings are read from the environment.
 - Change: `app.py`, `settings.py`, `tests/conftest.py`.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 10. Delete and re-index endpoints

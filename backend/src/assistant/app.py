@@ -3,6 +3,7 @@
 import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
 
 import structlog
 from fastapi import FastAPI
@@ -20,7 +21,10 @@ from assistant.api.errors import register_error_handlers
 from assistant.api.routes import chat, documents, health
 from assistant.log import configure_logging
 from assistant.ports.chat_model import ChatModel
+from assistant.ports.chunk_index import ChunkIndex
 from assistant.ports.document_parser import DocumentParser
+from assistant.ports.document_store import DocumentStore
+from assistant.ports.ingestion_queue import IngestionQueue
 from assistant.services.documents import DocumentService
 from assistant.services.questions import QuestionService
 from assistant.settings import Settings, SettingsError, load_settings
@@ -43,12 +47,23 @@ def document_parser_for(settings: Settings) -> DocumentParser:
     return RoutingDocumentParser(text=text, rich=DoclingDocumentParser(settings.models_dir))
 
 
+@dataclass(frozen=True)
+class Adapters:
+    """Everything the services need from outside; `build_adapters` wires the real ones."""
+
+    store: DocumentStore
+    index: ChunkIndex
+    parser: DocumentParser
+    queue: IngestionQueue
+    chat_model: ChatModel
+
+
 def operation_id(route: APIRoute) -> str:
     """Use the route function's name as the OpenAPI operation id, e.g. `get_health`."""
     return route.name
 
 
-def create_app(settings: Settings) -> FastAPI:
+def create_app(settings: Settings, adapters: Adapters | None = None) -> FastAPI:
     """Build the HTTP application from settings."""
     store = LocalFileDocumentStore(settings.data_dir)
     # In memory until the Qdrant index is wired in (F-03 step 9).
