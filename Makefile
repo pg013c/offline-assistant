@@ -20,10 +20,15 @@ export COREPACK_ENABLE_DOWNLOAD_PROMPT := 0
 export API_PORT ?= 8000
 export UI_PORT ?= 5173
 
+# Qdrant for `make dev`, the integration tests and the journeys (ADR 0017), pinned by digest.
+QDRANT_IMAGE := qdrant/qdrant:v1.20.0@sha256:9bfc89f9914fc14876a88c05270685921a55b8877b254a98bcc1cc2f0a424cd2
+QDRANT_CONTAINER := offline-assistant-qdrant
+export QDRANT_PORT ?= 6333
+
 # Where `make api-client` writes the schema and generated types (ADR 0005).
 API_OUT ?= $(CURDIR)/frontend/src/api
 
-.PHONY: help setup models dev dev-preflight e2e test-integration check check-backend check-frontend check-api-client api-client test test-backend test-frontend node-version
+.PHONY: help setup models qdrant dev dev-preflight e2e test-integration check check-backend check-frontend check-api-client api-client test test-backend test-frontend node-version
 
 help: ## List targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
@@ -37,6 +42,28 @@ setup: node-version ## Install project dependencies
 
 models: ## Download the parsing models into ASSISTANT_MODELS_DIR (the only step that needs the network)
 	$(BACKEND) python scripts/download_models.py "$(ASSISTANT_MODELS_DIR)"
+
+qdrant: ## Start Qdrant in Docker on QDRANT_PORT (data in ASSISTANT_DATA_DIR/qdrant, telemetry off)
+	@if [ -z "$(ASSISTANT_DATA_DIR)" ]; then \
+	  echo "ASSISTANT_DATA_DIR is not set. Copy .env.example to .env, or export it."; exit 1; \
+	fi
+	@if docker ps --format '{{.Names}}' | grep -qx $(QDRANT_CONTAINER); then \
+	  echo "Qdrant is already running ($(QDRANT_CONTAINER))."; \
+	elif docker ps -a --format '{{.Names}}' | grep -qx $(QDRANT_CONTAINER); then \
+	  docker start $(QDRANT_CONTAINER) >/dev/null; \
+	elif lsof -nP -iTCP:$(QDRANT_PORT) -sTCP:LISTEN >/dev/null 2>&1; then \
+	  echo "Port $(QDRANT_PORT) is already used by another process. Stop it or set QDRANT_PORT."; exit 1; \
+	else \
+	  mkdir -p "$(ASSISTANT_DATA_DIR)/qdrant"; \
+	  docker run -d --name $(QDRANT_CONTAINER) -p 127.0.0.1:$(QDRANT_PORT):6333 \
+	    -e QDRANT__TELEMETRY_DISABLED=true -v "$(ASSISTANT_DATA_DIR)/qdrant:/qdrant/storage" \
+	    $(QDRANT_IMAGE) >/dev/null; \
+	fi
+	@for attempt in $$(seq 30); do \
+	  curl -fs http://127.0.0.1:$(QDRANT_PORT)/readyz >/dev/null && echo "Qdrant is ready on port $(QDRANT_PORT)." && exit 0; \
+	  sleep 1; \
+	done; \
+	echo "Qdrant did not become ready; see: docker logs $(QDRANT_CONTAINER)"; exit 1
 
 dev: node-version dev-preflight ## API on :8000 and UI on :5173 (API_PORT, UI_PORT), both with hot reload
 	@mkdir -p "$(ASSISTANT_DATA_DIR)"

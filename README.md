@@ -60,15 +60,16 @@ MacBook Pro 14", Apple M5 Pro, 64 GB unified memory. A Linux + NVIDIA profile wi
 
 Development setup. Docker packaging and the offline install guide arrive with F-10 and F-12.
 
-Prerequisites: [uv](https://docs.astral.sh/uv/), Node 24 (`nvm use` reads `.nvmrc`), GNU Make, and [Tesseract](https://tesseract-ocr.github.io/) with English and Polish data for OCR (`brew install tesseract tesseract-lang` on macOS, `apt install tesseract-ocr tesseract-ocr-pol` on Debian/Ubuntu). pnpm comes through Corepack.
+Prerequisites: [uv](https://docs.astral.sh/uv/), Node 24 (`nvm use` reads `.nvmrc`), GNU Make, [Docker](https://docs.docker.com/) for Qdrant, and [Tesseract](https://tesseract-ocr.github.io/) with English and Polish data for OCR (`brew install tesseract tesseract-lang` on macOS, `apt install tesseract-ocr tesseract-ocr-pol` on Debian/Ubuntu). pnpm comes through Corepack.
 
 ```bash
 cp .env.example .env
 make setup
 make models
+make qdrant
 ```
 
-`make models` downloads the document parsing models (about 500 MB, pinned by commit and checked by hash) into `ASSISTANT_MODELS_DIR`. It is the only step that needs the network; nothing is downloaded at runtime ([ADR 0004](docs/adr/0004-offline-first-no-egress.md)).
+`make models` downloads the document parsing models (about 500 MB, pinned by commit and checked by hash) into `ASSISTANT_MODELS_DIR`. It is the only step that needs the network; nothing is downloaded at runtime ([ADR 0004](docs/adr/0004-offline-first-no-egress.md)). `make qdrant` starts the vector database in Docker, pinned by digest, with telemetry off and data under `ASSISTANT_DATA_DIR/qdrant` ([ADR 0017](docs/adr/0017-qdrant-and-bge-m3-for-hybrid-search.md)).
 
 ```bash
 make dev
@@ -109,3 +110,7 @@ Code: [MIT](LICENSE). Models, tools and datasets keep their own licences:
 | [SciPy](https://scipy.org/) | OCR region detection in Docling | BSD-3-Clause |
 | [pypdfium2](https://github.com/pypdfium2-team/pypdfium2) (PDFium) | PDF text and page checks | Apache-2.0 or BSD-3-Clause |
 | [huggingface_hub](https://github.com/huggingface/huggingface_hub) | `make models` downloads | Apache-2.0 |
+| [Qdrant](https://qdrant.tech/) server and [qdrant-client](https://github.com/qdrant/qdrant-client) | vector and keyword search | Apache-2.0 |
+| [BGE-M3](https://huggingface.co/BAAI/bge-m3) | multilingual embeddings | MIT |
+| [sentence-transformers](https://www.sbert.net/) | runs the embedding model | Apache-2.0 |
+| [scikit-learn](https://scikit-learn.org/) | dependency of sentence-transformers | BSD-3-Clause |

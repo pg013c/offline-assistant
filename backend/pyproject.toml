@@ -13,6 +13,8 @@ dependencies = [
     "pydantic-settings>=2.16.2",
     "pypdfium2>=5.14,<6",
     "python-multipart>=0.0.32",
+    "qdrant-client>=1.20,<2",
+    "sentence-transformers>=6.2,<7",
     "structlog>=26.1.0",
     "torch>=2.2.2,<3",
     "torchvision<1",
@@ -102,6 +104,10 @@ forbidden_modules = [
     "starlette",
     "uvicorn",
     "pydantic_settings",
+    # Search (ADR 0017).
+    "qdrant_client",
+    "sentence_transformers",
+    "transformers",
     # Document parsing (ADR 0015).
     "docling",
     "docling_core",

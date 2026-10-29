@@ -102,7 +102,7 @@
   - import-linter forbids `qdrant_client` and `sentence_transformers` in the inner layers;
   - README licences and setup.
 - Done when: `make qdrant` serves `/readyz` and `make check` is green.
-- [ ] green
+- [x] green
 
 ### Step 2. Pinned models for every model, BGE-M3 included
 
