@@ -103,7 +103,7 @@
     - the same input gives the same scores.
 - Change: `ports/reranker.py`, `domain/` (ordering), `adapters/fakes/reranker.py`.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 2. Pinned BGE reranker and its adapter
 

@@ -2,6 +2,8 @@
 
 from collections.abc import Sequence
 
+from assistant.domain.keywords import tokens
+
 
 class WordOverlapReranker:
     @property
@@ -9,4 +11,7 @@ class WordOverlapReranker:
         return "word-overlap"
 
     def score(self, query: str, passages: Sequence[str]) -> list[float]:
-        raise NotImplementedError
+        wanted = set(tokens(query))
+        if not wanted:
+            return [0.0 for _ in passages]
+        return [len(wanted & set(tokens(passage))) / len(wanted) for passage in passages]
