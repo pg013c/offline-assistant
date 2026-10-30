@@ -42,7 +42,14 @@ from harness.calibration import (
 from harness.corpus import CorpusDocument, documents, sha256
 from harness.dataset import load_answer_cases, load_cases
 from harness.gate import below_answer_floors, gate_failures
-from harness.judge import JUDGE_MODEL, JudgeClient, JudgeUnavailable, Verdict
+from harness.judge import (
+    JUDGE_MODEL,
+    JUDGE_PROMPT,
+    MAX_TOKENS,
+    JudgeClient,
+    JudgeUnavailable,
+    Verdict,
+)
 from harness.metrics import CaseResult, compute, latency, top_out_of_scope_similarity
 from harness.promptfoo import (
     MODES,
@@ -209,7 +216,7 @@ def run_answers(config: RunConfig) -> Outcome:
         )
         for case in cases
     ]
-    verdicts, judge_note = judge_answers(
+    verdicts, judge = judge_answers(
         answer_cases,
         {case.id: case.question for case in cases},
         results,
@@ -231,7 +238,7 @@ def run_answers(config: RunConfig) -> Outcome:
         "corpus": corpus,
         "chat_model": config.chat_model,
         "llm_server": _llm_server(config.llm_url),
-        "judge": judge_note,
+        "judge": judge,
         "calibration": (
             {
                 "correctness": calibration.correctness,
@@ -474,13 +481,13 @@ def judge_answers(
     results: Mapping[str, ChatResult],
     texts: Mapping[str, str],
     judge_url: str,
-) -> tuple[dict[str, Verdict | None] | None, str]:
-    """Each complete answer judged (ADR 0022), and a note on the judge; without a judge,
-    no verdicts and a note that says how to start it."""
+) -> tuple[dict[str, Verdict | None] | None, dict[str, Any]]:
+    """Each complete answer judged (ADR 0022), and who judged it; without a judge, no
+    verdicts and a note that says how to start it."""
     try:
         httpx.get(f"{judge_url}/health", timeout=5).raise_for_status()
     except httpx.HTTPError:
-        return None, f"skipped: no judge answers at {judge_url}; start it with make judge"
+        return None, {"skipped": f"no judge answers at {judge_url}; start it with make judge"}
     client = JudgeClient(judge_url)
     verdicts: dict[str, Verdict | None] = {}
     try:
@@ -490,11 +497,16 @@ def judge_answers(
                 continue
             verdicts[case.id] = client.judge(judge_input(case, result, questions[case.id], texts))
     except JudgeUnavailable:
-        return (
-            None,
-            f"skipped: the judge at {judge_url} stopped answering; start it with make judge",
-        )
-    return verdicts, f"{JUDGE_MODEL} at {judge_url}"
+        return None, {
+            "skipped": f"the judge at {judge_url} stopped answering; start it with make judge"
+        }
+    return verdicts, {
+        "model": JUDGE_MODEL,
+        "server": _llm_server(judge_url),
+        "prompt_sha256": hashlib.sha256(JUDGE_PROMPT.encode()).hexdigest(),
+        "max_tokens": MAX_TOKENS,
+        "thinking": client.thought,
+    }
 
 
 def calibrate(judge_url: str, path: Path = CALIBRATION_FILE) -> Agreement | None:

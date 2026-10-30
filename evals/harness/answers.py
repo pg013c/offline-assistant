@@ -412,6 +412,8 @@ def _judged_scores(
         row["judge_reason"] = verdict.reason if verdict else None
         if verdict is None:
             continue
+        row["supported_sentences"] = sum(verdict.supported.values())
+        row["cited_sentences"] = len(verdict.supported)
         judged += 1
         correct += weights[verdict.correctness]
         cited += len(verdict.supported)
@@ -467,6 +469,7 @@ def _case_result(case: AnswerCase, result: ChatResult) -> dict[str, Any]:
         "error": result.error,
         "tools": list(result.tools),
         "tool_turns": usage.get("tool_turns", 0),
+        "failed_tool_turns": usage.get("failed_tool_turns", 0),
     }
 
 
@@ -488,8 +491,9 @@ def answers_markdown(metrics: AnswerMetrics, metadata: Mapping[str, Any]) -> str
         lines.append(f"| {name} | {shown} |")
     lines += [
         "",
-        "| Case | Cites expected | Language | Attempts | First token (ms) | Tokens/s | Tools |",
-        "|---|---|---|---|---|---|---|",
+        "| Case | Cites expected | Language | Attempts | First token (ms) | Tokens/s | Tools"
+        " | Correctness | Supported | Valid tool turns |",
+        "|---|---|---|---|---|---|---|---|---|---|",
     ]
     for case_id, row in metrics.per_case.items():
         cells = [
@@ -499,6 +503,12 @@ def answers_markdown(metrics: AnswerMetrics, metadata: Mapping[str, Any]) -> str
             "n/a" if row["first_token_ms"] is None else f"{row['first_token_ms']:.0f}",
             "n/a" if row["tokens_per_second"] is None else f"{row['tokens_per_second']:.1f}",
             ", ".join(row["tools"]) or "none",
+            row.get("correctness") or "n/a",
+            _fraction(row.get("supported_sentences"), row.get("cited_sentences")),
+            _fraction(
+                row["tool_turns"] - row["failed_tool_turns"] if row["tool_turns"] else None,
+                row["tool_turns"],
+            ),
         ]
         lines.append(f"| {case_id} | " + " | ".join(cells) + " |")
     lines += ["", "Missed cases:", ""]
@@ -506,6 +516,10 @@ def answers_markdown(metrics: AnswerMetrics, metadata: Mapping[str, Any]) -> str
     lines += ["", "Run:", ""]
     lines += [f"- {name}: {value}" for name, value in metadata.items()]
     return "\n".join(lines) + "\n"
+
+
+def _fraction(count: int | None, total: int | None) -> str:
+    return "n/a" if count is None or not total else f"{count}/{total}"
 
 
 def _share(count: float, total: int) -> float | None:

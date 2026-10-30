@@ -111,6 +111,7 @@ class JudgeClient:
                 raise JudgeUnavailable(
                     f"No judge answers at {self._url}. Start it with: make judge"
                 ) from error
+            self.thought = self.thought or _thought(response)
             try:
                 return _verdict(response, judged)
             except _Invalid:
@@ -126,6 +127,14 @@ def _user_message(judged: JudgeInput) -> str:
         f"Question: {judged.question}\n\nKey points:\n{key_points}\n\n"
         f"Answer, by sentence:\n{sentences}\n\nCited passages:\n{passages or '(none)'}"
     )
+
+
+def _thought(response: httpx.Response) -> bool:
+    """Whether the reply carries the judge's reasoning, as llama-server returns it apart."""
+    try:
+        return bool(response.json()["choices"][0]["message"].get("reasoning_content"))
+    except (ValueError, KeyError, IndexError, TypeError, AttributeError):
+        return False
 
 
 def _verdict(response: httpx.Response, judged: JudgeInput) -> Verdict:
