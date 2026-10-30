@@ -188,7 +188,7 @@ Added after the first measurement: the Polish checklist overran the 256-token ca
 - Kind: eval
 - `make eval-answers` with Qwen3 8B. Record `docs/evals/2026-10-30-answers-notes.md` against the F-07 baseline, and update `answer-baseline.json`.
 - A prompt change is made only between runs, and each change is measured.
-- [ ] recorded
+- [x] recorded: [2026-10-30-answers-notes.md](../../evals/2026-10-30-answers-notes.md), after step 7c
 
 ## Acceptance criteria mapping
 
