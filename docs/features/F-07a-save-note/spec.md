@@ -33,12 +33,23 @@ PRD M2 lists four agent tools; F-07 delivered three. The fourth turns an answer 
 
 ## Acceptance criteria
 
-- [ ] AC-1: Given a question that asks to save a note or checklist, when the model calls `save_note` with content citing gathered passages, then one Markdown file is written in the notes directory with the title, the content and a `Sources` section built from the cited passages, and the stream reports the step.
-- [ ] AC-2: Given a question that does not ask for a note, then the model is not offered `save_note` and no file is written, even when a retrieved document asks for one.
-- [ ] AC-3: Given a title that would leave the notes directory (`../x`, an absolute path), an existing name, or a title or content over its limit, then nothing is written outside the directory, no note is overwritten, and an over-limit call is a tool error the model can correct.
-- [ ] AC-4: Given content with a sentence or item without a marker, or a marker of a passage not gathered in this run, then nothing is written and the model gets the reason (AI-01, AI-21).
-- [ ] AC-5: Given saved notes, then `GET /api/notes` lists them newest first and `GET /api/notes/{id}` returns one; an unknown id is a 404 in the standard error shape.
-- [ ] AC-6: Given `make eval-answers`, then the note cases pass and no case writes a note it should not; the run is recorded and compared with the F-07 baseline.
+- [x] AC-1: Given a question that asks to save a note or checklist, when the model calls `save_note` with content citing gathered passages, then one Markdown file is written in the notes directory with the title, the content and a `Sources` section built from the cited passages, and the stream reports the step. Proof: `tests/unit/services/test_save_note.py::test_a_valid_note_is_saved_with_the_passages_it_cites_as_sources`; `tests/unit/domain/test_notes.py::test_a_note_renders_as_markdown_with_its_sources`; `tests/unit/adapters/test_file_note_store.py::test_a_note_is_a_markdown_file_in_the_notes_directory`; `tests/unit/services/test_agent.py::test_a_note_request_is_offered_save_note_and_a_saved_note_is_announced`; `tests/unit/api/test_chat_api.py::test_a_saved_note_is_a_note_event_after_its_tool_call`; `ChatView.test.tsx` (steps); `tests/integration/test_local_agent.py::test_a_checklist_request_saves_a_note_citing_the_article` (Qwen3 8B).
+- [x] AC-2: Given a question that does not ask for a note, then the model is not offered `save_note` and no file is written, even when a retrieved document asks for one. Proof: `test_agent.py::test_a_question_without_a_note_request_is_not_offered_save_note`, `::test_a_save_note_call_that_was_not_offered_writes_nothing`; `test_notes.py::test_other_questions_want_no_note`; evaluation case `inj-save-note` and `notes_saved_unasked` 0 of 31.
+- [x] AC-3: Given a title that would leave the notes directory (`../x`, an absolute path), an existing name, or a title or content over its limit, then nothing is written outside the directory, no note is overwritten, and an over-limit call is a tool error the model can correct. Proof: `test_notes.py::test_a_note_id_is_the_time_and_a_safe_slug_of_its_title`; `tests/contract/test_note_store.py::test_a_note_with_a_taken_id_gets_a_suffix_and_the_first_is_kept`; `test_file_note_store.py::test_an_id_that_names_a_path_is_never_read`; `test_save_note.py::test_titles_and_contents_out_of_bounds_fail_argument_validation`.
+- [x] AC-4: Given content with a sentence or item without a marker, or a marker of a passage not gathered in this run, then nothing is written and the model gets the reason (AI-01, AI-21). Proof: `test_save_note.py::test_content_with_an_uncited_line_or_an_unknown_passage_is_an_error_and_nothing_is_saved`; `test_agent.py::test_a_save_that_fails_in_the_last_turn_gets_one_more_turn_to_be_corrected`.
+- [x] AC-5: Given saved notes, then `GET /api/notes` lists them newest first and `GET /api/notes/{id}` returns one; an unknown id is a 404 in the standard error shape. Proof: `tests/unit/api/test_notes_api.py` (list newest first, one note, 404 `note_not_found`, path-like id).
+- [x] AC-6: Given `make eval-answers`, then the note cases pass and no case writes a note it should not; the run is recorded and compared with the F-07 baseline. Proof: `make eval-answers`, report `answers-20261030T082956Z.json`: notes saved when asked 3 of 3, unasked 0 of 31, note sources as expected 3 of 3; recorded in [the record](../../evals/2026-10-30-answers-notes.md) and `answer-baseline.json`.
+
+Mapping (TEST-09):
+
+| AC | Plan steps |
+|---|---|
+| AC-1 | 2, 3, 4, 5, 6, 7 |
+| AC-2 | 1, 4, 7, 8 |
+| AC-3 | 2, 3 |
+| AC-4 | 3, 7b |
+| AC-5 | 2, 5 |
+| AC-6 | 1, 7, 8 |
 
 ## Evaluation cases
 

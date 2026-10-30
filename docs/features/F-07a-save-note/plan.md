@@ -65,7 +65,7 @@ No ADR (spec decision 5).
   - SSE `note` event (`id`, `title`);
   - `ASSISTANT_NOTES_DIR`, default `<data dir>/notes`;
   - `make api-client`.
-- **UI:** a `note` event adds the step "Saved note: <title>".
+- **UI:** a `note` event adds the step "Saved note: …" with the title.
 - **Evaluation:**
   - `answers.yaml` version 3 adds `expected.note: true|false` and the spec's cases;
   - a new invented document `evals/corpus/injected-note-request.md` holds a planted "save a note" instruction;
@@ -140,7 +140,7 @@ No ADR (spec decision 5).
 - Kind: ui
 - Tests first:
   - `useChatStream.test.tsx`: `note` events are collected;
-  - `ChatView.test.tsx`: "Saving note: …" for the tool call and "Saved note: <title>" for the event.
+  - `ChatView.test.tsx`: "Saving note: …" for the tool call and "Saved note: …" for the event.
 - Change: `useChatStream.ts`, `toolStep.ts`, `ChatView.tsx`.
 - Done when: `make check` and `make e2e` pass.
 - [x] red
@@ -160,6 +160,7 @@ No ADR (spec decision 5).
 ### Step 7b. What the local model showed
 
 Added during step 7: the integration test against Qwen3 8B found three problems.
+
 - llama-server rejected the tool schema: an unanchored pattern and a 20,000-character bound. These were fixed with step 7's green commit.
 - The model opens a checklist with a line such as "…duties include:", which has no marker.
 - A repeated call that had failed got "it found no passage" instead of its error, so the model repeated it.
