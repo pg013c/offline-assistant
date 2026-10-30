@@ -43,3 +43,15 @@ def test_a_named_model_answers() -> None:
 def test_an_unknown_model_is_an_error_naming_the_models() -> None:
     with pytest.raises(UnknownModel, match="qwen3-8b, fake-extractive"):
         models().answerer("gpt-latest")
+
+
+def test_no_models_is_a_configuration_error() -> None:
+    with pytest.raises(ValueError, match="at least one model"):
+        ChatModels([])
+
+
+def test_a_model_listed_twice_is_a_configuration_error() -> None:
+    entry = ModelEntry(id="qwen3-8b", is_test_model=False, answerer=LOCAL)
+
+    with pytest.raises(ValueError, match="qwen3-8b is listed twice"):
+        ChatModels([entry, entry])

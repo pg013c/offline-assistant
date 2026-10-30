@@ -76,3 +76,13 @@ def test_an_unknown_model_is_a_422_in_the_standard_error_shape(client: TestClien
     assert response.status_code == 422
     assert response.json()["code"] == "unknown_model"
     assert "fake-extractive" in response.json()["message"]
+
+
+def test_a_model_name_over_100_characters_is_rejected_before_it_is_looked_up(
+    client: TestClient,
+) -> None:
+    response = client.post("/api/chat", json={"question": "Anything?", "model": "x" * 101})
+
+    assert response.status_code == 422
+    assert response.json()["code"] == "invalid_request"
+    assert [detail["field"] for detail in response.json()["details"]] == ["body.model"]
