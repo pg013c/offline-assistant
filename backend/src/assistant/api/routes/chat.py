@@ -24,6 +24,7 @@ from assistant.domain.answers import (
     AnswerEvent,
     AnswerFailed,
     AnswerText,
+    NoteSaved,
     ToolUsed,
 )
 from assistant.services.questions import Answerer
@@ -80,6 +81,9 @@ def _to_schema(event: AnswerEvent) -> ChatEvent:
             )
         case ToolUsed(name=name, arguments=arguments):
             return ChatEvent(ChatToolEvent(type="tool", name=name, arguments=arguments))
+        case NoteSaved():
+            # F-07a step 5 puts saved notes on the stream.
+            raise NotImplementedError
         case _:
             assert_never(event)
 

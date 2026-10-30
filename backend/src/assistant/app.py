@@ -36,6 +36,7 @@ from assistant.ports.reranker import Reranker
 from assistant.services.agent import AgentService
 from assistant.services.documents import DocumentService
 from assistant.services.questions import Answerer, QuestionService
+from assistant.services.tools import DocumentTools
 from assistant.settings import Settings, load_settings
 
 API_PREFIX = "/api"
@@ -129,7 +130,12 @@ def create_app(settings: Settings, adapters: Adapters | None = None) -> FastAPI:
         adapters.reranker,
     )
     answers: Answerer = (
-        AgentService(question_service, adapters.tool_model, adapters.store, settings.max_tool_turns)
+        AgentService(
+            question_service,
+            adapters.tool_model,
+            DocumentTools(question_service, adapters.store),
+            settings.max_tool_turns,
+        )
         if adapters.tool_model
         else question_service
     )

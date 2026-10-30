@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     max_retries: int = Field(default=2, ge=0, le=5)
     # Model turns that may call tools before the answer (AI-22, F-07).
     max_tool_turns: int = Field(default=2, ge=1, le=10)
+    notes_dir: Path | None = None
     # `docling` reads every supported format; `text-only` reads .txt and .md without models.
     document_parser: Literal["docling", "text-only"] = "docling"
     # Where `make models` put the parsing and embedding models (ADR 0004).

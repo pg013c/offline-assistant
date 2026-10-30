@@ -107,6 +107,11 @@ class DocumentTools:
         except _ToolError as error:
             return f"Error: {error}"
 
+    async def document_titles(self) -> list[str]:
+        """The titles of the stored documents, in order, for the agent's prompt."""
+        documents = await asyncio.to_thread(self._store.list_documents)
+        return [document.title for document in _by_title(documents)]
+
     async def _save_note(
         self, arguments: SaveNoteArguments, ledger: PassageLedger, notes: NoteStore
     ) -> str:

@@ -1,6 +1,5 @@
 """The agent: it looks passages up with tools, then answers from them (F-07, FR-10)."""
 
-import asyncio
 import re
 import time
 from collections.abc import AsyncIterator, Callable
@@ -28,7 +27,6 @@ from assistant.domain.tools import (
     ToolCalls,
 )
 from assistant.ports.chat_model import ToolCallingModel
-from assistant.ports.document_store import DocumentStore
 from assistant.services.questions import QuestionService
 from assistant.services.tools import TOOLS, DocumentTools
 
@@ -55,14 +53,13 @@ class AgentService:
         self,
         questions: QuestionService,
         model: ToolCallingModel,
-        store: DocumentStore,
+        tools: DocumentTools,
         max_tool_turns: int,
         clock: Callable[[], float] = time.perf_counter,
     ) -> None:
         self._questions = questions
         self._model = model
-        self._store = store
-        self._tools = DocumentTools(questions, store)
+        self._tools = tools
         self._max_tool_turns = max_tool_turns
         self._clock = clock
 
@@ -172,8 +169,7 @@ class AgentService:
         return result
 
     async def _system_prompt(self) -> str:
-        documents = await asyncio.to_thread(self._store.list_documents)
-        titles = sorted(document.title for document in documents)
+        titles = await self._tools.document_titles()
         return AGENT_PROMPT.substitute(documents=", ".join(f'"{title}"' for title in titles))
 
 

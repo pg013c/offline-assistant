@@ -9,12 +9,14 @@ import pytest
 from assistant.adapters.fakes.chunk_index import InMemoryChunkIndex
 from assistant.adapters.fakes.document_store import FakeDocumentStore
 from assistant.adapters.fakes.ingestion_queue import InlineIngestionQueue
+from assistant.adapters.fakes.note_store import InMemoryNoteStore
 from assistant.adapters.openai_compatible_chat import LlmServer, OpenAICompatibleChat
 from assistant.adapters.text_document_parser import TextDocumentParser
 from assistant.domain.answers import AnswerCitation, AnswerEnd, AnswerEvent, AnswerText, ToolUsed
 from assistant.services.agent import AgentService
 from assistant.services.documents import DocumentService
 from assistant.services.questions import QuestionService
+from assistant.services.tools import DocumentTools
 
 pytestmark = pytest.mark.integration
 
@@ -71,7 +73,8 @@ def ask(question: str) -> tuple[list[AnswerEvent], FakeDocumentStore]:
     )
     # The in-memory index only finds passages that share a word with the query.
     questions = QuestionService(index, model, store, min_similarity=0)
-    agent = AgentService(questions, model, store, max_tool_turns=4)
+    tools = DocumentTools(questions, store, notes=InMemoryNoteStore())
+    agent = AgentService(questions, model, tools, max_tool_turns=4)
 
     async def gather() -> list[AnswerEvent]:
         return [event async for event in agent.ask(question)]

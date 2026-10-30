@@ -120,7 +120,7 @@ No ADR (spec decision 5).
   - a scripted model that calls `save_note` anyway gets "there is no tool save_note", and nothing is written.
 - Change: `services/agent.py`, `domain/answers.py` (`NoteSaved`), `prompts/agent.md`, `app.py` and `settings.py` (`notes_dir`).
 - Done when: `make check` is green.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 5. API: notes endpoints and the note event
