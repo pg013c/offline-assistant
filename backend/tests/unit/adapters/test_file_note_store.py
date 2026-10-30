@@ -1,6 +1,8 @@
 from datetime import UTC, datetime
 from pathlib import Path
 
+from structlog.testing import capture_logs
+
 from assistant.adapters.file_note_store import FileNoteStore
 from assistant.domain.notes import Note, render
 
@@ -34,3 +36,31 @@ def test_an_id_that_names_a_path_is_never_read(tmp_path: Path) -> None:
 
 def test_an_empty_directory_lists_no_notes(tmp_path: Path) -> None:
     assert FileNoteStore(tmp_path / "missing").list_notes() == []
+
+
+def test_a_damaged_or_foreign_file_is_skipped_and_logged_by_id_only(tmp_path: Path) -> None:
+    directory = tmp_path / "notes"
+    store = FileNoteStore(directory)
+    store.save(NOTE)
+    (directory / "20261030-100000-broken.json").write_text("{not json", encoding="utf-8")
+    (directory / "my-own.json").write_text("{}", encoding="utf-8")
+
+    with capture_logs() as logs:
+        notes = store.list_notes()
+
+    assert [note.id for note in notes] == [NOTE.id]
+    assert store.get("20261030-100000-broken") is None
+    warnings = [entry for entry in logs if entry["event"] == "note_unreadable"]
+    assert [entry["note_id"] for entry in warnings] == ["20261030-100000-broken"] * len(warnings)
+    assert warnings
+
+
+def test_saving_leaves_only_the_note_files(tmp_path: Path) -> None:
+    directory = tmp_path / "notes"
+
+    FileNoteStore(directory).save(NOTE)
+
+    assert sorted(path.name for path in directory.iterdir()) == [
+        f"{NOTE.id}.json",
+        f"{NOTE.id}.md",
+    ]
