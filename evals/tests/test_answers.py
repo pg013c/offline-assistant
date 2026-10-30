@@ -486,3 +486,16 @@ def test_without_a_judge_the_judged_metrics_are_skipped() -> None:
 
     assert metrics.values["judged_correct"] is None
     assert metrics.values["citation_support"] is None
+
+
+def test_a_failed_answer_counts_as_wrong_and_only_a_judge_failure_as_not_judged() -> None:
+    cases = [*JUDGED_CASES, AnswerCase("e", "en", "answer", frozenset({"d:5"}), key_points=("v",))]
+    results = {**JUDGED_RESULTS, "e": result("", (), error="invalid_answer")}
+
+    metrics = score_answers(cases, results, verdicts=VERDICTS)
+
+    assert metrics.values["judged_correct"] == pytest.approx((1 + 0.5 + 0 + 0) / 4)
+    assert metrics.cases["judged_correct"] == 4
+    assert metrics.performance["not_judged"] == 1
+    assert metrics.per_case["e"]["correctness"] == "wrong"
+    assert metrics.per_case["e"]["judge_reason"] == "the answer failed: invalid_answer"

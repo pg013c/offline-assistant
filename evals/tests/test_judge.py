@@ -140,3 +140,18 @@ def test_correctness_follows_from_the_key_points_made(
 
     assert verdict is not None
     assert verdict.correctness == correctness
+
+
+def test_a_request_that_times_out_is_retried_then_not_judged() -> None:
+    attempts: list[httpx.Request] = []
+
+    def slow(request: httpx.Request) -> httpx.Response:
+        attempts.append(request)
+        raise httpx.ReadTimeout("no verdict in time", request=request)
+
+    judge = JudgeClient(
+        "http://127.0.0.1:8081", http=httpx.Client(transport=httpx.MockTransport(slow))
+    )
+
+    assert judge.judge(INPUT) is None
+    assert len(attempts) == 3
