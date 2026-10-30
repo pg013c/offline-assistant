@@ -252,7 +252,7 @@ Added after the first measurement (spec decision 6).
 - Kind: eval
 - `make eval-answers` with Qwen3 8B. Record `docs/evals/2026-10-30-answers-agent.md` with the before and after against the F-06 baseline, and update `answer-baseline.json`.
 - The prompt is changed only between runs, in `fix(prompts)` commits, and each change is measured. Any metric worse than the F-06 baseline goes to the human before review.
-- [ ] recorded
+- [x] recorded: [2026-10-30-answers-agent.md](../../evals/2026-10-30-answers-agent.md), after steps 10 and 11
 
 ## Changes during the build
 
