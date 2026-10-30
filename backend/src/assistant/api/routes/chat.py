@@ -13,6 +13,7 @@ from assistant.api.schemas import (
     ChatEvent,
     ChatRequest,
     ChatTextEvent,
+    ChatToolEvent,
     ChatUsage,
     CitationLocation,
 )
@@ -70,14 +71,15 @@ def _to_schema(event: AnswerEvent) -> ChatEvent:
                             first_token_ms=usage.first_token_ms,
                             total_ms=usage.total_ms,
                             attempts=usage.attempts,
+                            tool_turns=usage.tool_turns,
                         )
                         if usage
                         else None
                     ),
                 )
             )
-        case ToolUsed():
-            raise ValueError("tool calls are not part of the chat stream yet")
+        case ToolUsed(name=name, arguments=arguments):
+            return ChatEvent(ChatToolEvent(type="tool", name=name, arguments=arguments))
         case _:
             assert_never(event)
 
@@ -86,5 +88,4 @@ def _to_schema(event: AnswerEvent) -> ChatEvent:
 async def ask_question(request: ChatRequest, answers: Answers) -> AsyncIterable[ChatEvent]:
     """Answer a question from the uploaded documents as Server-Sent Events."""
     async for event in answers.ask(request.question):
-        if not isinstance(event, ToolUsed):
-            yield _to_schema(event)
+        yield _to_schema(event)

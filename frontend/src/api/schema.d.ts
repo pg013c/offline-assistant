@@ -234,9 +234,9 @@ export interface components {
         };
         /**
          * ChatEvent
-         * @description One event of a streamed answer: text, discard, error, citation or end.
+         * @description One event of a streamed answer: tool, text, discard, error, citation or end.
          */
-        ChatEvent: components["schemas"]["ChatTextEvent"] | components["schemas"]["ChatDiscardEvent"] | components["schemas"]["ChatErrorEvent"] | components["schemas"]["ChatCitationEvent"] | components["schemas"]["ChatEndEvent"];
+        ChatEvent: components["schemas"]["ChatToolEvent"] | components["schemas"]["ChatTextEvent"] | components["schemas"]["ChatDiscardEvent"] | components["schemas"]["ChatErrorEvent"] | components["schemas"]["ChatCitationEvent"] | components["schemas"]["ChatEndEvent"];
         /** ChatRequest */
         ChatRequest: {
             /** Question */
@@ -256,6 +256,23 @@ export interface components {
             text: string;
         };
         /**
+         * ChatToolEvent
+         * @description The agent called a tool, with its arguments; sent before the answer text (F-07).
+         */
+        ChatToolEvent: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "tool";
+            /** Name */
+            name: string;
+            /** Arguments */
+            arguments: {
+                [key: string]: unknown;
+            };
+        };
+        /**
          * ChatUsage
          * @description What the answer cost: tokens over every attempt, and its timings in milliseconds.
          */
@@ -270,6 +287,8 @@ export interface components {
             total_ms: number;
             /** Attempts */
             attempts: number;
+            /** Tool Turns */
+            tool_turns: number;
         };
         /**
          * ChunkSummary

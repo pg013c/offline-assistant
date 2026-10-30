@@ -35,6 +35,9 @@ function reduce(answer: ChatAnswer, action: Action): ChatAnswer {
       return { ...answer, status: 'error', error: action.message }
     case 'event':
       switch (action.event.type) {
+        case 'tool':
+          // Shown as progress from F-07 step 6; until then the answer ignores it.
+          return answer
         case 'text':
           return { ...answer, text: answer.text + action.event.text }
         case 'citation':
