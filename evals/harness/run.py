@@ -173,8 +173,19 @@ def run_answers(config: RunConfig) -> Outcome:
 
     results = {case.id: parse_chat_stream(outputs[case.id]) for case in cases}
     metrics = score_answers(
-        [AnswerCase(case.id, case.language, case.behaviour, expected[case.id]) for case in cases],
+        [
+            AnswerCase(
+                case.id,
+                case.language,
+                case.behaviour,
+                expected[case.id],
+                tools=case.tools,
+                forbidden=case.forbidden,
+            )
+            for case in cases
+        ],
         results,
+        stored=frozenset(chunk.chunk_id for chunk in chunks),
     )
     metadata = {
         **_metadata(config, started_at),
@@ -194,6 +205,7 @@ def run_answers(config: RunConfig) -> Outcome:
             case_id: {
                 "answer": result.answer,
                 "cited": list(result.cited),
+                "tools": list(result.tools),
                 "error": result.error,
                 "usage": result.usage,
             }

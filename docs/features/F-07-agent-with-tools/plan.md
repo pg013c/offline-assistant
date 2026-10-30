@@ -216,7 +216,7 @@ No ADR: no new dependency, model or standard.
 - Change: `evals/harness/answers.py`, `gate.py`, `run.py`.
 - Done when: `make check` is green.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 9. Measure and record the answer baseline
 
