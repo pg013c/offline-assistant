@@ -169,6 +169,10 @@ def run_answers(config: RunConfig) -> Outcome:
         outputs = outputs_by_case(
             _promptfoo(ANSWERS_CONFIG, cases, api_url, config.results_dir, started_at)
         )
+        results = {case.id: parse_chat_stream(outputs[case.id]) for case in cases}
+        # Notes are read back while the API still runs.
+        with httpx.Client(base_url=api_url, timeout=60) as api:
+            notes = fetch_notes(api, [note for result in results.values() for note in result.notes])
     except Exception as error:
         log.flush()
         tail = api_log_tail(config.results_dir / "api.log")
@@ -177,7 +181,6 @@ def run_answers(config: RunConfig) -> Outcome:
         _stop(server)
         log.close()
 
-    results = {case.id: parse_chat_stream(outputs[case.id]) for case in cases}
     metrics = score_answers(
         [
             AnswerCase(
@@ -194,6 +197,7 @@ def run_answers(config: RunConfig) -> Outcome:
         ],
         results,
         stored=frozenset(chunk.chunk_id for chunk in chunks),
+        notes=notes,
     )
     metadata = {
         **_metadata(config, started_at),
@@ -221,6 +225,10 @@ def run_answers(config: RunConfig) -> Outcome:
             for case_id, result in results.items()
         },
         "expected": {case: sorted(ids) for case, ids in expected.items()},
+        "notes": {
+            note_id: {"sources": list(note.sources), "content": note.content}
+            for note_id, note in notes.items()
+        },
         "metadata": metadata,
     }
     baseline = (
@@ -405,7 +413,16 @@ def _wait_until_healthy(api_url: str, server: subprocess.Popen[bytes]) -> None:
 
 def fetch_notes(api: httpx.Client, note_ids: Sequence[str]) -> dict[str, SavedNote]:
     """The notes the run saved, read back through `GET /api/notes/{id}` (F-07a)."""
-    raise NotImplementedError
+    saved: dict[str, SavedNote] = {}
+    for note_id in note_ids:
+        response = api.get(f"/api/notes/{note_id}")
+        response.raise_for_status()
+        note = response.json()
+        saved[note_id] = SavedNote(
+            sources=tuple(source["chunk_id"] for source in note["sources"]),
+            content=note["content"],
+        )
+    return saved
 
 
 def media_type(path: Path) -> str:

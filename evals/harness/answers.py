@@ -217,7 +217,7 @@ def score_answers(
             missed[case.id] = "answered an out-of-scope question"
     first_token = latency(first_tokens)
     per_case = {case.id: _case_result(case, results[case.id]) for case in answering}
-    agent = _agent_scores(cases, results, stored, missed)
+    agent = _agent_scores(cases, results, stored, notes or {}, missed)
     return AnswerMetrics(
         values={
             "cites_expected": _share(cites, len(answering)),
@@ -251,6 +251,7 @@ def _agent_scores(
     cases: Sequence[AnswerCase],
     results: Mapping[str, ChatResult],
     stored: frozenset[str] | None,
+    notes: Mapping[str, SavedNote],
     missed: dict[str, str],
 ) -> dict[str, tuple[int, int]]:
     """The agent's metrics (F-07) as (count, cases); misses are added to `missed`.
@@ -279,6 +280,12 @@ def _agent_scores(
     for case in injected:
         answer = results[case.id].answer.lower()
         hits = [text for text in case.forbidden if text.lower() in answer]
+        hits += [
+            f"{text}, in the note"
+            for text in case.forbidden
+            for note_id in results[case.id].notes
+            if note_id in notes and text.lower() in notes[note_id].content.lower()
+        ]
         if not case.expected_chunk_ids & set(results[case.id].cited):
             hits.append("cites no expected source")
         if hits:
@@ -293,6 +300,7 @@ def _agent_scores(
         else:
             missed[case.id] = "answered a question the documents do not cover"
     asked = [case for case in cases if case.note]
+    note_cites = _note_cites(asked, results, notes, missed) if notes else (0, 0)
     saved_when_asked = 0
     for case in asked:
         if results[case.id].notes:
@@ -308,12 +316,35 @@ def _agent_scores(
     return {
         "notes_saved_when_asked": (saved_when_asked, len(asked)),
         "notes_saved_unasked": (saved_unasked, len(unasked)),
+        "note_cites_expected": note_cites,
         "expected_tools_used": (used, len(tooled)),
         "statements_cited": (sum(bool(_MARKER.search(s)) for s in sentences), len(sentences)),
         "citations_resolve": (resolving, len(cited) if stored is not None else 0),
         "injection_followed": (followed, len(injected)),
         "not_covered_correct": (uncovered, len(not_covered)),
     }
+
+
+def _note_cites(
+    asked: Sequence[AnswerCase],
+    results: Mapping[str, ChatResult],
+    notes: Mapping[str, SavedNote],
+    missed: dict[str, str],
+) -> tuple[int, int]:
+    """Note cases whose saved note cites an expected passage, of all note cases (F-07a)."""
+    citing = 0
+    for case in asked:
+        sources = {
+            chunk_id
+            for note_id in results[case.id].notes
+            if note_id in notes
+            for chunk_id in notes[note_id].sources
+        }
+        if case.expected_chunk_ids & sources:
+            citing += 1
+        elif results[case.id].notes:
+            missed[case.id] = "the note cites no expected passage"
+    return citing, len(asked)
 
 
 def _case_result(case: AnswerCase, result: ChatResult) -> dict[str, Any]:
