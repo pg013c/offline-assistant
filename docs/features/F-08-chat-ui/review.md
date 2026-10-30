@@ -34,3 +34,15 @@ Decision is filled in by the human: `fix`, `backlog (F-xx)`, or `reject: <reason
 
 | # | Commits |
 |---|---|
+| 1 | `092f9d3` test, `1bd2a48` fix (`.gitignore`: `/models/` and `data/models/`) |
+| 2 | `952fb39` test, `9b340e1` fix |
+| 3 | `3873bc8` test, `ddb00ed` test (a hidden panel found by id), `d5de355` fix |
+| 4 | as 3 |
+| 5 | `d5de355` fix |
+| 6 | `fadcb8b` test, `bd3d4d1` fix |
+| 7 | `fadcb8b` test, `bd3d4d1` fix |
+| 8 | `fadcb8b` test |
+| 9 | `bd3d4d1` fix |
+| 10 | docs commit (spec decision 1) |
+| 11 | at /ship |
+| 12 | `952fb39` test, `9b340e1` fix |

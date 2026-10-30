@@ -62,6 +62,8 @@ This feature finishes the UI for the demo. It does not change what the model doe
 Confirmed by the human on 2026-10-30.
 
 1. **Models offered:** the configured local model when its server answers, and `fake-extractive` always, labelled as a test model. F-09 adds more models and Claude to the same list.
+   - Limitation found in review (#10): the server is checked once, at startup. A server that stops later is still listed, and a question to it fails with `model_unreachable`.
+   - Checking it on each listing goes with F-09.
 2. **Markers to citations:** each `citation` event gains `number`, the passage number its marker uses. The UI shows only the passages cited.
 3. **The thread:** in memory only; a reload starts empty.
 4. **Notes:** shown as preformatted text with their sources, without a Markdown renderer.
