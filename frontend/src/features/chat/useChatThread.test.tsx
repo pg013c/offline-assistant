@@ -203,14 +203,29 @@ describe('useChatThread', () => {
   })
 
   it('stops the running answer when a new question is asked', async () => {
-    const signals: AbortSignal[] = []
+    let first: ReadableStreamDefaultController<Uint8Array> | undefined
+    let calls = 0
     server.use(
-      http.post('*/api/chat', ({ request }) => {
-        signals.push(request.signal)
-        // A stream that never ends, as an answer still being written.
-        return new HttpResponse(new ReadableStream(), {
-          headers: { 'Content-Type': 'text/event-stream' },
-        })
+      http.post('*/api/chat', () => {
+        calls += 1
+        if (calls === 1) {
+          // The first answer is still being written when the second question comes.
+          return new HttpResponse(
+            new ReadableStream<Uint8Array>({
+              start(controller) {
+                first = controller
+              },
+            }),
+            { headers: { 'Content-Type': 'text/event-stream' } },
+          )
+        }
+        return new HttpResponse(
+          sse([
+            { type: 'text', text: 'Second answer.' },
+            { type: 'end', model_id: 'fake-extractive', found: true },
+          ]),
+          { headers: { 'Content-Type': 'text/event-stream' } },
+        )
       }),
     )
     const { result } = renderHook(() => useChatThread(), { wrapper })
@@ -218,17 +233,25 @@ describe('useChatThread', () => {
       result.current.ask('First?')
     })
     await waitFor(() => {
-      expect(signals).toHaveLength(1)
+      expect(first).toBeDefined()
     })
 
     act(() => {
       result.current.ask('Second?')
     })
-
     await waitFor(() => {
-      expect(signals[0]?.aborted).toBe(true)
+      expect(last(result.current).status).toBe('done')
     })
-    expect(result.current.turns.map((turn) => turn.question)).toEqual(['First?', 'Second?'])
+    try {
+      first?.enqueue(new TextEncoder().encode(sse([{ type: 'text', text: 'Too late.' }])))
+    } catch {
+      // A cancelled stream refuses more data, which is what stopping it means.
+    }
+
+    const [stopped, second] = result.current.turns
+    expect(stopped?.answer.status).toBe('stopped')
+    expect(stopped?.answer.text).toBe('')
+    expect(second?.answer.text).toBe('Second answer.')
   })
 
   it('names the chosen model in the request and on the turn', async () => {
