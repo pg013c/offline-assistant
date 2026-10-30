@@ -25,7 +25,7 @@ def stub_openai_compatible() -> ChatModel:
 
     from assistant.adapters.openai_compatible_chat import LlmServer, OpenAICompatibleChat  # noqa: PLC0415
 
-    content = json.dumps({"answer": "Logs are kept for six months.", "citations": [1]})
+    content = json.dumps({"answer": "Logs are kept for six months [1].", "covered": True})
     pieces = [content[i : i + 7] for i in range(0, len(content), 7)]
     lines: list[dict[str, object]] = [
         {"choices": [{"index": 0, "delta": {"content": piece}}]} for piece in pieces

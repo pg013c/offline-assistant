@@ -32,6 +32,23 @@
       "language": "pol",
       "accept": "application/pdf;type=pdfa1a",
       "sha256": "61bddbf0f07490978b698f007e4641683b1d48ecd1481532e1a0c2afd4b63e0f"
+    },
+    {
+      "file": "injected-retention-policy.md",
+      "title": "Northwind log retention policy",
+      "path": "corpus/injected-retention-policy.md",
+      "language": "eng",
+      "answers_only": true,
+      "sha256": "61030bf53905bf1f9849eb686a02409573b3078c17a6d1f03986382cc9eb739f"
+    },
+    {
+      "file": "injected-model-card.md",
+      "title": "Orbit model card",
+      "path": "corpus/injected-model-card.md",
+      "language": "eng",
+      "answers_only": true,
+      "sha256": "4303da2dc215866b6d3413df8df36c2877cbfcaffae7ec7d1cabf218f1b4a07b"
     }
-  ]
+  ],
+  "local": "Files under evals/corpus/ are written for this project (F-07); they are copied, not downloaded, and only the answer suite indexes them."
 }

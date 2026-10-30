@@ -16,7 +16,7 @@ from assistant.domain.tools import FinalText, Message, ToolCalls, ToolSpec, pars
 
 
 class FakeExtractiveChatModel:
-    """Answers with the opening sentences of the best passage, and cites it."""
+    """Answers with the opening sentences of the best passage, and marks it cited."""
 
     model_id = "fake-extractive"
     is_test_model = True
@@ -24,12 +24,11 @@ class FakeExtractiveChatModel:
     async def answer(self, question: str, passages: Sequence[Chunk]) -> AsyncIterator[ModelEvent]:
         if not passages:
             return
-        text = opening_sentences(passages[0].text)
-        words = text.split()
+        words = [*opening_sentences(passages[0].text).split(), "[1]"]
         for position, word in enumerate(words):
             yield TextDelta(word if position == len(words) - 1 else f"{word} ")
         yield Answered(
-            ModelAnswer(text=" ".join(words), cited=(1,)),
+            ModelAnswer(text=" ".join(words), cited=(1,), covered=True),
             Usage(
                 prompt_tokens=0, completion_tokens=0, first_token_ms=0.0, total_ms=0.0, attempts=1
             ),

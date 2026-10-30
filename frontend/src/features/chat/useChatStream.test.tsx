@@ -53,7 +53,12 @@ describe('useChatStream', () => {
   it('starts idle with an empty answer', () => {
     const { result } = renderHook(() => useChatStream(), { wrapper })
 
-    expect(result.current.answer).toEqual({ status: 'idle', text: '', citations: [] })
+    expect(result.current.answer).toEqual({
+      status: 'idle',
+      text: '',
+      citations: [],
+      tools: [],
+    })
   })
 
   it('sends the question and collects text, citations and the model', async () => {
@@ -78,10 +83,33 @@ describe('useChatStream', () => {
       question: 'How long are logs kept?',
       text: 'Providers keep logs.',
       citations: [CITATION],
+      tools: [],
       modelId: 'fake-extractive',
       found: true,
       isTestModel: true,
     })
+  })
+
+  it('collects the tool calls of the agent in order, before the answer', async () => {
+    serveAnswer([
+      { type: 'tool', name: 'search_documents', arguments: { query: 'breach' } },
+      { type: 'tool', name: 'get_article', arguments: { document: 'GDPR (EN)', number: '33' } },
+      { type: 'text', text: 'Within 72 hours [1].' },
+      { type: 'end', model_id: 'qwen3-8b', found: true, is_test_model: false },
+    ])
+    const { result } = renderHook(() => useChatStream(), { wrapper })
+
+    act(() => {
+      result.current.ask('When must a breach be notified?')
+    })
+
+    await waitFor(() => {
+      expect(result.current.answer.status).toBe('done')
+    })
+    expect(result.current.answer.tools).toEqual([
+      { name: 'search_documents', arguments: { query: 'breach' } },
+      { name: 'get_article', arguments: { document: 'GDPR (EN)', number: '33' } },
+    ])
   })
 
   it('reports an error when the request fails', async () => {

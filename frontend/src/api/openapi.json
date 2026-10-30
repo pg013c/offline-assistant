@@ -530,6 +530,9 @@
       "ChatEvent": {
         "oneOf": [
           {
+            "$ref": "#/components/schemas/ChatToolEvent"
+          },
+          {
             "$ref": "#/components/schemas/ChatTextEvent"
           },
           {
@@ -546,7 +549,7 @@
           }
         ],
         "title": "ChatEvent",
-        "description": "One event of a streamed answer: text, discard, error, citation or end.",
+        "description": "One event of a streamed answer: tool, text, discard, error, citation or end.",
         "discriminator": {
           "propertyName": "type",
           "mapping": {
@@ -554,7 +557,8 @@
             "discard": "#/components/schemas/ChatDiscardEvent",
             "end": "#/components/schemas/ChatEndEvent",
             "error": "#/components/schemas/ChatErrorEvent",
-            "text": "#/components/schemas/ChatTextEvent"
+            "text": "#/components/schemas/ChatTextEvent",
+            "tool": "#/components/schemas/ChatToolEvent"
           }
         }
       },
@@ -593,6 +597,32 @@
         "title": "ChatTextEvent",
         "description": "A piece of the answer text, in order."
       },
+      "ChatToolEvent": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "tool",
+            "title": "Type"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "arguments": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Arguments"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "name",
+          "arguments"
+        ],
+        "title": "ChatToolEvent",
+        "description": "The agent called a tool, with its arguments; sent before the answer text (F-07)."
+      },
       "ChatUsage": {
         "properties": {
           "prompt_tokens": {
@@ -621,6 +651,10 @@
           "attempts": {
             "type": "integer",
             "title": "Attempts"
+          },
+          "tool_turns": {
+            "type": "integer",
+            "title": "Tool Turns"
           }
         },
         "type": "object",
@@ -629,7 +663,8 @@
           "completion_tokens",
           "first_token_ms",
           "total_ms",
-          "attempts"
+          "attempts",
+          "tool_turns"
         ],
         "title": "ChatUsage",
         "description": "What the answer cost: tokens over every attempt, and its timings in milliseconds."

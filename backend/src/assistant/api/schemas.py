@@ -1,6 +1,6 @@
 """Request and response models of the HTTP API. Services never return these (PY-12)."""
 
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field, RootModel
 
@@ -71,6 +71,14 @@ class SearchHit(BaseModel):
     rerank_score: float | None
 
 
+class ChatToolEvent(BaseModel):
+    """The agent called a tool, with its arguments; sent before the answer text (F-07)."""
+
+    type: Literal["tool"]
+    name: str
+    arguments: dict[str, Any]
+
+
 class ChatTextEvent(BaseModel):
     """A piece of the answer text, in order."""
 
@@ -121,6 +129,8 @@ class ChatUsage(BaseModel):
     first_token_ms: float | None
     total_ms: float
     attempts: int
+    # Model turns that called tools before the answer.
+    tool_turns: int
 
 
 class ChatEndEvent(BaseModel):
@@ -136,9 +146,14 @@ class ChatEndEvent(BaseModel):
 class ChatEvent(
     RootModel[
         Annotated[
-            ChatTextEvent | ChatDiscardEvent | ChatErrorEvent | ChatCitationEvent | ChatEndEvent,
+            ChatToolEvent
+            | ChatTextEvent
+            | ChatDiscardEvent
+            | ChatErrorEvent
+            | ChatCitationEvent
+            | ChatEndEvent,
             Field(discriminator="type"),
         ]
     ]
 ):
-    """One event of a streamed answer: text, discard, error, citation or end."""
+    """One event of a streamed answer: tool, text, discard, error, citation or end."""

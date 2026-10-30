@@ -37,3 +37,11 @@ def test_the_chat_stream_documents_discard_and_error_events_and_usage() -> None:
         "model_error",
     ]
     assert "usage" in schemas["ChatEndEvent"]["properties"]
+
+
+def test_the_chat_stream_documents_tool_events_and_tool_turns() -> None:
+    schemas = json.loads(openapi_json())["components"]["schemas"]
+
+    tool = schemas["ChatToolEvent"]
+    assert set(tool["required"]) == {"type", "name", "arguments"}
+    assert "tool_turns" in schemas["ChatUsage"]["required"]

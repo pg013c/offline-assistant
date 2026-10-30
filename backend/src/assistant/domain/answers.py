@@ -49,6 +49,14 @@ class AnswerFailed:
 
 
 @dataclass(frozen=True, slots=True)
+class ToolUsed:
+    """The agent called a tool; sent before the answer text so the UI can show progress."""
+
+    name: str
+    arguments: dict[str, Any]
+
+
+@dataclass(frozen=True, slots=True)
 class AnswerEnd:
     model_id: str
     found: bool
@@ -56,7 +64,9 @@ class AnswerEnd:
     usage: "Usage | None" = None
 
 
-type AnswerEvent = AnswerText | AnswerDiscarded | AnswerFailed | AnswerCitation | AnswerEnd
+type AnswerEvent = (
+    ToolUsed | AnswerText | AnswerDiscarded | AnswerFailed | AnswerCitation | AnswerEnd
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -68,6 +78,36 @@ class Usage:
     first_token_ms: float | None
     total_ms: float
     attempts: int
+    # Model turns that called tools before the answer (F-07).
+    tool_turns: int = 0
+
+    def plus(self, other: "Usage") -> "Usage":
+        """Two parts of one run side by side: tokens, time, attempts and tool turns added."""
+        return Usage(
+            prompt_tokens=self.prompt_tokens + other.prompt_tokens,
+            completion_tokens=self.completion_tokens + other.completion_tokens,
+            first_token_ms=self.first_token_ms,
+            total_ms=self.total_ms + other.total_ms,
+            attempts=self.attempts + other.attempts,
+            tool_turns=self.tool_turns + other.tool_turns,
+        )
+
+    def then(self, answer: "Usage") -> "Usage":
+        """This research phase followed by the answer: the first token counts from the start."""
+        first = None if answer.first_token_ms is None else self.total_ms + answer.first_token_ms
+        return Usage(
+            prompt_tokens=self.prompt_tokens + answer.prompt_tokens,
+            completion_tokens=self.completion_tokens + answer.completion_tokens,
+            first_token_ms=first,
+            total_ms=self.total_ms + answer.total_ms,
+            attempts=answer.attempts,
+            tool_turns=self.tool_turns,
+        )
+
+
+NO_USAGE = Usage(
+    prompt_tokens=0, completion_tokens=0, first_token_ms=None, total_ms=0.0, attempts=0
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -120,15 +160,53 @@ def quote_from(text: str) -> str:
 
 class _StructuredAnswer(BaseModel):
     """The structured answer a language model is asked for (FR-13, AI-20): the answer first,
-    so it can stream, then the numbers of the passages it rests on, counted from 1."""
+    so it can stream, then whether the passages cover the question at all (F-07)."""
 
     model_config = ConfigDict(strict=True, extra="forbid")
 
     answer: str
-    citations: list[int]
+    covered: bool
 
 
 ANSWER_SCHEMA: dict[str, Any] = _StructuredAnswer.model_json_schema()
+
+# A citation marker: passage numbers counted from 1 in square brackets, e.g. [2] or [1, 3].
+_MARKER = re.compile(r"\[(\d+(?:\s*,\s*\d+)*)\]")
+# A sentence ends at ., ? or !, with any markers that follow it, before an upper-case letter.
+_SENTENCE_BREAK = re.compile(
+    r"[.!?](?P<markers>(?:\s*\[\d+(?:\s*,\s*\d+)*\])*)(?=\s+[\"„(]?(?P<next>\w))"
+)
+_WORD_BEFORE = re.compile(r"(\S+)$")
+# A full stop after these abbreviations, such as "art." or the "r." after a year, does not end
+# a sentence; after a number it does ("…set out in Article 83. Fines reach…").
+_ABBREVIATIONS = frozenset({"art", "ust", "pkt", "lit", "no", "nr", "e.g", "i.e", "zob", "tj", "r"})
+
+
+def statements(text: str) -> list[str]:
+    """The sentences and list lines of an answer, each with the markers that follow it."""
+    found: list[str] = []
+    for line in text.splitlines():
+        start = 0
+        for match in _SENTENCE_BREAK.finditer(line):
+            if not match.group("next").isupper():
+                continue
+            word = _WORD_BEFORE.search(line[start : match.start()])
+            if match.group()[0] == "." and word and _no_sentence_end(word.group(1)):
+                continue
+            found.append(line[start : match.end()].strip())
+            start = match.end()
+        found.append(line[start:].strip())
+    return [statement for statement in found if any(char.isalpha() for char in statement)]
+
+
+def _no_sentence_end(word: str) -> bool:
+    bare = word.lstrip('("„').lower()
+    return bare in _ABBREVIATIONS
+
+
+def markers(text: str) -> list[int]:
+    """The passage numbers the text cites, in order, with repeats."""
+    return [int(number) for group in _MARKER.findall(text) for number in group.split(",")]
 
 
 class InvalidAnswer(Exception):
@@ -139,10 +217,12 @@ class InvalidAnswer(Exception):
 class ModelAnswer:
     text: str
     cited: tuple[int, ...]
+    # False when the model says the passages do not answer the question; then nothing is cited.
+    covered: bool = True
 
 
 def parse_answer(raw: str, passage_count: int) -> ModelAnswer:
-    """The validated answer, or `InvalidAnswer` saying what to correct."""
+    """The validated answer, or `InvalidAnswer` saying what to correct (AI-01, AI-21)."""
     try:
         decoded = json.loads(raw)
     except json.JSONDecodeError as error:
@@ -151,19 +231,29 @@ def parse_answer(raw: str, passage_count: int) -> ModelAnswer:
         answer = _StructuredAnswer.model_validate(decoded)
     except ValidationError as error:
         raise InvalidAnswer(
-            "the output is not a JSON object with answer and citations "
-            "(a string and a list of passage numbers)"
+            "the output is not a JSON object with answer and covered (a string and true or false)"
         ) from error
     if not answer.answer.strip():
         raise InvalidAnswer("the answer is empty")
-    if not answer.citations:
-        raise InvalidAnswer("the answer cites no passage")
-    for number in answer.citations:
+    cited = markers(answer.answer)
+    if not answer.covered:
+        if cited:
+            raise InvalidAnswer(
+                "an answer that is not covered cites no passage; remove the markers"
+            )
+        return ModelAnswer(text=answer.answer, cited=(), covered=False)
+    for number in cited:
         if not 1 <= number <= passage_count:
             raise InvalidAnswer(
                 f"passage {number} does not exist; cite passages 1 to {passage_count}"
             )
-    return ModelAnswer(text=answer.answer, cited=tuple(dict.fromkeys(answer.citations)))
+    for statement in statements(answer.answer):
+        if not _MARKER.search(statement):
+            raise InvalidAnswer(
+                f'the sentence "{statement}" cites no passage; end every sentence with the '
+                "numbers of the passages it rests on, like [1]"
+            )
+    return ModelAnswer(text=answer.answer, cited=tuple(dict.fromkeys(cited)))
 
 
 _HIGH_SURROGATES = 0xD800

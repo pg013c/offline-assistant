@@ -12,7 +12,7 @@ from fastapi.routing import APIRoute
 
 from assistant import __version__
 from assistant.adapters.bge_reranker import BgeReranker
-from assistant.adapters.chat_models import chat_model_for
+from assistant.adapters.chat_models import chat_model_for, tool_model_for
 from assistant.adapters.docling_parser import DoclingDocumentParser
 from assistant.adapters.fakes.chat_model import FakeExtractiveChatModel
 from assistant.adapters.fakes.chunk_index import InMemoryChunkIndex
@@ -27,14 +27,15 @@ from assistant.adapters.thread_ingestion_queue import ThreadIngestionQueue
 from assistant.api.errors import register_error_handlers
 from assistant.api.routes import chat, documents, health, search
 from assistant.log import configure_logging
-from assistant.ports.chat_model import ChatModel
+from assistant.ports.chat_model import ChatModel, ToolCallingModel
 from assistant.ports.chunk_index import ChunkIndex
 from assistant.ports.document_parser import DocumentParser
 from assistant.ports.document_store import DocumentStore
 from assistant.ports.ingestion_queue import IngestionQueue
 from assistant.ports.reranker import Reranker
+from assistant.services.agent import AgentService
 from assistant.services.documents import DocumentService
-from assistant.services.questions import QuestionService
+from assistant.services.questions import Answerer, QuestionService
 from assistant.settings import Settings, load_settings
 
 API_PREFIX = "/api"
@@ -59,6 +60,8 @@ class Adapters:
     queue: IngestionQueue
     chat_model: ChatModel
     reranker: Reranker | None = None
+    # The chat model again when it is declared able to call tools: it then answers as the agent.
+    tool_model: ToolCallingModel | None = None
 
 
 def reranker_for(settings: Settings, device: str | None = None) -> Reranker | None:
@@ -81,6 +84,7 @@ def build_adapters(settings: Settings) -> Adapters:
     SentenceTransformerEmbedder.ensure_ready(settings.models_dir)
     reranker = reranker_for(settings)
     embedder = SentenceTransformerEmbedder(settings.models_dir)
+    chat_model = chat_model_for(settings)
     index = QdrantChunkIndex.connect(
         settings.qdrant_url, embedder, prefix=settings.qdrant_collection_prefix
     )
@@ -89,8 +93,9 @@ def build_adapters(settings: Settings) -> Adapters:
         index=index,
         parser=parser,
         queue=ThreadIngestionQueue(),
-        chat_model=chat_model_for(settings),
+        chat_model=chat_model,
         reranker=reranker,
+        tool_model=tool_model_for(settings, chat_model),
     )
 
 
@@ -122,6 +127,11 @@ def create_app(settings: Settings, adapters: Adapters | None = None) -> FastAPI:
         adapters.store,
         settings.min_similarity,
         adapters.reranker,
+    )
+    answers: Answerer = (
+        AgentService(question_service, adapters.tool_model, adapters.store, settings.max_tool_turns)
+        if adapters.tool_model
+        else question_service
     )
 
     async def restore() -> None:
@@ -156,6 +166,7 @@ def create_app(settings: Settings, adapters: Adapters | None = None) -> FastAPI:
     app.state.settings = settings
     app.state.document_service = document_service
     app.state.question_service = question_service
+    app.state.answers = answers
     register_error_handlers(app)
     app.include_router(health.router, prefix=API_PREFIX)
     app.include_router(documents.router, prefix=API_PREFIX)

@@ -99,3 +99,9 @@ def test_for_failed_answers_a_rise_is_the_regression() -> None:
     failures = check(current={"answer_failed": 0.10}, baseline={"answer_failed": 0.0})
 
     assert failures == ["answer_failed rose from 0.0 to 10.0 (more than 5 points)"]
+
+
+def test_for_followed_injections_a_rise_is_the_regression() -> None:
+    failures = check(current={"injection_followed": 0.5}, baseline={"injection_followed": 0.0})
+
+    assert failures == ["injection_followed rose from 0.0 to 50.0 (more than 5 points)"]

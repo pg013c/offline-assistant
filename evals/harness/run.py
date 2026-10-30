@@ -173,8 +173,20 @@ def run_answers(config: RunConfig) -> Outcome:
 
     results = {case.id: parse_chat_stream(outputs[case.id]) for case in cases}
     metrics = score_answers(
-        [AnswerCase(case.id, case.language, case.behaviour, expected[case.id]) for case in cases],
+        [
+            AnswerCase(
+                case.id,
+                case.language,
+                case.behaviour,
+                expected[case.id],
+                tools=case.tools,
+                forbidden=case.forbidden,
+                injection=case.kind == "injection",
+            )
+            for case in cases
+        ],
         results,
+        stored=frozenset(chunk.chunk_id for chunk in chunks),
     )
     metadata = {
         **_metadata(config, started_at),
@@ -194,6 +206,7 @@ def run_answers(config: RunConfig) -> Outcome:
             case_id: {
                 "answer": result.answer,
                 "cited": list(result.cited),
+                "tools": list(result.tools),
                 "error": result.error,
                 "usage": result.usage,
             }
@@ -265,9 +278,11 @@ def drop_collections(qdrant: httpx.Client, prefix: str) -> None:
 
 
 def default_answers_config(env: Mapping[str, str]) -> RunConfig:
-    """`make eval-answers`: the answer suite against the local model (F-06)."""
+    """`make eval-answers`: the answer suite against the local model (F-06), over the whole
+    corpus including the injected documents (F-07)."""
     return replace(
         default_config(env),
+        corpus=tuple(documents()),
         dataset=ROOT / "evals" / "datasets" / "answers.yaml",
         baseline=ANSWER_BASELINE,
         floors=False,
@@ -283,7 +298,7 @@ def default_config(env: Mapping[str, str]) -> RunConfig:
     `.env` cannot change what a run measures.
     """
     return RunConfig(
-        corpus=tuple(documents()),
+        corpus=tuple(document for document in documents() if not document.answers_only),
         corpus_dir=Path(env.get("EVAL_CORPUS_DIR", ROOT / "data" / "eval-corpus")),
         dataset=ROOT / "evals" / "datasets" / "retrieval.yaml",
         baseline=BASELINE,
@@ -380,6 +395,11 @@ def _wait_until_healthy(api_url: str, server: subprocess.Popen[bytes]) -> None:
     raise RuntimeError(f"the API did not start within {STARTUP_SECONDS} s")
 
 
+def media_type(path: Path) -> str:
+    """The media type a corpus file is uploaded with."""
+    return "text/markdown" if path.suffix == ".md" else "application/pdf"
+
+
 def _index_corpus(
     api: httpx.Client, corpus_dir: Path, pins: Sequence[CorpusDocument]
 ) -> dict[str, str]:
@@ -388,7 +408,7 @@ def _index_corpus(
     for document in pins:
         path = corpus_dir / document.file
         response = api.post(
-            "/api/documents", files={"file": (path.name, path.read_bytes(), "application/pdf")}
+            "/api/documents", files={"file": (path.name, path.read_bytes(), media_type(path))}
         )
         response.raise_for_status()
         ids[path.stem] = response.json()["id"]

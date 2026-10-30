@@ -101,7 +101,7 @@ The diagram above is the target. The question flow runs end to end today; each p
 | `Embedder` | `SentenceTransformerEmbedder`: BGE-M3, 1,024 dimensions, Polish and English, MPS on the Mac, pinned and verified (ADR 0017); `FakeEmbedder` for tests | stays; F-09 compares models |
 | `ChunkIndex` | `QdrantChunkIndex`: one collection per embedding model with a dense vector, a BM25 sparse vector (Qdrant's IDF modifier) and the chunk as payload, both halves fused by reciprocal rank in one query, ties broken by dense similarity; `InMemoryChunkIndex` for tests | stays |
 | `Reranker` | `BgeReranker`: BGE reranker v2 M3, a multilingual cross-encoder, float16 on MPS and float32 on CPU, pinned and verified; `ASSISTANT_RERANKER=auto` (default) uses it with an Apple GPU only, `on` or `off` force it (ADR 0019); `WordOverlapReranker` for tests | stays |
-| `ChatModel` | `OpenAICompatibleChat`: any OpenAI-compatible server, by default Qwen3 8B on llama.cpp's `llama-server` started by `make llm` (ADR 0003, 0021). Answers are JSON (`answer`, `citations`) streamed and validated, with retries; it also makes validated tool calls for F-07. `FakeExtractiveChatModel` (`fake-extractive`, the test model in the browser journeys) quotes the best passage. `ASSISTANT_CHAT_MODEL` chooses | the agent (F-07); more models compared in F-09 |
+| `ChatModel` | `OpenAICompatibleChat`: any OpenAI-compatible server, by default Qwen3 8B on llama.cpp's `llama-server` started by `make llm` (ADR 0003, 0021). Answers are JSON (`answer`, `covered`) with `[n]` citation markers, streamed and validated, with retries; tool turns are validated tool calls capped at 256 tokens. `FakeExtractiveChatModel` (`fake-extractive`, the test model in the browser journeys) quotes the best passage. `ASSISTANT_CHAT_MODEL` chooses; a model declared able to call tools answers as the agent (F-07) | more models compared in F-09 |
 
 `create_app(settings, adapters)` takes the adapters to use; `build_adapters` wires the real ones, and route tests pass in-process fakes. At startup every model is checked against its pinned hashes (`pinned_models.py`), Tesseract against its languages and Qdrant against `ASSISTANT_QDRANT_URL`; each failure names what is missing and the command that fixes it (`make models`, `make qdrant`). The process runs with the Hugging Face offline flags. `ASSISTANT_DOCUMENT_PARSER=text-only` reads text and Markdown without Docling.
 
@@ -113,16 +113,27 @@ The diagram above is the target. The question flow runs end to end today; each p
 
 **Answers.** With passages over the threshold, the model gets the three best, numbered and delimited as data, with the system prompt in `prompts/answer.md`.
 
-- **Output:** it answers as JSON, `{"answer", "citations"}`, the answer first, so its text streams while it is written (`domain.AnswerTextExtractor`).
+- **Output:** it answers as JSON, `{"answer", "covered"}`, the answer first, so its text streams while it is written (`domain.AnswerTextExtractor`). Every sentence ends with the numbers of the passages it rests on, e.g. `[2]`; those markers are the citations. `covered: false` says the passages do not answer the question: nothing is cited and the answer ends with `found=false`, which the UI shows as a "no answer" note.
 - **Validation and retries:**
-  - the answer must be non-empty and cite passages it was given;
+  - the answer must be non-empty, every sentence of a covered answer must carry a marker, and markers must name passages it was given (`domain.parse_answer`; abbreviations such as "art." do not end a sentence);
   - a rejected attempt is followed by a `discard` event and retried with the reason, at most `ASSISTANT_MAX_RETRIES` times;
   - each attempt has a deadline of `ASSISTANT_LLM_TIMEOUT` and a `max_tokens` cap, and asks for JSON-schema output and streaming only when the model declares them (AI-23);
   - then, or when the server is unreachable, slow or answers with an error or unreadable output, an `error` event with a code follows (`invalid_answer`, `model_unreachable`, `model_timeout`, `model_error`).
 - **Logging:** each answer from a model is logged as `model_answered`, with ids, tokens and timings but no text (AI-53, AI-60).
-- **The stream:** `text`, `discard`, `error`, `citation` and `end` events. Citations are the passages the model cited, each with its location, which the UI shows as "Art. 6(2), p. 53". `end` names the model and carries its usage: tokens, time to first token, total time and attempts (AI-60).
+- **The stream:** `tool`, `text`, `discard`, `error`, `citation` and `end` events. Citations are the passages the model cited, each with its location, which the UI shows as "Art. 6(2), p. 53". `end` names the model and carries its usage: tokens, time to first token, total time, attempts and tool turns (AI-60).
 - **No relevant passage:** the stream says so, with no model call and no citation.
 - **At startup:** the API checks that the configured server serves the model, naming `make llm` if not.
+
+**The agent** (`services/agent.py`, F-07). When the model is declared able to call tools, `AgentService` answers instead of `QuestionService` alone, but only for a question that names an article ("Article 83", "art. 17") or asks to compare (`domain.needs_tools`); every other question takes the path above, which is faster.
+
+- **Research:**
+  - the question's own search is the first tool result;
+  - the model may then call `search_documents(query, document?)`, `get_article(document, number)` and `compare(a, b)` (`services/tools.py`) for up to `ASSISTANT_MAX_TOOL_TURNS` turns (default 2), replying `ready` when it has enough;
+  - every chunk a tool returns gets the next passage number in the run (`domain.PassageLedger`, at most 24), and a call repeated with the same arguments gets those numbers instead of the passages again.
+- **Answer:** the answer call then gets every gathered passage in that order, so the numbers the model saw are the numbers it cites.
+- **Refusal:** an article question is not refused at the threshold, since a short reference can fall under it. It is refused when the tools find nothing either.
+- **Stream and logs:** each tool call is a `tool` event before the answer text, which the UI shows as a step ("Reading: GDPR (EN), Art. 33"). Each tool call and tool turn is logged with ids, counts, tokens and times, never arguments or text.
+- **Timing:** the time to first token counts the whole research phase.
 
 **Evaluation** (`evals/`, ADR 0018). `make eval` starts its own API with:
 
@@ -130,7 +141,12 @@ The diagram above is the target. The question flow runs end to end today; each p
 - Qdrant collection prefix `eval`;
 - port 8021.
 
-It uploads the pinned corpus (AI Act and GDPR, English and Polish) and resolves each case's expected sources, written as document and article, to chunk ids through `GET /api/documents/{id}/chunks`. After one unmeasured warm-up search per mode, Promptfoo queries `POST /api/search` for every case twice, with and without the reranker, one request at a time. Python computes recall@k, MRR, answerable@3 (an expected chunk among the first three hits at or above the threshold), the refusal shares at the similarity threshold, the search latency (median and 95th percentile) and the top out-of-scope similarity for each mode, writes a report with the run metadata, and fails when a metric of the API's default mode is more than 5 points worse than `docs/evals/retrieval-baseline.json` or below its floor (ADR 0020, TEST-24). `make eval-answers` runs the answer suite (`answers.yaml`) through `POST /api/chat` against the local model. It scores citations of expected passages, the answer language, first-try validity, failures and refusals, reports time to first token and tokens per second, and compares the run with `docs/evals/answer-baseline.json`. The API it started is stopped at the end.
+It uploads the pinned corpus (AI Act and GDPR, English and Polish) and resolves each case's expected sources, written as document and article, to chunk ids through `GET /api/documents/{id}/chunks`. After one unmeasured warm-up search per mode, Promptfoo queries `POST /api/search` for every case twice, with and without the reranker, one request at a time. Python computes recall@k, MRR, answerable@3 (an expected chunk among the first three hits at or above the threshold), the refusal shares at the similarity threshold, the search latency (median and 95th percentile) and the top out-of-scope similarity for each mode, writes a report with the run metadata, and fails when a metric of the API's default mode is more than 5 points worse than `docs/evals/retrieval-baseline.json` or below its floor (ADR 0020, TEST-24). `make eval-answers` runs the answer suite (`answers.yaml`) through `POST /api/chat` against the local model. The answer suite also indexes two invented documents with planted instructions (`evals/corpus/`, pinned in `corpus.json`), which only it uses. It scores:
+
+- citations of expected passages, the answer language, first-try validity, failures and refusals;
+- the agent's metrics: expected tools used, sentences with markers, cited chunks that are stored, followed injections and not-covered answers.
+
+It reports time to first token, tokens per second and each case's tools, and compares the run with `docs/evals/answer-baseline.json`. The API it started is stopped at the end.
 
 ## 4. Main flow: a question
 
@@ -143,20 +159,26 @@ sequenceDiagram
     participant RAG as RetrievalService
     participant VS as VectorStore
     UI->>API: POST /chat (question)
-    API->>Agent: answer(question)
-    Agent->>LLM: messages + tool schemas
-    LLM-->>Agent: tool_call search_documents
-    Agent->>RAG: search(query)
+    API->>Agent: ask(question)
+    Agent->>RAG: search(question)
     RAG->>VS: hybrid search
     VS-->>RAG: candidates
     RAG->>RAG: rerank
-    RAG-->>Agent: chunks with source metadata
-    Agent->>LLM: tool result (as data, delimited)
-    LLM-->>Agent: final answer (JSON schema)
-    Agent->>Agent: validate, check citations resolve, retry if invalid
-    Agent-->>API: stream answer + citations
+    RAG-->>Agent: numbered passages
+    Agent->>LLM: messages + tool schemas + search result (as data)
+    LLM-->>Agent: tool_call get_article / search_documents / compare
+    Agent->>RAG: run the tool
+    RAG-->>Agent: numbered passages
+    Agent->>LLM: tool result, or ask again
+    LLM-->>Agent: ready
+    Agent->>LLM: question + every gathered passage
+    LLM-->>Agent: streamed JSON answer with [n] markers
+    Agent->>Agent: validate markers, retry if invalid
+    Agent-->>API: tool events, answer text, citations, end
     API-->>UI: SSE events
 ```
+
+The agent takes this path for questions about an article or a comparison. Any other question skips the tool turns: the search result goes straight to the streamed answer.
 
 Voice wraps this flow: speech-to-text before `answer`, and text-to-speech on each completed sentence of the stream.
 

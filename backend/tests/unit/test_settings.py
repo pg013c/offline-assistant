@@ -229,6 +229,7 @@ def test_the_chat_model_is_the_test_model_unless_configured(
     assert settings.llm_url == "http://127.0.0.1:8080"
     assert settings.llm_timeout == 60
     assert settings.max_retries == 2
+    assert settings.max_tool_turns == 2
 
 
 def test_a_local_model_is_chosen_by_configuration(

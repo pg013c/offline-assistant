@@ -9,6 +9,8 @@ import yaml
 from jsonschema import Draft202012Validator
 
 SCHEMA = Path(__file__).parents[1] / "datasets" / "retrieval.schema.json"
+# The answer suite's own cases may also expect tools, forbid strings or expect "not covered".
+ANSWER_SCHEMA = SCHEMA.with_name("answers.schema.json")
 
 
 class DatasetError(Exception):
@@ -31,6 +33,9 @@ class Case:
     question: str
     behaviour: str
     sources: tuple[ExpectedSource, ...]
+    # Answer suite only: tools any of which should be called, strings the answer must not hold.
+    tools: tuple[str, ...] = ()
+    forbidden: tuple[str, ...] = ()
 
 
 def load_cases(path: Path) -> list[Case]:
@@ -39,8 +44,8 @@ def load_cases(path: Path) -> list[Case]:
     return _validated(document["cases"])
 
 
-def _validated(entries: list[dict[str, Any]]) -> list[Case]:
-    validator = Draft202012Validator(json.loads(SCHEMA.read_text(encoding="utf-8")))
+def _validated(entries: list[dict[str, Any]], schema: Path = SCHEMA) -> list[Case]:
+    validator = Draft202012Validator(json.loads(schema.read_text(encoding="utf-8")))
     cases: list[Case] = []
     for entry in entries:
         errors = sorted(validator.iter_errors(entry), key=lambda error: list(error.path))
@@ -60,10 +65,14 @@ def _case(entry: dict[str, Any]) -> Case:
         question=entry["question"],
         behaviour=expected["behaviour"],
         sources=tuple(ExpectedSource(**source) for source in expected["sources"]),
+        tools=tuple(expected.get("tools", ())),
+        forbidden=tuple(expected.get("forbidden", ())),
     )
 
 
 def load_answer_cases(path: Path) -> list[Case]:
-    """The answer suite: the reused retrieval cases, then the suite's own (F-06)."""
+    """The answer suite: the reused retrieval cases, then the suite's own (F-06, F-07)."""
     document = yaml.safe_load(path.read_text(encoding="utf-8"))
-    return load_cases(path.parent / document["reuse"]) + _validated(document["cases"])
+    return load_cases(path.parent / document["reuse"]) + _validated(
+        document["cases"], ANSWER_SCHEMA
+    )
