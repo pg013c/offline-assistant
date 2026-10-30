@@ -130,7 +130,7 @@ No ADR: no new dependency, model or standard.
   - `prompts/answer.md`.
 - Done when: `make check` is green. The prompt change is measured in step 9.
 - [ ] red
-- [ ] green
+- [x] green
 
 ### Step 3. Tools over the store and the index
 

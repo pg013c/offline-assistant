@@ -116,6 +116,7 @@ class QuestionService:
         passages = [result.chunk for result in results]
         usage: Usage | None = None
         outcome = "no_outcome"
+        covered = True
         async for event in self._model.answer(question, passages):
             match event:
                 case TextDelta(text=text):
@@ -126,14 +127,15 @@ class QuestionService:
                     yield AnswerFailed(code=code, message=detail)
                     outcome = code
                 case Answered(answer=answer, usage=usage):
-                    outcome = "answered"
+                    outcome = "answered" if answer.covered else "not_covered"
+                    covered = answer.covered
                     # The passages the model says the answer rests on, in its order (AI-01).
                     for number in dict.fromkeys(answer.cited):
                         yield AnswerCitation(citation=self._citation(passages[number - 1]))
         _log_model_call(self._model.model_id, outcome, len(passages), usage)
         yield AnswerEnd(
             model_id=self._model.model_id,
-            found=True,
+            found=covered,
             is_test_model=self._model.is_test_model,
             usage=usage,
         )
