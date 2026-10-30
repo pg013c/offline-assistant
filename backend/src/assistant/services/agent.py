@@ -3,12 +3,20 @@
 import re
 import time
 from collections.abc import AsyncIterator, Callable
+from dataclasses import replace
 from importlib.resources import files
 from string import Template
 
 import structlog
 
-from assistant.domain.answers import NO_USAGE, AnswerEvent, AnswerFailed, ToolUsed, Usage
+from assistant.domain.answers import (
+    NO_USAGE,
+    AnswerEvent,
+    AnswerFailed,
+    ModelFailed,
+    ToolUsed,
+    Usage,
+)
 from assistant.domain.routing import needs_tools
 from assistant.domain.tools import (
     FinalText,
@@ -55,6 +63,7 @@ class AgentService:
         self._store = store
         self._tools = DocumentTools(questions, store)
         self._max_tool_turns = max_tool_turns
+        self._clock = clock
 
     async def ask(self, question: str) -> AsyncIterator[AnswerEvent]:
         """Tool calls, then text pieces, citations and an end event; or a refusal.
@@ -66,6 +75,7 @@ class AgentService:
             async for event in self._questions.ask(question):
                 yield event
             return
+        started = self._clock()
         ledger = PassageLedger()
         gate = ToolCall(
             id=GATE_CALL_ID,
@@ -87,6 +97,7 @@ class AgentService:
             reply = await self._model.call_tools(messages, TOOLS)
             if reply.usage is not None:
                 research = research.plus(reply.usage)
+            self._log_turn(turn, reply)
             match reply:
                 case FinalText():
                     break
@@ -99,15 +110,40 @@ class AgentService:
                         messages.append(Message(role="tool", content=content, tool_call_id=call.id))
                 case _:
                     yield AnswerFailed(code=reply.code, message=reply.detail)
-                    yield self._questions.end(found=True, usage=research)
+                    yield self._questions.end(found=True, usage=self._timed(research, started))
                     return
         if not ledger:
             # Nothing above the threshold and nothing the tools found: no answer (AI-02).
             for event in self._questions.refusal():
                 yield event
             return
+        research = self._timed(research, started)
         async for event in self._questions.answer(question, ledger.passages, research):
             yield event
+
+    def _timed(self, research: Usage, started: float) -> Usage:
+        """The research phase's usage with its whole time: searches, tools and model turns."""
+        return replace(research, total_ms=(self._clock() - started) * 1000)
+
+    def _log_turn(self, turn: int, reply: ToolCalls | FinalText | ModelFailed) -> None:
+        """One info line per tool-turn model call: ids, tokens and time, never text (AI-60)."""
+        match reply:
+            case ToolCalls():
+                outcome = "tool_calls"
+            case FinalText():
+                outcome = "ready"
+            case _:
+                outcome = reply.code
+        usage = reply.usage
+        log.info(
+            "tool_turn",
+            model_id=self._questions.model_id,
+            turn=turn,
+            outcome=outcome,
+            prompt_tokens=usage.prompt_tokens if usage else None,
+            completion_tokens=usage.completion_tokens if usage else None,
+            total_ms=usage.total_ms if usage else None,
+        )
 
     async def _run(
         self, call: ToolCall, ledger: PassageLedger, turn: int, calls: "_CallLog"

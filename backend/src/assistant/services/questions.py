@@ -79,6 +79,10 @@ class QuestionService:
         self._store = store
 
     @property
+    def model_id(self) -> str:
+        return self._model.model_id
+
+    @property
     def min_similarity(self) -> float:
         return self._min_similarity
 
