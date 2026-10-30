@@ -109,7 +109,7 @@ No ADR (spec decision 5).
 - Change: `domain/tools.py` (`SaveNoteArguments`), `services/tools.py` (`SAVE_NOTE`, note store, clock).
 - Done when: `make check` is green.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 4. The agent offers `save_note` only when asked
 

@@ -7,9 +7,12 @@ A mistake in the arguments is a result too, so the model can correct it (AI-21).
 import asyncio
 import re
 from collections.abc import Callable, Sequence
+from dataclasses import replace
 from datetime import UTC, datetime
 
+from assistant.domain.answers import markers, statements
 from assistant.domain.documents import Chunk, Document, indexed_text
+from assistant.domain.notes import Note, NoteSource, note_id
 from assistant.domain.tools import (
     CompareArguments,
     GetArticleArguments,
@@ -53,7 +56,15 @@ TOOLS: tuple[ToolSpec, ...] = (
 _ARTICLE_NUMBER = re.compile(r"\d+[a-z]?", re.IGNORECASE)
 
 
-SAVE_NOTE = ToolSpec(name="save_note", description="", arguments=SaveNoteArguments)
+# Offered only when the user asks to save a note (F-07a); the one tool that writes (AI-11).
+SAVE_NOTE = ToolSpec(
+    name="save_note",
+    description=(
+        "Save a note or checklist for the user in the local notes. Every sentence or list item "
+        "of the content ends with the numbers of the passages it rests on, like [1]."
+    ),
+    arguments=SaveNoteArguments,
+)
 
 
 class _ToolError(Exception):
@@ -72,6 +83,8 @@ class DocumentTools:
     ) -> None:
         self._questions = questions
         self._store = store
+        self._notes = notes
+        self._clock = clock
 
     async def run(self, call: ToolCall, ledger: PassageLedger) -> str:
         """The tool's result as the model reads it; passages are numbered in `ledger`."""
@@ -83,6 +96,8 @@ class DocumentTools:
                     return await self._article(
                         arguments.document, arguments.number, ARTICLE_CAP, ledger
                     )
+                case SaveNoteArguments() as arguments if self._notes is not None:
+                    return await self._save_note(arguments, ledger, self._notes)
                 case CompareArguments(a=a, b=b):
                     first = await self._article(a.document, a.number, COMPARE_CAP, ledger)
                     second = await self._article(b.document, b.number, COMPARE_CAP, ledger)
@@ -91,6 +106,49 @@ class DocumentTools:
                     return f"Error: there is no tool {call.name}."
         except _ToolError as error:
             return f"Error: {error}"
+
+    async def _save_note(
+        self, arguments: SaveNoteArguments, ledger: PassageLedger, notes: NoteStore
+    ) -> str:
+        """Saves the note when every line cites passages of this run; the service, not the
+        model, turns the markers into the note's sources (FR-11)."""
+        cited = list(dict.fromkeys(markers(arguments.content)))
+        for number in cited:
+            if not 1 <= number <= len(ledger):
+                raise _ToolError(
+                    f"passage {number} was not gathered in this run; "
+                    f"cite passages 1 to {len(ledger)}"
+                )
+        for statement in statements(arguments.content):
+            if not markers(statement):
+                kind = "line" if statement[:1] in "-*•" or statement[:1].isdigit() else "sentence"
+                raise _ToolError(
+                    f'the {kind} "{statement}" cites no passage; end every sentence and list '
+                    "item with the numbers of the passages it rests on, like [1]"
+                )
+        created = self._clock()
+        sources = []
+        for number in sorted(cited):
+            chunk = ledger.passages[number - 1]
+            document = await asyncio.to_thread(self._store.get, chunk.document_id)
+            sources.append(
+                NoteSource(
+                    number=number,
+                    document_title=document.title if document else chunk.document_id,
+                    location=chunk.location,
+                    chunk_id=chunk.id,
+                )
+            )
+        note = Note(
+            id=note_id(arguments.title, created),
+            title=arguments.title,
+            content=arguments.content,
+            sources=tuple(sources),
+            created=created,
+        )
+        saved = await asyncio.to_thread(notes.save, note)
+        ledger.saved(replace(note, id=saved))
+        return f"Saved note {saved}."
 
     async def _search(self, arguments: SearchDocumentsArguments, ledger: PassageLedger) -> str:
         document = await self._document(arguments.document) if arguments.document else None

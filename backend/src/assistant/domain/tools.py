@@ -5,11 +5,11 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Literal
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, Field, ValidationError
 
 from assistant.domain.answers import Usage
 from assistant.domain.documents import Chunk
-from assistant.domain.notes import Note
+from assistant.domain.notes import CONTENT_LIMIT, TITLE_LIMIT, Note
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,8 +67,10 @@ class GetArticleArguments(ArticleRef):
 
 
 class SaveNoteArguments(BaseModel):
-    title: str
-    content: str
+    """A note to keep: its title and its content, every line citing passages like [1]."""
+
+    title: str = Field(min_length=1, max_length=TITLE_LIMIT)
+    content: str = Field(min_length=1, max_length=CONTENT_LIMIT, pattern=r"\S")
 
 
 class CompareArguments(BaseModel):
@@ -92,6 +94,7 @@ class PassageLedger:
         self.limit = limit
         self._numbers: dict[str, int] = {}
         self._passages: list[Chunk] = []
+        self._notes: list[Note] = []
 
     def number(self, chunk: Chunk) -> int | None:
         """The chunk's number, given the next one the first time it is seen; None when the
@@ -103,9 +106,13 @@ class PassageLedger:
             self._numbers[chunk.id] = len(self._passages)
         return self._numbers[chunk.id]
 
+    def saved(self, note: Note) -> None:
+        """Record a note this run saved, so the agent can announce it."""
+        self._notes.append(note)
+
     @property
-    def saved_notes(self) -> tuple["Note", ...]:
-        raise NotImplementedError
+    def saved_notes(self) -> tuple[Note, ...]:
+        return tuple(self._notes)
 
     @property
     def passages(self) -> tuple[Chunk, ...]:
