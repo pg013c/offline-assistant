@@ -1,6 +1,7 @@
 import { useState, type JSX, type SubmitEvent } from 'react'
 
 import type { ChatCitation } from './chatStream'
+import { ModelSelect } from '../models/ModelSelect'
 import { CitationDialog } from './CitationDialog'
 import { Turn } from './Turn'
 import { useChatThread } from './useChatThread'
@@ -9,11 +10,12 @@ export function ChatView(): JSX.Element {
   const { turns, ask } = useChatThread()
   const [question, setQuestion] = useState('')
   const [openCitation, setOpenCitation] = useState<ChatCitation | null>(null)
+  const [model, setModel] = useState<string | undefined>(undefined)
   const streaming = turns.at(-1)?.answer.status === 'streaming'
 
   function onSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
-    ask(question.trim())
+    ask(question.trim(), model)
     setQuestion('')
   }
 
@@ -27,7 +29,7 @@ export function ChatView(): JSX.Element {
         <Turn key={position} turn={turn} onOpenCitation={setOpenCitation} />
       ))}
 
-      <form onSubmit={onSubmit} className="flex gap-2">
+      <form onSubmit={onSubmit} className="flex flex-wrap items-center gap-2">
         <label htmlFor="question" className="sr-only">
           Question
         </label>
@@ -40,6 +42,7 @@ export function ChatView(): JSX.Element {
           placeholder="What does the policy say about logs?"
           className="flex-1 rounded border border-gray-300 px-3 py-2 text-sm"
         />
+        <ModelSelect value={model} onChange={setModel} />
         <button
           type="submit"
           disabled={question.trim() === '' || streaming}

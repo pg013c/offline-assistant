@@ -111,7 +111,7 @@ No ADR (spec decision 5).
 - Change: `features/models/` (`useModels.ts`, `ModelSelect.tsx`), `features/status/NetworkBadge.tsx`, `App.tsx`.
 - Done when: `make check` is green.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 7. Notes in the library
 
