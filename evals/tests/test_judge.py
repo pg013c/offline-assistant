@@ -57,6 +57,7 @@ def test_the_request_holds_the_prompt_the_schema_and_everything_the_judge_reads(
 
     request = stub.requests[0]
     assert request["temperature"] == 0
+    assert request["max_tokens"] >= 8192, "room to think (ADR 0023)"
     assert request["response_format"]["type"] == "json_schema"
     schema = request["response_format"]["json_schema"]["schema"]
     assert set(schema["properties"]) == {"key_points", "reason", "sentences"}

@@ -69,5 +69,9 @@ check "judge serves on JUDGE_PORT as qwen3-30b-a3b" \
   "$(make -C "$root" --no-print-directory -n judge JUDGE_PORT=59994 ASSISTANT_MODELS_DIR="$scratch" 2>/dev/null \
     | grep -q -- "--port 59994.*--alias qwen3-30b-a3b\|--alias qwen3-30b-a3b.*--port 59994" && echo yes || echo no)"
 
+check "judge thinks before it rules (ADR 0023)" \
+  "$(make -C "$root" --no-print-directory -n judge ASSISTANT_MODELS_DIR="$scratch" 2>/dev/null \
+    | grep -q -- "--reasoning-budget 0" && echo no || echo yes)"
+
 [[ "$failures" -eq 0 ]] || { echo "$failures Makefile test(s) failed"; exit 1; }
 echo "All Makefile tests passed."
