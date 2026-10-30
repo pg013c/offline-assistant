@@ -2,6 +2,7 @@ import { useState, type JSX, type SubmitEvent } from 'react'
 
 import type { ChatCitation } from './chatStream'
 import { ModelSelect } from '../models/ModelSelect'
+import { useModels } from '../models/useModels'
 import { CitationDialog } from './CitationDialog'
 import { Turn } from './Turn'
 import { useChatThread } from './useChatThread'
@@ -11,11 +12,14 @@ export function ChatView(): JSX.Element {
   const [question, setQuestion] = useState('')
   const [openCitation, setOpenCitation] = useState<ChatCitation | null>(null)
   const [model, setModel] = useState<string | undefined>(undefined)
-  const streaming = turns.at(-1)?.answer.status === 'streaming'
+  const models = useModels()
+  // The model a question goes to: the one picked, else the API's default.
+  const chosen = model ?? models.data?.find((choice) => choice.is_default)?.id
 
   function onSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
-    ask(question.trim(), model)
+    // A new question stops an answer still being written (F-08 review #12).
+    ask(question.trim(), chosen)
     setQuestion('')
   }
 
@@ -45,7 +49,7 @@ export function ChatView(): JSX.Element {
         <ModelSelect value={model} onChange={setModel} />
         <button
           type="submit"
-          disabled={question.trim() === '' || streaming}
+          disabled={question.trim() === ''}
           className="rounded bg-gray-900 px-4 py-2 text-sm text-white disabled:opacity-40"
         >
           Ask

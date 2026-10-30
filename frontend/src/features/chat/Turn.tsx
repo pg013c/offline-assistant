@@ -47,6 +47,9 @@ export function Turn({ turn, onOpenCitation }: TurnProps): JSX.Element {
       {answer.status === 'stopped' && (
         <p className="text-xs text-gray-500">Stopped for the next question.</p>
       )}
+      {!answer.modelId && turn.model && answer.status !== 'streaming' && (
+        <p className="text-xs text-gray-500">Asked {turn.model}</p>
+      )}
       {answer.modelId && (
         <p className="text-xs text-gray-500">
           Answered by {answer.modelId}
