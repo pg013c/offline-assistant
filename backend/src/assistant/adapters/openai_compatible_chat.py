@@ -45,7 +45,6 @@ USER_PROMPT = Template(_PROMPTS.joinpath("answer_user.md").read_text(encoding="u
 RETRY_PROMPT = Template(_PROMPTS.joinpath("retry.md").read_text(encoding="utf-8"))
 
 
-# A passage's own text must not open or close a passage block (AI-10).
 @dataclass(frozen=True)
 class LlmServer:
     """Where a model is served and how long and how often to try it (AI-21, AI-22)."""
