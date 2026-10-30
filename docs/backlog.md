@@ -14,7 +14,7 @@ Status: `planned` → `spec` → `building` → `review` → `done`.
 | F-04a | Article context in the index: article label and title indexed with each chunk, section titles not chunked, measured with `make eval` | FR-03, FR-05 | 2 | done |
 | F-05 | Reranker, switchable, measured with and without | FR-06, FR-43 | 2 | done |
 | F-06 | OpenAI-compatible chat adapter with tool calling, JSON schema output, validation and retries | FR-13, FR-40 | 2 | done |
-| F-07 | Agent with tools, resolvable citations, refusal, prompt-injection defence | FR-10–FR-12, FR-14 | 2 | building |
+| F-07 | Agent with tools, resolvable citations, refusal, prompt-injection defence | FR-10–FR-12, FR-14 | 2 | review |
 | F-07a | `save_note` tool: notes and checklists written to the local notes directory | FR-10, AI-11 | 2 | planned |
 | F-08 | Chat UI with clickable citations, document library, model selector, offline indicator | FR-60–FR-62 | 2 | planned |
 | F-09 | Full evaluation set, comparison of 3–4 local models and Claude, performance measurements, published report | FR-41–FR-45 | 3 | planned |
