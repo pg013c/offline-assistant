@@ -203,8 +203,8 @@ No ADR: no new dependency, model or standard.
   - a Polish question answers in Polish with markers.
 - Change: prompt wording only if the tests show the model misreads the tools.
 - Done when: the tests pass against Qwen3 8B.
-- [ ] red
-- [ ] green
+- [x] red
+- [x] green: none needed, the tests passed three times against Qwen3 8B as built
 
 ### Step 8. Evaluation metrics for the agent
 
@@ -229,6 +229,8 @@ No ADR: no new dependency, model or standard.
 
 - **Step 4:** the loop lives in `AgentService` (`services/agent.py`), which wraps `QuestionService`, instead of `QuestionService` taking the agent as more constructor arguments. The chat route asks an `Answerer`: the agent when the model can call tools, the question service otherwise. Until step 5 the route leaves tool events out of the stream.
 - **Step 4:** the failure code `too_many_tool_turns` reached the API schema, the generated client and the UI copy in this step rather than in step 5, because the route has to send it once the agent is wired.
+
+- **Step 7:** the integration tests passed on the first run, three runs in a row, so the step has no green commit.
 
 ## Acceptance criteria mapping
 
