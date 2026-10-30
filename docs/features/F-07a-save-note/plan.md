@@ -181,7 +181,7 @@ Added after the first measurement: the Polish checklist overran the 256-token ca
 - Tests first: `test_openai_tool_calls.py`, where a tool turn is capped at 1024 tokens, like an answer.
 - Change: `adapters/openai_compatible_chat.py`.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 8. Measure and record
 
