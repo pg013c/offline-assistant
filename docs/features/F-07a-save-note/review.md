@@ -38,3 +38,13 @@ Decision is filled in by the human: `fix`, `backlog (F-xx)`, or `reject: <reason
 
 | # | Commits |
 |---|---|
+| 1 | `20884ed` test, `1583329` fix |
+| 2 | `20884ed` test, `1583329` fix |
+| 3 | `7fa8e6c` test, `653b1d7` fix |
+| 4 | `8843d5c` test, `899351e` fix |
+| 5 | `e485b2d` test (dataset version 4, `inj-note-content`) |
+| 6 | `e485b2d` test, `b1bb109` fix |
+| 7 | `7fa8e6c` test |
+| 8 | `d8c20c2` docs |
+| 9 | `20884ed` test, `1583329` fix |
+| 10 | rejected |
