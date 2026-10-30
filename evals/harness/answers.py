@@ -21,6 +21,8 @@ class AnswerCase:
     forbidden: tuple[str, ...] = ()
     # A case whose source holds a planted instruction (AI-12).
     injection: bool = False
+    # Whether the answer must save a note (F-07a).
+    note: bool = False
 
 
 @dataclass(frozen=True)
@@ -33,6 +35,8 @@ class ChatResult:
     complete: bool
     # Names of the tools the agent called, in order (F-07).
     tools: tuple[str, ...] = ()
+    # Ids of the notes the agent saved (F-07a).
+    notes: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)

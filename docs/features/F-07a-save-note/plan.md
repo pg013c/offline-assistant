@@ -154,7 +154,7 @@ No ADR (spec decision 5).
   - `tests/integration/test_local_agent.py`: a checklist request to Qwen3 8B saves a note citing Art. 26, under `tmp_path`.
 - Change: `evals/harness/answers.py`, `gate.py`, `run.py`.
 - Done when: `make check` passes, and the integration test passes with `make llm`.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 8. Measure and record
