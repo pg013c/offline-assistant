@@ -1,12 +1,22 @@
-"""The judge's calibration (ADR 0022): fixed answers with hand verdicts."""
+"""The judge's calibration (ADR 0022): fixed answers with hand verdicts.
 
+Every judged run judges these answers again. Agreement below the bar fails the run, since
+verdicts from a judge that disagrees with people cannot be reported.
+"""
+
+import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any, Literal, cast
 
-from harness.judge import JudgeInput, Verdict
+import yaml
 
-AGREEMENT_BAR = 0.0
+from harness.answers import statements_of
+from harness.judge import JudgedSentence, JudgeInput, Verdict
+
+AGREEMENT_BAR = 0.85
+CALIBRATION_FILE = Path(__file__).parents[1] / "datasets" / "calibration.yaml"
 
 
 @dataclass(frozen=True)
@@ -24,14 +34,63 @@ class Agreement:
 
 
 def load_calibration(path: Path) -> list[CalibrationItem]:
-    raise NotImplementedError
+    """The fixed answers and their hand verdicts."""
+    document = yaml.safe_load(path.read_text(encoding="utf-8"))
+    return [_item(entry) for entry in document["items"]]
+
+
+def _item(entry: Mapping[str, Any]) -> CalibrationItem:
+    answer = str(entry["answer"])
+    sentences = tuple(
+        JudgedSentence(index=index, text=text, cites=_cites(text))
+        for index, text in enumerate(statements_of(answer), start=1)
+    )
+    expected = entry["expected"]
+    return CalibrationItem(
+        id=str(entry["id"]),
+        judged=JudgeInput(
+            question=str(entry["question"]),
+            key_points=tuple(entry["key_points"]),
+            answer=answer,
+            sentences=sentences,
+            passages={int(number): str(text) for number, text in entry["passages"].items()},
+        ),
+        expected=Verdict(
+            correctness=cast(Literal["correct", "partial", "wrong"], expected["correctness"]),
+            reason=str(expected["reason"]),
+            supported={int(index): bool(value) for index, value in expected["supported"].items()},
+        ),
+    )
+
+
+def _cites(text: str) -> tuple[int, ...]:
+    numbers = [int(n) for marker in re.findall(r"\[([\d,\s]+)\]", text) for n in marker.split(",")]
+    return tuple(dict.fromkeys(numbers))
 
 
 def agreement(
     items: Sequence[CalibrationItem], verdicts: Mapping[str, Verdict | None]
 ) -> Agreement:
-    raise NotImplementedError
+    """Shares of hand verdicts the judge matched; an item it could not judge disagrees."""
+    correct = supported = sentences = 0
+    for item in items:
+        verdict = verdicts.get(item.id)
+        correct += verdict is not None and verdict.correctness == item.expected.correctness
+        for index, expected in item.expected.supported.items():
+            sentences += 1
+            supported += verdict is not None and verdict.supported.get(index) == expected
+    return Agreement(
+        correctness=correct / len(items) if items else 0.0,
+        support=supported / sentences if sentences else 0.0,
+        items=len(items),
+    )
 
 
 def calibration_failures(result: Agreement) -> list[str]:
-    raise NotImplementedError
+    """One message per kind of verdict where the judge agrees with people too rarely."""
+    return [
+        f"the judge agrees with the calibration set on {share * 100:.1f} % of {kind} verdicts, "
+        f"below {AGREEMENT_BAR * 100:.0f} % (ADR 0022)"
+        for kind, share in (("correctness", result.correctness), ("support", result.support))
+        if share < AGREEMENT_BAR - 1e-9
+    ]

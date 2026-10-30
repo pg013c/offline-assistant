@@ -31,13 +31,17 @@ export LLM_PORT ?= 8080
 # The model file's path comes from its pin (pinned_models.py), so the two cannot drift apart.
 LLM_FILE = $(shell $(BACKEND) python -c "from assistant.adapters.pinned_models import QWEN3_8B as m; print('$(ASSISTANT_MODELS_DIR)/' + m.directory + '/' + next(iter(m.files)))")
 
+# The evaluation's judge for `make judge` (ADR 0022): llama-server on JUDGE_PORT.
+export JUDGE_PORT ?= 8081
+JUDGE_FILE = $(shell $(BACKEND) python -c "from assistant.adapters.pinned_models import QWEN3_30B_A3B as m; print('$(ASSISTANT_MODELS_DIR)/' + m.directory + '/' + next(iter(m.files)))")
+
 # Evaluation corpus, fetched by `make eval-corpus` (ADR 0018).
 export EVAL_CORPUS_DIR := $(abspath $(or $(EVAL_CORPUS_DIR),data/eval-corpus))
 
 # Where `make api-client` writes the schema and generated types (ADR 0005).
 API_OUT ?= $(CURDIR)/frontend/src/api
 
-.PHONY: help setup models llm-models llm-preflight llm qdrant eval-corpus eval eval-answers check-evals dev dev-preflight e2e test-integration check check-backend check-frontend check-api-client api-client test test-backend test-frontend node-version
+.PHONY: help setup models llm-models llm-preflight llm judge-models judge-preflight judge qdrant eval-corpus eval eval-answers check-evals dev dev-preflight e2e test-integration check check-backend check-frontend check-api-client api-client test test-backend test-frontend node-version
 
 help: ## List targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
@@ -68,6 +72,22 @@ llm-preflight: ## Check that make llm can start: llama-server installed, model f
 
 llm: llm-preflight ## Serve the local LLM with llama-server on LLM_PORT (Metal, thinking off; ADR 0021)
 	llama-server -m "$(LLM_FILE)" --alias qwen3-8b --host 127.0.0.1 --port $(LLM_PORT) \
+	  --n-gpu-layers 99 --ctx-size 16384 --jinja --reasoning-budget 0
+
+judge-models: ## Download the evaluation's judge (Qwen3 30B-A3B, about 18.6 GB) into ASSISTANT_MODELS_DIR, checked by hash
+	$(BACKEND) python scripts/download_models.py "$(ASSISTANT_MODELS_DIR)" --judge
+
+judge-preflight: ## Check that make judge can start: llama-server installed, judge file pinned, port free
+	@$(BACKEND) python -c "from pathlib import Path; from assistant.adapters.pinned_models import JUDGE_MODELS, verify_models; verify_models(Path('$(ASSISTANT_MODELS_DIR)'), JUDGE_MODELS)" 2>/dev/null \
+	  || { echo "The judge is missing or changed in $(ASSISTANT_MODELS_DIR). Fetch it with: make judge-models"; exit 1; }
+	@command -v llama-server >/dev/null || { echo "llama-server is not installed. Install it with: brew install llama.cpp"; exit 1; }
+	@if lsof -nP -iTCP:$(JUDGE_PORT) -sTCP:LISTEN >/dev/null 2>&1; then \
+	  owner="$$(lsof -nP -iTCP:$(JUDGE_PORT) -sTCP:LISTEN | awk 'NR==2 {print $$1 " (pid " $$2 ")"}')"; \
+	  echo "Port $(JUDGE_PORT) is already used by $$owner. Stop it or set JUDGE_PORT."; exit 1; \
+	fi
+
+judge: judge-preflight ## Serve the evaluation's judge with llama-server on JUDGE_PORT (thinking off; ADR 0022)
+	llama-server -m "$(JUDGE_FILE)" --alias qwen3-30b-a3b --host 127.0.0.1 --port $(JUDGE_PORT) \
 	  --n-gpu-layers 99 --ctx-size 16384 --jinja --reasoning-budget 0
 
 eval-corpus: ## Download the evaluation corpus into EVAL_CORPUS_DIR, checked against pinned hashes

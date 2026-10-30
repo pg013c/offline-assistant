@@ -128,6 +128,7 @@ Code: [MIT](LICENSE). Models, tools and datasets keep their own licences:
 | [BGE-M3](https://huggingface.co/BAAI/bge-m3) | multilingual embeddings | MIT |
 | [BGE reranker v2 M3](https://huggingface.co/BAAI/bge-reranker-v2-m3) | multilingual reranking | Apache-2.0 |
 | [Qwen3 8B](https://huggingface.co/Qwen/Qwen3-8B-GGUF) | local LLM, Q4_K_M GGUF | Apache-2.0 |
+| [Qwen3 30B-A3B](https://huggingface.co/Qwen/Qwen3-30B-A3B-GGUF) | evaluation judge, Q4_K_M GGUF, `make judge-models` ([ADR 0022](docs/adr/0022-local-judge-and-answer-floors.md)) | Apache-2.0 |
 | [llama.cpp](https://github.com/ggml-org/llama.cpp) | `make llm` serves the LLM | MIT |
 | [sentence-transformers](https://www.sbert.net/) | runs the embedding model | Apache-2.0 |
 | [scikit-learn](https://scikit-learn.org/) | dependency of sentence-transformers | BSD-3-Clause |

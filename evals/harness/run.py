@@ -32,6 +32,13 @@ from harness.answers import (
     parse_chat_stream,
     score_answers,
 )
+from harness.calibration import (
+    CALIBRATION_FILE,
+    Agreement,
+    agreement,
+    calibration_failures,
+    load_calibration,
+)
 from harness.corpus import CorpusDocument, documents, sha256
 from harness.dataset import load_answer_cases, load_cases
 from harness.gate import below_answer_floors, gate_failures
@@ -207,6 +214,7 @@ def run_answers(config: RunConfig) -> Outcome:
         {chunk.chunk_id: chunk.text for chunk in chunks},
         config.judge_url,
     )
+    calibration = calibrate(config.judge_url) if verdicts is not None else None
     metrics = score_answers(
         answer_cases,
         results,
@@ -220,6 +228,15 @@ def run_answers(config: RunConfig) -> Outcome:
         "chat_model": config.chat_model,
         "llm_server": _llm_server(config.llm_url),
         "judge": judge_note,
+        "calibration": (
+            {
+                "correctness": calibration.correctness,
+                "support": calibration.support,
+                "items": calibration.items,
+            }
+            if calibration
+            else "not run"
+        ),
     }
     report = {
         "metrics": {
@@ -257,6 +274,8 @@ def run_answers(config: RunConfig) -> Outcome:
         {name: values["value"] for name, values in baseline.items()},
         floors=False,
     ) + below_answer_floors(metrics.values)
+    if calibration is not None:
+        failures += calibration_failures(calibration)
     stem = config.results_dir / f"answers-{started_at:%Y%m%dT%H%M%SZ}"
     report_json = stem.with_suffix(".json")
     report_markdown = stem.with_suffix(".md")
@@ -463,6 +482,15 @@ def judge_answers(
             continue
         verdicts[case.id] = client.judge(judge_input(case, result, questions[case.id], texts))
     return verdicts, f"{JUDGE_MODEL} at {judge_url}"
+
+
+def calibrate(judge_url: str, path: Path = CALIBRATION_FILE) -> Agreement | None:
+    """The judge's agreement with the hand-labelled calibration set, when there is one."""
+    if not path.exists():
+        return None
+    client = JudgeClient(judge_url)
+    items = load_calibration(path)
+    return agreement(items, {item.id: client.judge(item.judged) for item in items})
 
 
 def media_type(path: Path) -> str:

@@ -131,7 +131,7 @@
   - `scripts/ci/test-make.sh`: `judge-models`, `judge-preflight` and `judge` exist and name `JUDGE_PORT`.
 - Change: `harness/calibration.py`, `pinned_models.py` (`QWEN3_30B_A3B`, `JUDGE_MODELS`), `scripts/download_models.py --judge`, `Makefile`, README licence table.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 7. First judged run, calibration labels and the record
 
