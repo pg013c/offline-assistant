@@ -181,6 +181,7 @@ def run_answers(config: RunConfig) -> Outcome:
                 expected[case.id],
                 tools=case.tools,
                 forbidden=case.forbidden,
+                injection=case.kind == "injection",
             )
             for case in cases
         ],
