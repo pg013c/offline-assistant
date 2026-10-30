@@ -121,7 +121,7 @@ No ADR (spec decision 5).
 - Change: `services/agent.py`, `domain/answers.py` (`NoteSaved`), `prompts/agent.md`, `app.py` and `settings.py` (`notes_dir`).
 - Done when: `make check` is green.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 5. API: notes endpoints and the note event
 

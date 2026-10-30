@@ -14,9 +14,11 @@ from assistant.domain.answers import (
     AnswerEvent,
     AnswerFailed,
     ModelFailed,
+    NoteSaved,
     ToolUsed,
     Usage,
 )
+from assistant.domain.notes import wants_note
 from assistant.domain.routing import needs_tools
 from assistant.domain.tools import (
     FinalText,
@@ -28,7 +30,7 @@ from assistant.domain.tools import (
 )
 from assistant.ports.chat_model import ToolCallingModel
 from assistant.services.questions import QuestionService
-from assistant.services.tools import TOOLS, DocumentTools
+from assistant.services.tools import SAVE_NOTE, TOOLS, DocumentTools
 
 log = structlog.get_logger(__name__)
 
@@ -69,7 +71,8 @@ class AgentService:
         Only a question about an article, or a comparison, uses the tools; any other
         takes the question service's search-then-answer path (spec decision 6).
         """
-        if not needs_tools(question):
+        note = wants_note(question)
+        if not (needs_tools(question) or note):
             async for event in self._questions.ask(question):
                 yield event
             return
@@ -89,10 +92,13 @@ class AgentService:
             Message(role="assistant", content="", tool_calls=(gate,)),
             Message(role="tool", content=result, tool_call_id=gate.id),
         ]
+        # save_note writes a file, so only a question asking for a note gets it (F-07a, AI-11).
+        offered = (*TOOLS, SAVE_NOTE) if note else TOOLS
+        names = {tool.name for tool in offered}
         research = NO_USAGE
         # At the limit the model is not asked again; the answer rests on what it found.
         for turn in range(1, self._max_tool_turns + 1):
-            reply = await self._model.call_tools(messages, TOOLS)
+            reply = await self._model.call_tools(messages, offered)
             if reply.usage is not None:
                 research = research.plus(reply.usage)
             self._log_turn(turn, reply)
@@ -104,7 +110,14 @@ class AgentService:
                     messages.append(Message(role="assistant", content="", tool_calls=requested))
                     for call in requested:
                         yield _announced(call)
-                        content = await self._run(call, ledger, turn, calls)
+                        saved = len(ledger.saved_notes)
+                        content = (
+                            await self._run(call, ledger, turn, calls)
+                            if call.name in names
+                            else f"Error: there is no tool {call.name}."
+                        )
+                        for written in ledger.saved_notes[saved:]:
+                            yield NoteSaved(id=written.id, title=written.title)
                         messages.append(Message(role="tool", content=content, tool_call_id=call.id))
                 case _:
                     yield AnswerFailed(code=reply.code, message=reply.detail)

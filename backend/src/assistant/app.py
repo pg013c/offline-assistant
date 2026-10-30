@@ -19,6 +19,7 @@ from assistant.adapters.fakes.chunk_index import InMemoryChunkIndex
 from assistant.adapters.fakes.document_store import FakeDocumentStore
 from assistant.adapters.fakes.ingestion_queue import InlineIngestionQueue
 from assistant.adapters.file_document_store import LocalFileDocumentStore
+from assistant.adapters.file_note_store import FileNoteStore
 from assistant.adapters.qdrant_chunk_index import QdrantChunkIndex
 from assistant.adapters.routing_parser import RoutingDocumentParser
 from assistant.adapters.sentence_transformer_embedder import SentenceTransformerEmbedder
@@ -133,7 +134,9 @@ def create_app(settings: Settings, adapters: Adapters | None = None) -> FastAPI:
         AgentService(
             question_service,
             adapters.tool_model,
-            DocumentTools(question_service, adapters.store),
+            DocumentTools(
+                question_service, adapters.store, notes=FileNoteStore(settings.notes_dir)
+            ),
             settings.max_tool_turns,
         )
         if adapters.tool_model

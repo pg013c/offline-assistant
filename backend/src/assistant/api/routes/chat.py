@@ -82,8 +82,7 @@ def _to_schema(event: AnswerEvent) -> ChatEvent:
         case ToolUsed(name=name, arguments=arguments):
             return ChatEvent(ChatToolEvent(type="tool", name=name, arguments=arguments))
         case NoteSaved():
-            # F-07a step 5 puts saved notes on the stream.
-            raise NotImplementedError
+            raise ValueError("saved notes are not part of the chat stream yet")
         case _:
             assert_never(event)
 
@@ -92,4 +91,6 @@ def _to_schema(event: AnswerEvent) -> ChatEvent:
 async def ask_question(request: ChatRequest, answers: Answers) -> AsyncIterable[ChatEvent]:
     """Answer a question from the uploaded documents as Server-Sent Events."""
     async for event in answers.ask(request.question):
-        yield _to_schema(event)
+        # Saved notes reach the stream with F-07a step 5.
+        if not isinstance(event, NoteSaved):
+            yield _to_schema(event)
