@@ -311,14 +311,18 @@ def test_each_tool_call_is_an_event_before_the_answer_text(tmp_path: Path, uploa
 QUESTION_ARGUMENTS = {"query": QUESTION["question"]}
 
 
-def test_too_many_tool_turns_is_an_error_event_and_the_stream_still_ends(
+def test_at_the_tool_turn_limit_the_answer_follows_without_an_error(
     tmp_path: Path, upload: Upload
 ) -> None:
-    agent = ScriptedAgent([searching("logs", "c1"), searching("retention", "c2")], [])
+    agent = ScriptedAgent(
+        [searching("logs", "c1")],
+        [
+            TextDelta("Six months [1]."),
+            Answered(ModelAnswer(text="Six months [1].", cited=(1,)), USAGE),
+        ],
+    )
     with agent_client(tmp_path, agent, max_tool_turns=1) as client:
         upload(client)
         _, events = ask(client)
 
-    assert [event["type"] for event in events] == ["tool", "tool", "error", "end"]
-    assert events[2]["code"] == "too_many_tool_turns"
-    assert events[-1]["found"] is True
+    assert [event["type"] for event in events] == ["tool", "tool", "text", "citation", "end"]

@@ -230,7 +230,7 @@ Added after the first measurement (spec decision 6).
   - `ASSISTANT_MAX_TOOL_TURNS` defaults to 2.
 - Change: `services/agent.py`, `domain/answers.py`, `api/schemas.py`, `settings.py`, `useChatStream.ts`; `make api-client`.
 - Done when: `make check` is green.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 11. Tools only for articles and comparisons; such questions pass the gate

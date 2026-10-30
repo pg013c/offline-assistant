@@ -1,6 +1,7 @@
 """The agent: tools before the answer (F-07)."""
 
 import asyncio
+import re
 from collections.abc import AsyncIterator, Sequence
 
 from structlog.testing import capture_logs
@@ -204,18 +205,46 @@ def test_each_tool_call_is_announced_before_the_answer_text() -> None:
     assert all(isinstance(event, ToolUsed) for event in events[:first_text])
 
 
-def test_too_many_tool_turns_end_the_run_typed_without_an_answer() -> None:
-    agent = ScriptedAgent([reading("33", "c1"), reading("17", "c2"), reading("33", "c3")])
-    questions, _, _ = service(agent, max_tool_turns=2)
+def test_at_the_limit_the_model_is_not_asked_again_and_answers_from_what_it_found() -> None:
+    agent = ScriptedAgent(
+        [reading("33", "c1"), reading("17", "c2")], answered("Within 72 hours [1].", (1,))
+    )
+    questions, store, document_id = service(agent, max_tool_turns=2)
 
     events = ask(questions)
 
-    failures = [event for event in events if isinstance(event, AnswerFailed)]
-    assert [failure.code for failure in failures] == ["too_many_tool_turns"]
-    assert "2" in failures[0].message
-    assert agent.answered_with is None
-    assert len(agent.seen) == 3
-    assert isinstance(events[-1], AnswerEnd)
+    assert len(agent.seen) == 2
+    assert not any(isinstance(event, AnswerFailed) for event in events)
+    assert agent.answered_with is not None
+    gathered = {chunk.id for chunk in agent.answered_with}
+    for number in ("33", "17"):
+        assert {chunk.id for chunk in article(store, document_id, number)} <= gathered
+    end = events[-1]
+    assert isinstance(end, AnswerEnd)
+    assert end.found is True
+
+
+def test_a_repeated_call_gets_the_numbers_of_its_passages_not_the_passages_again() -> None:
+    agent = ScriptedAgent(
+        [reading("33", "c1"), reading("33", "c2"), FinalText("ready")],
+        answered("Within 72 hours [1].", (1,)),
+    )
+    questions, _, _ = service(agent)
+
+    with capture_logs() as logs:
+        ask(questions)
+
+    first, repeated = agent.seen[2][-3], agent.seen[2][-1]
+    assert "<passage " in first.content
+    assert repeated.tool_call_id == "c2"
+    assert "<passage " not in repeated.content
+    assert repeated.content.startswith("You already called get_article with these arguments")
+    numbers = [int(n) for n in re.findall(r'<passage number="(\d+)"', first.content)]
+    assert repeated.content.endswith(f"passages {', '.join(map(str, numbers))}.")
+    assert [entry["tool"] for entry in logs if entry["event"] == "tool_called"] == [
+        "search_documents",
+        "get_article",
+    ]
 
 
 def test_a_failed_tool_turn_ends_the_run_typed_and_keeps_its_usage() -> None:

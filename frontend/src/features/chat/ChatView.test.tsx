@@ -232,7 +232,6 @@ describe('ChatView', () => {
       /not reachable.*127\.0\.0\.1:8080/i,
     ],
     ['model_timeout', 'The model server took over 60 s.', /took too long.*60 s/i],
-    ['too_many_tool_turns', 'Still calling tools after 4 turns.', /kept looking things up/i],
     [
       'model_error',
       'The model server at http://127.0.0.1:8080 answered 400: context size exceeded',
