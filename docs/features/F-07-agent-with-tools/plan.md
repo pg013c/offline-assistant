@@ -193,7 +193,7 @@ No ADR: no new dependency, model or standard.
 - Change: `useChatStream.ts`, `ChatView.tsx`.
 - Done when: `make check` is green and `make e2e` passes unchanged (`fake-extractive`).
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 7. Integration with the local model
 
