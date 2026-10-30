@@ -10,8 +10,9 @@ from assistant.domain.routing import needs_tools
         "What does article 5(1) say about purpose limitation?",
         "Co stanowi art. 17 RODO?",
         "Jakie obowiązki nakłada Artykuł 26 aktu o AI?",
-        "Which systems does Annex III list?",
-        "Co obejmuje załącznik III?",
+        "Art 17 RODO: co stanowi?",
+        "What do articles 5 and 6 require?",
+        "Jakie obowiązki wynikają z artykułów 9 i 10?",
         "Compare breach notification under the GDPR with incident reporting in the AI Act.",
         "What is the difference between a provider and a deployer?",
         "Porównaj obowiązki dostawców i podmiotów stosujących.",
@@ -32,6 +33,11 @@ def test_questions_about_an_article_or_a_comparison_need_tools(question: str) ->
         "How long should pasta boil?",
         "Is art therapy covered?",
         "What is an article of clothing?",
+        # No tool can read an annex yet, so annex questions take the faster path (review #4).
+        "Which systems does Annex III list?",
+        "Co obejmuje załącznik III?",
+        "What are the different retention periods?",
+        "Do different rules apply to small companies?",
     ],
 )
 def test_other_questions_take_the_search_then_answer_path(question: str) -> None:
