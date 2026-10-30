@@ -43,7 +43,7 @@ class ErrorResponse(BaseModel):
 class ChatRequest(BaseModel):
     question: str = Field(min_length=1, max_length=2000)
     # A model from GET /api/models; the default when left out (F-08).
-    model: str | None = None
+    model: str | None = Field(default=None, max_length=100)
 
 
 class ModelChoiceResponse(BaseModel):

@@ -27,7 +27,13 @@ class ChatModels:
     """The configured model first, as the default, then any others offered beside it."""
 
     def __init__(self, entries: Sequence[ModelEntry]) -> None:
-        self._entries = {entry.id: entry for entry in entries}
+        if not entries:
+            raise ValueError("the API needs at least one model to answer with")
+        self._entries: dict[str, ModelEntry] = {}
+        for entry in entries:
+            if entry.id in self._entries:
+                raise ValueError(f"{entry.id} is listed twice among the models")
+            self._entries[entry.id] = entry
         self._default = entries[0].id
 
     def list_models(self) -> list[ModelChoice]:
