@@ -5,7 +5,6 @@ writes it, and an invalid answer is retried with the reason fed back (AI-21).
 """
 
 import json
-import re
 import time
 from collections.abc import AsyncIterator, Sequence
 from dataclasses import dataclass, field, replace
@@ -35,6 +34,7 @@ from assistant.domain.tools import (
     ToolCalls,
     ToolSpec,
     ToolsUnsupported,
+    neutralised,
     parse_tool_calls,
 )
 
@@ -43,10 +43,9 @@ _PROMPTS = files("assistant").joinpath("prompts")
 ANSWER_PROMPT = _PROMPTS.joinpath("answer.md").read_text(encoding="utf-8")
 USER_PROMPT = Template(_PROMPTS.joinpath("answer_user.md").read_text(encoding="utf-8"))
 RETRY_PROMPT = Template(_PROMPTS.joinpath("retry.md").read_text(encoding="utf-8"))
+
+
 # A passage's own text must not open or close a passage block (AI-10).
-_PASSAGE_TAG = re.compile(r"<(/?)(passage)", re.IGNORECASE)
-
-
 @dataclass(frozen=True)
 class LlmServer:
     """Where a model is served and how long and how often to try it (AI-21, AI-22)."""
@@ -375,15 +374,10 @@ def _error_status(url: str, response: httpx.Response) -> ModelFailed:
     )
 
 
-def _neutralised(text: str) -> str:
-    """The text with any passage tag broken up, so it stays inside its block."""
-    return _PASSAGE_TAG.sub(r"<\1 \2", text)
-
-
 def _user_message(question: str, passages: Sequence[Chunk]) -> str:
     # Passages are delimited data, each with its heading path for context (AI-10).
     blocks = [
-        f'<passage number="{number}">\n{_neutralised(indexed_text(chunk))}\n</passage>'
+        f'<passage number="{number}">\n{neutralised(indexed_text(chunk))}\n</passage>'
         for number, chunk in enumerate(passages, start=1)
     ]
     return USER_PROMPT.substitute(passages="\n\n".join(blocks), question=question)

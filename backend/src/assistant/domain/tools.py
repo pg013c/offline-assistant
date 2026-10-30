@@ -1,5 +1,6 @@
 """Tools a language model may call, and the conversation that carries the calls (F-07)."""
 
+import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Literal
@@ -70,17 +71,37 @@ class CompareArguments(BaseModel):
 
 
 class PassageLedger:
-    """The passages tools returned in one run, numbered from 1 in the order first seen."""
+    """The passages tools returned in one run, numbered from 1 in the order first seen.
+
+    The final answer is given these passages in this order, so a number the model saw in a
+    tool result is the number it cites (AI-01).
+    """
+
+    def __init__(self) -> None:
+        self._numbers: dict[str, int] = {}
+        self._passages: list[Chunk] = []
 
     def number(self, chunk: Chunk) -> int:
-        raise NotImplementedError
+        """The chunk's number, given the next one the first time it is seen."""
+        if chunk.id not in self._numbers:
+            self._passages.append(chunk)
+            self._numbers[chunk.id] = len(self._passages)
+        return self._numbers[chunk.id]
 
     @property
     def passages(self) -> tuple[Chunk, ...]:
-        raise NotImplementedError
+        return tuple(self._passages)
 
     def __len__(self) -> int:
-        raise NotImplementedError
+        return len(self._passages)
+
+
+_PASSAGE_TAG = re.compile(r"<(/?)(passage)", re.IGNORECASE)
+
+
+def neutralised(text: str) -> str:
+    """The text with any passage tag broken up, so it stays inside its block (AI-10)."""
+    return _PASSAGE_TAG.sub(r"<\1 \2", text)
 
 
 class ToolsUnsupported(Exception):

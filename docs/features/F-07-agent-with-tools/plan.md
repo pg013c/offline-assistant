@@ -145,7 +145,7 @@ No ADR: no new dependency, model or standard.
 - Change: `domain/tools.py` (argument models, `PassageLedger`), `services/tools.py`.
 - Done when: `make check` is green.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 4. The agent loop in the service
 

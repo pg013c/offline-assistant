@@ -71,6 +71,10 @@ class QuestionService:
         self._model = model
         self._store = store
 
+    @property
+    def min_similarity(self) -> float:
+        return self._min_similarity
+
     async def search(
         self, query: str, limit: int, rerank: bool | None = None
     ) -> list[FoundPassage]:
