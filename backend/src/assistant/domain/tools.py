@@ -70,6 +70,11 @@ class CompareArguments(BaseModel):
     b: ArticleRef
 
 
+# The passages one answer may rest on, so tool results cannot overflow the answer's context
+# (AI-22, F-07 review #5).
+MAX_ANSWER_PASSAGES = 24
+
+
 class PassageLedger:
     """The passages tools returned in one run, numbered from 1 in the order first seen.
 
@@ -77,7 +82,8 @@ class PassageLedger:
     tool result is the number it cites (AI-01).
     """
 
-    def __init__(self) -> None:
+    def __init__(self, limit: int = MAX_ANSWER_PASSAGES) -> None:
+        self.limit = limit
         self._numbers: dict[str, int] = {}
         self._passages: list[Chunk] = []
 

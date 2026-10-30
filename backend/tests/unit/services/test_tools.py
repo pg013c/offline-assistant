@@ -1,4 +1,5 @@
 import asyncio
+import time
 
 import pytest
 from pydantic import BaseModel
@@ -10,6 +11,7 @@ from assistant.adapters.fakes.ingestion_queue import InlineIngestionQueue
 from assistant.adapters.text_document_parser import TextDocumentParser
 from assistant.domain.documents import Chunk
 from assistant.domain.tools import (
+    MAX_ANSWER_PASSAGES,
     ArticleRef,
     CompareArguments,
     GetArticleArguments,
@@ -233,3 +235,60 @@ def test_a_passage_tag_inside_the_document_text_cannot_close_its_block(setup: Se
 
     assert result.count("</passage>") == 1
     assert result.count("<passage ") == 1
+
+
+def test_at_most_24_passages_are_gathered_for_one_answer() -> None:
+    assert MAX_ANSWER_PASSAGES == 24
+    assert PassageLedger().limit == MAX_ANSWER_PASSAGES
+
+
+def test_a_full_ledger_takes_no_more_passages_and_the_result_says_so(setup: Setup) -> None:
+    tools, store, ids = setup
+    ledger = PassageLedger(limit=2)
+
+    run(tools, GetArticleArguments(document="GDPR (EN)", number="17"), ledger)
+    result = run(tools, GetArticleArguments(document="GDPR (EN)", number="33"), ledger)
+
+    assert len(ledger) == 2
+    assert list(ledger.passages) == article_chunks(store, ids["gdpr"], "17")[:2]
+    assert "<passage " not in result
+    assert "The answer can rest on at most 2 passages" in result
+
+
+class SlowStore(FakeDocumentStore):
+    """Reads that block, as a store on disk does."""
+
+    def load_chunks(self, document_id: str) -> list[Chunk]:
+        time.sleep(0.2)
+        return super().load_chunks(document_id)
+
+
+def test_reading_an_article_does_not_block_other_work_on_the_event_loop() -> None:
+    store = SlowStore()
+    index = InMemoryChunkIndex()
+    DocumentService(store, index, TextDocumentParser(), InlineIngestionQueue()).upload(
+        "GDPR (EN).md", GDPR.encode()
+    )
+    questions = QuestionService(index, FakeExtractiveChatModel(), store, min_similarity=0)
+    tools = DocumentTools(questions, store)
+    call = ToolCall(
+        id="c1",
+        name="get_article",
+        arguments=GetArticleArguments(document="GDPR (EN)", number="17"),
+    )
+    ticks = 0
+
+    async def ticker() -> None:
+        nonlocal ticks
+        while True:
+            await asyncio.sleep(0.01)
+            ticks += 1
+
+    async def go() -> None:
+        task = asyncio.create_task(ticker())
+        await tools.run(call, PassageLedger())
+        task.cancel()
+
+    asyncio.run(go())
+
+    assert ticks >= 5
