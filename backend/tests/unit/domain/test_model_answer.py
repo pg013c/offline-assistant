@@ -47,7 +47,8 @@ def test_an_answer_that_is_not_covered_has_no_citations() -> None:
         "Some systems, e.g. Annex III systems, are high-risk [1].",
         "Fines reach EUR 20 000 000 or 4 % of turnover, i.e. Whichever is higher applies [2].",
         "See pkt. 3 and lit. A of the annex [1].",
-        "Under Article 6. Paragraph 2 lists further systems [1].",
+        "Wymóg obowiązuje od 25 maja 2018 r. Kary są wysokie [1].",
+        "Fines reach 4 % of turnover under Art. 83(5) [1].",
     ],
 )
 def test_abbreviations_and_numbers_do_not_end_a_sentence(text: str) -> None:
@@ -62,6 +63,11 @@ def test_abbreviations_and_numbers_do_not_end_a_sentence(text: str) -> None:
         ("Is it allowed? Yes, with consent [1].", "Is it allowed?"),
         ("- First duty [1]\n- Second duty", "- Second duty"),
         ("Dane są usuwane [1]. Administrator informuje osobę.", "Administrator informuje osobę."),
+        (
+            "The fine is set out in Article 83. Fines reach 20 million euro [1].",
+            "The fine is set out in Article 83.",
+        ),
+        ("Obowiązuje od 2018. Kary są wysokie [1].", "Obowiązuje od 2018."),
     ],
 )
 def test_a_sentence_without_a_marker_is_rejected_and_quoted(text: str, sentence: str) -> None:
