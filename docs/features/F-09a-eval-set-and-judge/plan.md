@@ -106,7 +106,7 @@
   - the prompt comes from its file.
 - Change: `harness/judge.py`, `evals/prompts/judge.md`.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 5. Judged metrics, tool validity and the gate
 
