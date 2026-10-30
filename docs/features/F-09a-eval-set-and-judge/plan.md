@@ -120,7 +120,7 @@
   In `evals/tests/test_gate.py`: the answer floors.
 - Change: `harness/answers.py`, `harness/gate.py`, `harness/run.py`.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 6. Calibration and the judge's make targets
 

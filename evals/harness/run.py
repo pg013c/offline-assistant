@@ -25,14 +25,17 @@ import yaml
 
 from harness.answers import (
     AnswerCase,
+    ChatResult,
     SavedNote,
     answers_markdown,
+    judge_input,
     parse_chat_stream,
     score_answers,
 )
 from harness.corpus import CorpusDocument, documents, sha256
 from harness.dataset import load_answer_cases, load_cases
-from harness.gate import gate_failures
+from harness.gate import below_answer_floors, gate_failures
+from harness.judge import JUDGE_MODEL, JudgeClient, Verdict
 from harness.metrics import CaseResult, compute, latency, top_out_of_scope_similarity
 from harness.promptfoo import (
     MODES,
@@ -87,6 +90,8 @@ class RunConfig:
     # The chat model the API answers with, and its server (F-06, ADR 0021).
     chat_model: str = "fake-extractive"
     llm_url: str = "http://127.0.0.1:8080"
+    # The judge `make judge` serves (ADR 0022); the answer suite judges when it answers.
+    judge_url: str = "http://127.0.0.1:8081"
 
 
 @dataclass(frozen=True)
@@ -181,29 +186,40 @@ def run_answers(config: RunConfig) -> Outcome:
         _stop(server)
         log.close()
 
+    answer_cases = [
+        AnswerCase(
+            case.id,
+            case.language,
+            case.behaviour,
+            expected[case.id],
+            tools=case.tools,
+            forbidden=case.forbidden,
+            injection=case.kind == "injection",
+            note=case.note,
+            key_points=case.key_points,
+        )
+        for case in cases
+    ]
+    verdicts, judge_note = judge_answers(
+        answer_cases,
+        {case.id: case.question for case in cases},
+        results,
+        {chunk.chunk_id: chunk.text for chunk in chunks},
+        config.judge_url,
+    )
     metrics = score_answers(
-        [
-            AnswerCase(
-                case.id,
-                case.language,
-                case.behaviour,
-                expected[case.id],
-                tools=case.tools,
-                forbidden=case.forbidden,
-                injection=case.kind == "injection",
-                note=case.note,
-            )
-            for case in cases
-        ],
+        answer_cases,
         results,
         stored=frozenset(chunk.chunk_id for chunk in chunks),
         notes=notes,
+        verdicts=verdicts,
     )
     metadata = {
         **_metadata(config, started_at),
         "corpus": corpus,
         "chat_model": config.chat_model,
         "llm_server": _llm_server(config.llm_url),
+        "judge": judge_note,
     }
     report = {
         "metrics": {
@@ -240,7 +256,7 @@ def run_answers(config: RunConfig) -> Outcome:
         dict(metrics.values),
         {name: values["value"] for name, values in baseline.items()},
         floors=False,
-    )
+    ) + below_answer_floors(metrics.values)
     stem = config.results_dir / f"answers-{started_at:%Y%m%dT%H%M%SZ}"
     report_json = stem.with_suffix(".json")
     report_markdown = stem.with_suffix(".md")
@@ -304,6 +320,7 @@ def default_answers_config(env: Mapping[str, str]) -> RunConfig:
         floors=False,
         chat_model="qwen3-8b",
         llm_url=f"http://127.0.0.1:{env.get('LLM_PORT', '8080')}",
+        judge_url=f"http://127.0.0.1:{env.get('JUDGE_PORT', '8081')}",
     )
 
 
@@ -425,6 +442,29 @@ def fetch_notes(api: httpx.Client, note_ids: Sequence[str]) -> dict[str, SavedNo
     return saved
 
 
+def judge_answers(
+    cases: Sequence[AnswerCase],
+    questions: Mapping[str, str],
+    results: Mapping[str, ChatResult],
+    texts: Mapping[str, str],
+    judge_url: str,
+) -> tuple[dict[str, Verdict | None] | None, str]:
+    """Each complete answer judged (ADR 0022), and a note on the judge; without a judge,
+    no verdicts and a note that says how to start it."""
+    try:
+        httpx.get(f"{judge_url}/health", timeout=5).raise_for_status()
+    except httpx.HTTPError:
+        return None, f"skipped: no judge answers at {judge_url}; start it with make judge"
+    client = JudgeClient(judge_url)
+    verdicts: dict[str, Verdict | None] = {}
+    for case in cases:
+        result = results[case.id]
+        if case.behaviour != "answer" or result.error or not result.complete:
+            continue
+        verdicts[case.id] = client.judge(judge_input(case, result, questions[case.id], texts))
+    return verdicts, f"{JUDGE_MODEL} at {judge_url}"
+
+
 def media_type(path: Path) -> str:
     """The media type a corpus file is uploaded with."""
     return "text/markdown" if path.suffix == ".md" else "application/pdf"
@@ -467,6 +507,7 @@ def _chunk_refs(api: httpx.Client, document_ids: dict[str, str]) -> list[ChunkRe
                     article=location["article"],
                     paragraph=location["paragraph"],
                     heading_path=tuple(location["heading_path"]),
+                    text=chunk.get("text", ""),
                 )
             )
     return refs
