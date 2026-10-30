@@ -33,7 +33,11 @@ export function ChatView(): JSX.Element {
         <Turn key={position} turn={turn} onOpenCitation={setOpenCitation} />
       ))}
 
-      <form onSubmit={onSubmit} className="flex flex-wrap items-center gap-2">
+      {/* The question box stays at the bottom of the screen while the thread scrolls. */}
+      <form
+        onSubmit={onSubmit}
+        className="sticky bottom-0 flex flex-wrap items-center gap-2 border-t border-gray-100 bg-white py-3"
+      >
         <label htmlFor="question" className="sr-only">
           Question
         </label>

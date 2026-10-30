@@ -32,7 +32,8 @@ export function AnswerText({ text, citations, onOpenCitation }: AnswerTextProps)
             onClick={() => {
               onOpenCitation(citation)
             }}
-            className="mx-0.5 rounded px-0.5 align-super text-xs text-blue-700 underline"
+            // At least 24 by 24 pixels, so a marker is easy to hit (WCAG 2.5.8).
+            className="mx-0.5 inline-flex min-h-6 min-w-6 items-center justify-center rounded align-baseline text-xs text-blue-700 underline hover:bg-blue-50"
           >
             [{part.number}]
           </button>
