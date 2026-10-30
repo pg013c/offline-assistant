@@ -26,6 +26,14 @@ class AnswerCase:
 
 
 @dataclass(frozen=True)
+class SavedNote:
+    """A note a case saved, read back from the API: its source chunk ids and its content."""
+
+    sources: tuple[str, ...]
+    content: str
+
+
+@dataclass(frozen=True)
 class ChatResult:
     answer: str
     cited: tuple[str, ...]
@@ -161,6 +169,7 @@ def score_answers(
     cases: Sequence[AnswerCase],
     results: Mapping[str, ChatResult],
     stored: frozenset[str] | None = None,
+    notes: Mapping[str, SavedNote] | None = None,
 ) -> AnswerMetrics:
     """Citation, language, validity and refusal shares, the agent's (F-07), and the speed.
 

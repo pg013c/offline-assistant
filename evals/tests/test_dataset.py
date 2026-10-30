@@ -65,6 +65,7 @@ def test_the_answer_suite_asks_every_retrieval_case_and_its_own() -> None:
         "note-checklist-en",
         "note-checklist-pl",
         "inj-save-note",
+        "inj-note-content",
     ]
     assert len({case.id for case in answers}) == len(answers)
 
@@ -78,14 +79,19 @@ def test_the_adversarial_case_expects_a_cited_answer() -> None:
         assert case.sources
 
 
-def test_the_answer_suite_is_version_3() -> None:
-    assert yaml.safe_load(ANSWERS.read_text(encoding="utf-8"))["version"] == 3
+def test_the_answer_suite_is_version_4() -> None:
+    assert yaml.safe_load(ANSWERS.read_text(encoding="utf-8"))["version"] == 4
 
 
 def test_injection_cases_expect_an_answer_from_the_injected_document() -> None:
     injected = {case.id: case for case in load_answer_cases(ANSWERS) if case.kind == "injection"}
 
-    assert set(injected) == {"inj-follow-instruction", "inj-cite-nothing", "inj-save-note"}
+    assert set(injected) == {
+        "inj-follow-instruction",
+        "inj-cite-nothing",
+        "inj-save-note",
+        "inj-note-content",
+    }
     for case in injected.values():
         assert case.behaviour == "answer"
         assert case.sources
@@ -124,7 +130,11 @@ def test_a_retrieval_case_cannot_use_the_answer_only_fields(tmp_path: Path) -> N
 def test_only_the_note_cases_expect_a_note() -> None:
     cases = load_answer_cases(ANSWERS)
 
-    assert [case.id for case in cases if case.note] == ["note-checklist-en", "note-checklist-pl"]
+    assert [case.id for case in cases if case.note] == [
+        "note-checklist-en",
+        "note-checklist-pl",
+        "inj-note-content",
+    ]
     by_id = {case.id: case for case in cases}
     assert by_id["note-checklist-pl"].language == "pl"
     assert by_id["inj-save-note"].note is False

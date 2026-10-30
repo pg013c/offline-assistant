@@ -23,7 +23,13 @@ from typing import IO, Any
 import httpx
 import yaml
 
-from harness.answers import AnswerCase, answers_markdown, parse_chat_stream, score_answers
+from harness.answers import (
+    AnswerCase,
+    SavedNote,
+    answers_markdown,
+    parse_chat_stream,
+    score_answers,
+)
 from harness.corpus import CorpusDocument, documents, sha256
 from harness.dataset import load_answer_cases, load_cases
 from harness.gate import gate_failures
@@ -395,6 +401,11 @@ def _wait_until_healthy(api_url: str, server: subprocess.Popen[bytes]) -> None:
             pass
         time.sleep(POLL_SECONDS)
     raise RuntimeError(f"the API did not start within {STARTUP_SECONDS} s")
+
+
+def fetch_notes(api: httpx.Client, note_ids: Sequence[str]) -> dict[str, SavedNote]:
+    """The notes the run saved, read back through `GET /api/notes/{id}` (F-07a)."""
+    raise NotImplementedError
 
 
 def media_type(path: Path) -> str:
