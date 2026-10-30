@@ -144,7 +144,7 @@ No ADR: no new dependency, model or standard.
   - results render as numbered `<passage>` blocks, a repeated chunk keeps its number, and passage tags inside document text are neutralised.
 - Change: `domain/tools.py` (argument models, `PassageLedger`), `services/tools.py`.
 - Done when: `make check` is green.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 4. The agent loop in the service

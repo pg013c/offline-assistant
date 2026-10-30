@@ -7,6 +7,7 @@ from typing import Literal
 from pydantic import BaseModel, ValidationError
 
 from assistant.domain.answers import Usage
+from assistant.domain.documents import Chunk
 
 
 @dataclass(frozen=True, slots=True)
@@ -47,6 +48,39 @@ class FinalText:
 
     text: str
     usage: Usage | None = field(default=None, compare=False)
+
+
+class SearchDocumentsArguments(BaseModel):
+    query: str
+    document: str | None = None
+
+
+class ArticleRef(BaseModel):
+    document: str
+    number: str
+
+
+class GetArticleArguments(ArticleRef):
+    pass
+
+
+class CompareArguments(BaseModel):
+    a: ArticleRef
+    b: ArticleRef
+
+
+class PassageLedger:
+    """The passages tools returned in one run, numbered from 1 in the order first seen."""
+
+    def number(self, chunk: Chunk) -> int:
+        raise NotImplementedError
+
+    @property
+    def passages(self) -> tuple[Chunk, ...]:
+        raise NotImplementedError
+
+    def __len__(self) -> int:
+        raise NotImplementedError
 
 
 class ToolsUnsupported(Exception):
