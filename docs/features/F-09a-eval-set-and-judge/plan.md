@@ -94,7 +94,7 @@
   - the UI error copy.
 - Change: `domain/answers.py`, `services/agent.py`, `api/schemas.py`, `useChatThread`/`chatStream.ts` copy; `make api-client`.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 4. The judge client
 

@@ -290,7 +290,7 @@ export interface components {
              * Code
              * @enum {string}
              */
-            code: "invalid_answer" | "model_unreachable" | "model_timeout" | "model_error";
+            code: "invalid_answer" | "model_unreachable" | "model_timeout" | "model_error" | "invalid_tool_call";
             /** Message */
             message: string;
         };
@@ -368,6 +368,8 @@ export interface components {
             attempts: number;
             /** Tool Turns */
             tool_turns: number;
+            /** Failed Tool Turns */
+            failed_tool_turns: number;
         };
         /**
          * ChunkSummary

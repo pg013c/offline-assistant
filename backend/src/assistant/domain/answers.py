@@ -102,6 +102,7 @@ class Usage:
             total_ms=self.total_ms + other.total_ms,
             attempts=self.attempts + other.attempts,
             tool_turns=self.tool_turns + other.tool_turns,
+            failed_tool_turns=self.failed_tool_turns + other.failed_tool_turns,
         )
 
     def then(self, answer: "Usage") -> "Usage":
@@ -114,6 +115,7 @@ class Usage:
             total_ms=self.total_ms + answer.total_ms,
             attempts=answer.attempts,
             tool_turns=self.tool_turns,
+            failed_tool_turns=self.failed_tool_turns,
         )
 
 

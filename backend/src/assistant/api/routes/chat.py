@@ -83,6 +83,7 @@ def _to_schema(event: AnswerEvent) -> ChatEvent:
                             total_ms=usage.total_ms,
                             attempts=usage.attempts,
                             tool_turns=usage.tool_turns,
+                            failed_tool_turns=usage.failed_tool_turns,
                         )
                         if usage
                         else None

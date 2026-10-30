@@ -157,6 +157,8 @@ class ChatUsage(BaseModel):
     attempts: int
     # Model turns that called tools before the answer.
     tool_turns: int
+    # Model turns that made no valid tool call even after retries.
+    failed_tool_turns: int
 
 
 class ChatEndEvent(BaseModel):
