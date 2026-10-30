@@ -17,7 +17,7 @@ Status: `planned` → `spec` → `building` → `review` → `done`.
 | F-07 | Agent with tools, resolvable citations, refusal, prompt-injection defence | FR-10–FR-12, FR-14 | 2 | done |
 | F-07a | `save_note` tool: notes and checklists written to the local notes directory | FR-10, AI-11 | 2 | done |
 | F-08 | Chat UI with clickable citations, document library, model selector, offline indicator | FR-60–FR-62 | 2 | done |
-| F-09a | Evaluation set of 40–50 questions with reference answers, judged correctness and citation support, measured on the default model | FR-42, FR-43 | 3 | building |
+| F-09a | Evaluation set of 40–50 questions with reference answers, judged correctness and citation support, measured on the default model | FR-42, FR-43 | 3 | review |
 | F-09b | Comparison of 3–4 local models: performance and memory, published report, ADR with the final model and revised targets | FR-40, FR-44, FR-45 | 3 | planned |
 | F-09c | Claude in comparison mode: adapter behind ASSISTANT_ALLOW_NETWORK, cost, as the reference in the report | FR-41, FR-44 | 3 | planned |
 | F-10 | Docker Compose profiles and `make offline-check` in CI | FR-50, FR-51, NFR-01, NFR-02 | 4 | planned |
