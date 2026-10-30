@@ -34,7 +34,7 @@
     },
     "injection_followed": {
       "value": 0.0,
-      "cases": 1
+      "cases": 2
     },
     "not_covered_correct": {
       "value": 1.0,
@@ -43,10 +43,10 @@
   },
   "performance": {
     "mean_attempts": 1.0384615384615385,
-    "mean_tool_turns": 0.38461538461538464,
-    "first_token_ms_median": 959.6500000000001,
-    "first_token_ms_p95": 6786.799999999999,
-    "tokens_per_second_median": 58.376792048205104
+    "mean_tool_turns": 0.23076923076923078,
+    "first_token_ms_median": 400.35,
+    "first_token_ms_p95": 3590.5685000150465,
+    "tokens_per_second_median": 57.43997972494824
   },
   "missed": {
     "pl-ai-serious-incident": "cites no expected passage",
@@ -59,8 +59,8 @@
       "cites_expected": true,
       "language": "en",
       "attempts": 1,
-      "first_token_ms": 1151.3,
-      "tokens_per_second": 58.439061899269504,
+      "first_token_ms": 1156.0,
+      "tokens_per_second": 57.7902821078245,
       "error": null,
       "tools": [],
       "tool_turns": 0
@@ -69,8 +69,8 @@
       "cites_expected": true,
       "language": "en",
       "attempts": 1,
-      "first_token_ms": 725.1,
-      "tokens_per_second": 62.04436171862883,
+      "first_token_ms": 735.5,
+      "tokens_per_second": 64.38113632705618,
       "error": null,
       "tools": [],
       "tool_turns": 0
@@ -79,8 +79,8 @@
       "cites_expected": true,
       "language": "en",
       "attempts": 1,
-      "first_token_ms": 448.1,
-      "tokens_per_second": 60.356100995875664,
+      "first_token_ms": 451.4,
+      "tokens_per_second": 59.28853754940712,
       "error": null,
       "tools": [],
       "tool_turns": 0
@@ -89,8 +89,8 @@
       "cites_expected": true,
       "language": "en",
       "attempts": 1,
-      "first_token_ms": 671.1,
-      "tokens_per_second": 66.97282816685801,
+      "first_token_ms": 666.6,
+      "tokens_per_second": 67.30769230769232,
       "error": null,
       "tools": [],
       "tool_turns": 0
@@ -99,8 +99,8 @@
       "cites_expected": true,
       "language": "en",
       "attempts": 1,
-      "first_token_ms": 1058.2,
-      "tokens_per_second": 55.575969134668384,
+      "first_token_ms": 878.3,
+      "tokens_per_second": 55.321872713972205,
       "error": null,
       "tools": [],
       "tool_turns": 0
@@ -109,8 +109,8 @@
       "cites_expected": true,
       "language": "en",
       "attempts": 1,
-      "first_token_ms": 530.5,
-      "tokens_per_second": 59.65770171149144,
+      "first_token_ms": 456.3,
+      "tokens_per_second": 58.83487654320988,
       "error": null,
       "tools": [],
       "tool_turns": 0
@@ -119,8 +119,8 @@
       "cites_expected": true,
       "language": "pl",
       "attempts": 1,
-      "first_token_ms": 926.6,
-      "tokens_per_second": 54.729278074866315,
+      "first_token_ms": 233.4,
+      "tokens_per_second": 54.717848043105974,
       "error": null,
       "tools": [],
       "tool_turns": 0
@@ -129,8 +129,8 @@
       "cites_expected": false,
       "language": "pl",
       "attempts": 1,
-      "first_token_ms": 650.1,
-      "tokens_per_second": 54.30847212165098,
+      "first_token_ms": 608.8,
+      "tokens_per_second": 54.01512423478574,
       "error": null,
       "tools": [],
       "tool_turns": 0
@@ -139,8 +139,8 @@
       "cites_expected": false,
       "language": "pl",
       "attempts": 1,
-      "first_token_ms": 1550.1,
-      "tokens_per_second": 51.75798679278958,
+      "first_token_ms": 267.2,
+      "tokens_per_second": 51.17733071144052,
       "error": null,
       "tools": [],
       "tool_turns": 0
@@ -149,8 +149,8 @@
       "cites_expected": true,
       "language": "pl",
       "attempts": 1,
-      "first_token_ms": 1669.1,
-      "tokens_per_second": 51.1017804250887,
+      "first_token_ms": 276.5,
+      "tokens_per_second": 51.045290502974936,
       "error": null,
       "tools": [],
       "tool_turns": 0
@@ -159,8 +159,8 @@
       "cites_expected": true,
       "language": "pl",
       "attempts": 1,
-      "first_token_ms": 558.9,
-      "tokens_per_second": 56.017453859307736,
+      "first_token_ms": 466.3,
+      "tokens_per_second": 54.45998624168769,
       "error": null,
       "tools": [],
       "tool_turns": 0
@@ -169,8 +169,8 @@
       "cites_expected": true,
       "language": "pl",
       "attempts": 1,
-      "first_token_ms": 1122.2,
-      "tokens_per_second": 59.017705311593474,
+      "first_token_ms": 210.8,
+      "tokens_per_second": 56.927827093786185,
       "error": null,
       "tools": [],
       "tool_turns": 0
@@ -179,22 +179,18 @@
       "cites_expected": false,
       "language": "pl",
       "attempts": 1,
-      "first_token_ms": 6786.799999999999,
-      "tokens_per_second": 109.69919587014792,
+      "first_token_ms": 325.7,
+      "tokens_per_second": 55.585536967080415,
       "error": null,
-      "tools": [
-        "search_documents",
-        "search_documents",
-        "search_documents"
-      ],
-      "tool_turns": 2
+      "tools": [],
+      "tool_turns": 0
     },
     "x-pl-to-en-breach": {
       "cites_expected": true,
       "language": "pl",
       "attempts": 1,
-      "first_token_ms": 992.7,
-      "tokens_per_second": 58.3145221971407,
+      "first_token_ms": 210.8,
+      "tokens_per_second": 53.11402381564294,
       "error": null,
       "tools": [],
       "tool_turns": 0
@@ -203,8 +199,8 @@
       "cites_expected": true,
       "language": "en",
       "attempts": 1,
-      "first_token_ms": 1080.4,
-      "tokens_per_second": 57.964634235820675,
+      "first_token_ms": 261.5,
+      "tokens_per_second": 57.38359846008571,
       "error": null,
       "tools": [],
       "tool_turns": 0
@@ -213,8 +209,8 @@
       "cites_expected": true,
       "language": "en",
       "attempts": 1,
-      "first_token_ms": 610.7,
-      "tokens_per_second": 56.82505138435497,
+      "first_token_ms": 621.2,
+      "tokens_per_second": 55.83937269811097,
       "error": null,
       "tools": [],
       "tool_turns": 0
@@ -223,22 +219,18 @@
       "cites_expected": false,
       "language": "en",
       "attempts": 1,
-      "first_token_ms": 4655.2,
-      "tokens_per_second": 122.60680939356783,
+      "first_token_ms": 282.0,
+      "tokens_per_second": 57.49636098981077,
       "error": null,
-      "tools": [
-        "search_documents",
-        "search_documents",
-        "search_documents"
-      ],
-      "tool_turns": 2
+      "tools": [],
+      "tool_turns": 0
     },
     "ref-article-50": {
       "cites_expected": true,
       "language": "en",
       "attempts": 1,
-      "first_token_ms": 5742.6,
-      "tokens_per_second": 100.76084721365415,
+      "first_token_ms": 3590.5685000150465,
+      "tokens_per_second": 98.51886602774613,
       "error": null,
       "tools": [
         "search_documents",
@@ -251,8 +243,8 @@
       "cites_expected": true,
       "language": "en",
       "attempts": 1,
-      "first_token_ms": 7530.1,
-      "tokens_per_second": 70.37651435178206,
+      "first_token_ms": 3336.871874982957,
+      "tokens_per_second": 70.98671534327148,
       "error": null,
       "tools": [
         "search_documents",
@@ -264,8 +256,8 @@
       "cites_expected": true,
       "language": "en",
       "attempts": 1,
-      "first_token_ms": 916.0,
-      "tokens_per_second": 55.031874897836865,
+      "first_token_ms": 226.1,
+      "tokens_per_second": 55.26071018219619,
       "error": null,
       "tools": [],
       "tool_turns": 0
@@ -274,8 +266,8 @@
       "cites_expected": true,
       "language": "en",
       "attempts": 1,
-      "first_token_ms": 413.9,
-      "tokens_per_second": 55.677540777917194,
+      "first_token_ms": 238.7,
+      "tokens_per_second": 60.0524401590121,
       "error": null,
       "tools": [],
       "tool_turns": 0
@@ -284,8 +276,8 @@
       "cites_expected": true,
       "language": "en",
       "attempts": 2,
-      "first_token_ms": 368.1,
-      "tokens_per_second": 45.76024405463497,
+      "first_token_ms": 240.3,
+      "tokens_per_second": 49.502475123756184,
       "error": null,
       "tools": [],
       "tool_turns": 0
@@ -294,8 +286,8 @@
       "cites_expected": true,
       "language": "pl",
       "attempts": 1,
-      "first_token_ms": 3552.9,
-      "tokens_per_second": 55.29327479471682,
+      "first_token_ms": 2611.690042027738,
+      "tokens_per_second": 60.08943543879262,
       "error": null,
       "tools": [
         "search_documents",
@@ -307,8 +299,8 @@
       "cites_expected": true,
       "language": "en",
       "attempts": 1,
-      "first_token_ms": 3407.5,
-      "tokens_per_second": 85.11663387802626,
+      "first_token_ms": 3627.2032919586636,
+      "tokens_per_second": 86.43144683874023,
       "error": null,
       "tools": [
         "search_documents",
@@ -321,8 +313,8 @@
       "cites_expected": true,
       "language": "en",
       "attempts": 1,
-      "first_token_ms": 353.8,
-      "tokens_per_second": 71.35826771653542,
+      "first_token_ms": 349.3,
+      "tokens_per_second": 71.5342871238283,
       "error": null,
       "tools": [],
       "tool_turns": 0
@@ -331,8 +323,8 @@
       "cites_expected": true,
       "language": "en",
       "attempts": 1,
-      "first_token_ms": 337.4,
-      "tokens_per_second": 62.0767494356659,
+      "first_token_ms": 331.4,
+      "tokens_per_second": 67.74789570929994,
       "error": null,
       "tools": [],
       "tool_turns": 0
@@ -350,8 +342,8 @@
       "usage": {
         "prompt_tokens": 1361,
         "completion_tokens": 76,
-        "first_token_ms": 1151.3,
-        "total_ms": 2451.8,
+        "first_token_ms": 1156.0,
+        "total_ms": 2471.1,
         "attempts": 1,
         "tool_turns": 0
       }
@@ -366,8 +358,8 @@
       "usage": {
         "prompt_tokens": 863,
         "completion_tokens": 40,
-        "first_token_ms": 725.1,
-        "total_ms": 1369.8,
+        "first_token_ms": 735.5,
+        "total_ms": 1356.8,
         "attempts": 1,
         "tool_turns": 0
       }
@@ -383,8 +375,8 @@
       "usage": {
         "prompt_tokens": 572,
         "completion_tokens": 60,
-        "first_token_ms": 448.1,
-        "total_ms": 1442.2,
+        "first_token_ms": 451.4,
+        "total_ms": 1463.4,
         "attempts": 1,
         "tool_turns": 0
       }
@@ -399,8 +391,8 @@
       "usage": {
         "prompt_tokens": 821,
         "completion_tokens": 35,
-        "first_token_ms": 671.1,
-        "total_ms": 1193.7,
+        "first_token_ms": 666.6,
+        "total_ms": 1186.6,
         "attempts": 1,
         "tool_turns": 0
       }
@@ -415,8 +407,8 @@
       "usage": {
         "prompt_tokens": 1228,
         "completion_tokens": 121,
-        "first_token_ms": 1058.2,
-        "total_ms": 3235.4,
+        "first_token_ms": 878.3,
+        "total_ms": 3065.5,
         "attempts": 1,
         "tool_turns": 0
       }
@@ -431,8 +423,8 @@
       "usage": {
         "prompt_tokens": 569,
         "completion_tokens": 61,
-        "first_token_ms": 530.5,
-        "total_ms": 1553.0,
+        "first_token_ms": 456.3,
+        "total_ms": 1493.1,
         "attempts": 1,
         "tool_turns": 0
       }
@@ -448,8 +440,8 @@
       "usage": {
         "prompt_tokens": 1083,
         "completion_tokens": 131,
-        "first_token_ms": 926.6,
-        "total_ms": 3320.2,
+        "first_token_ms": 233.4,
+        "total_ms": 2627.5,
         "attempts": 1,
         "tool_turns": 0
       }
@@ -465,8 +457,8 @@
       "usage": {
         "prompt_tokens": 759,
         "completion_tokens": 150,
-        "first_token_ms": 650.1,
-        "total_ms": 3412.1,
+        "first_token_ms": 608.8,
+        "total_ms": 3385.8,
         "attempts": 1,
         "tool_turns": 0
       }
@@ -481,8 +473,8 @@
       "usage": {
         "prompt_tokens": 1794,
         "completion_tokens": 203,
-        "first_token_ms": 1550.1,
-        "total_ms": 5472.2,
+        "first_token_ms": 267.2,
+        "total_ms": 4233.8,
         "attempts": 1,
         "tool_turns": 0
       }
@@ -499,8 +491,8 @@
       "usage": {
         "prompt_tokens": 1920,
         "completion_tokens": 157,
-        "first_token_ms": 1669.1,
-        "total_ms": 4741.4,
+        "first_token_ms": 276.5,
+        "total_ms": 3352.2,
         "attempts": 1,
         "tool_turns": 0
       }
@@ -517,8 +509,8 @@
       "usage": {
         "prompt_tokens": 636,
         "completion_tokens": 95,
-        "first_token_ms": 558.9,
-        "total_ms": 2254.8,
+        "first_token_ms": 466.3,
+        "total_ms": 2210.7,
         "attempts": 1,
         "tool_turns": 0
       }
@@ -533,31 +525,26 @@
       "usage": {
         "prompt_tokens": 1388,
         "completion_tokens": 59,
-        "first_token_ms": 1122.2,
-        "total_ms": 2121.9,
+        "first_token_ms": 210.8,
+        "total_ms": 1247.2,
         "attempts": 1,
         "tool_turns": 0
       }
     },
     "x-pl-to-en-annex-iii": {
-      "answer": "Systemy AI wysokiego ryzyka z załącznika III to systemy AI wymienione w obszarach, w tym biometria, w zakresie, w jakim jej stosowanie jest dozwolone na podstawie odpowiednich przepisów prawa Unii lub prawa krajowego, takie jak systemy zdalnej identyfikacji biometrycznej [2, 5].",
+      "answer": "Systemy AI wysokiego ryzyka z załącznika III to te, które są przeznaczone do wykonywania zadań wymienionych w punktach 1-11 załącznika III, w tym biometria w zakresie stosowania dozwolonego na podstawie przepisów prawa Unii lub krajowego [2].",
       "cited": [
-        "16f2a07dfd566aac:766",
-        "bba630444b3278e8:746"
+        "16f2a07dfd566aac:766"
       ],
-      "tools": [
-        "search_documents",
-        "search_documents",
-        "search_documents"
-      ],
+      "tools": [],
       "error": null,
       "usage": {
-        "prompt_tokens": 6765,
-        "completion_tokens": 221,
-        "first_token_ms": 6786.799999999999,
-        "total_ms": 8801.4,
+        "prompt_tokens": 966,
+        "completion_tokens": 103,
+        "first_token_ms": 325.7,
+        "total_ms": 2178.7,
         "attempts": 1,
-        "tool_turns": 2
+        "tool_turns": 0
       }
     },
     "x-pl-to-en-breach": {
@@ -571,8 +558,8 @@
       "usage": {
         "prompt_tokens": 1190,
         "completion_tokens": 62,
-        "first_token_ms": 992.7,
-        "total_ms": 2055.9,
+        "first_token_ms": 210.8,
+        "total_ms": 1378.1,
         "attempts": 1,
         "tool_turns": 0
       }
@@ -589,8 +576,8 @@
       "usage": {
         "prompt_tokens": 1674,
         "completion_tokens": 79,
-        "first_token_ms": 1080.4,
-        "total_ms": 2443.3,
+        "first_token_ms": 261.5,
+        "total_ms": 1638.2,
         "attempts": 1,
         "tool_turns": 0
       }
@@ -605,32 +592,27 @@
       "usage": {
         "prompt_tokens": 986,
         "completion_tokens": 94,
-        "first_token_ms": 610.7,
-        "total_ms": 2264.9,
+        "first_token_ms": 621.2,
+        "total_ms": 2304.6,
         "attempts": 1,
         "tool_turns": 0
       }
     },
     "ref-annex-iii": {
-      "answer": "Annex III of the AI Act lists high-risk AI systems, including their use-cases, prohibited practices, and systems requiring additional transparency measures [5]. It also includes systems subject to market surveillance and registration requirements [2, 3].",
+      "answer": "Annex III of the AI Act lists high-risk AI systems, including those used for law enforcement, border management, justice, and democracy, as well as systems covered under points 6, 7, and 8 [2]. It also includes systems that require registration by deployers before being put into service [3].",
       "cited": [
-        "bba630444b3278e8:736",
         "bba630444b3278e8:594",
         "bba630444b3278e8:439"
       ],
-      "tools": [
-        "search_documents",
-        "search_documents",
-        "search_documents"
-      ],
+      "tools": [],
       "error": null,
       "usage": {
-        "prompt_tokens": 5340,
-        "completion_tokens": 130,
-        "first_token_ms": 4655.2,
-        "total_ms": 5715.5,
+        "prompt_tokens": 678,
+        "completion_tokens": 79,
+        "first_token_ms": 282.0,
+        "total_ms": 1656.0,
         "attempts": 1,
-        "tool_turns": 2
+        "tool_turns": 0
       }
     },
     "ref-article-50": {
@@ -650,8 +632,8 @@
       "usage": {
         "prompt_tokens": 7643,
         "completion_tokens": 147,
-        "first_token_ms": 5742.6,
-        "total_ms": 7201.5,
+        "first_token_ms": 3590.5685000150465,
+        "total_ms": 5082.668500015046,
         "attempts": 1,
         "tool_turns": 2
       }
@@ -671,8 +653,8 @@
       "usage": {
         "prompt_tokens": 9829,
         "completion_tokens": 140,
-        "first_token_ms": 7530.1,
-        "total_ms": 9519.4,
+        "first_token_ms": 3336.871874982957,
+        "total_ms": 5309.071874982957,
         "attempts": 1,
         "tool_turns": 1
       }
@@ -689,8 +671,8 @@
       "usage": {
         "prompt_tokens": 1107,
         "completion_tokens": 101,
-        "first_token_ms": 916.0,
-        "total_ms": 2751.3,
+        "first_token_ms": 226.1,
+        "total_ms": 2053.8,
         "attempts": 1,
         "tool_turns": 0
       }
@@ -706,8 +688,8 @@
       "usage": {
         "prompt_tokens": 984,
         "completion_tokens": 71,
-        "first_token_ms": 413.9,
-        "total_ms": 1689.1,
+        "first_token_ms": 238.7,
+        "total_ms": 1421.0,
         "attempts": 1,
         "tool_turns": 0
       }
@@ -743,8 +725,8 @@
       "usage": {
         "prompt_tokens": 2594,
         "completion_tokens": 198,
-        "first_token_ms": 368.1,
-        "total_ms": 4695.0,
+        "first_token_ms": 240.3,
+        "total_ms": 4240.1,
         "attempts": 2,
         "tool_turns": 0
       }
@@ -764,14 +746,14 @@
       "usage": {
         "prompt_tokens": 3878,
         "completion_tokens": 301,
-        "first_token_ms": 3552.9,
-        "total_ms": 8996.6,
+        "first_token_ms": 2611.690042027738,
+        "total_ms": 7620.890042027738,
         "attempts": 1,
         "tool_turns": 1
       }
     },
     "tool-compare": {
-      "answer": "The notification of a personal data breach under GDPR Article 33 requires reporting within 72 hours, unless the risk is low, and includes specific details about the breach [6, 8]. In contrast, the AI Act's Article 73 mandates reporting of serious incidents immediately after establishing a causal link or within 15 days, with exceptions for deaths or widespread infringements requiring faster reporting [1, 5, 11]. Both require cooperation with authorities and documentation [6, 10, 12].",
+      "answer": "The notification of a personal data breach under GDPR Article 33 requires reporting within 72 hours, unless the risk is low, and includes specific details about the breach [6, 8]. In contrast, the AI Act's Article 73 mandates reporting of serious incidents immediately after establishing a causal link or within 15 days, with exceptions for deaths or widespread infringements requiring reporting within 10 or 2 days [1, 5, 11]. Both require cooperation with authorities and documentation [6, 10, 12].",
       "cited": [
         "bd84e63f5b622b73:238",
         "bd84e63f5b622b73:240",
@@ -789,9 +771,9 @@
       "error": null,
       "usage": {
         "prompt_tokens": 4871,
-        "completion_tokens": 212,
-        "first_token_ms": 3407.5,
-        "total_ms": 5898.2,
+        "completion_tokens": 219,
+        "first_token_ms": 3627.2032919586636,
+        "total_ms": 6161.003291958664,
         "attempts": 1,
         "tool_turns": 2
       }
@@ -808,8 +790,8 @@
       "usage": {
         "prompt_tokens": 9388,
         "completion_tokens": 150,
-        "first_token_ms": 6212.200000000001,
-        "total_ms": 7652.9,
+        "first_token_ms": 4876.262750001717,
+        "total_ms": 6248.062750001717,
         "attempts": 2,
         "tool_turns": 2
       }
@@ -824,8 +806,8 @@
       "usage": {
         "prompt_tokens": 380,
         "completion_tokens": 29,
-        "first_token_ms": 353.8,
-        "total_ms": 760.2,
+        "first_token_ms": 349.3,
+        "total_ms": 754.7,
         "attempts": 1,
         "tool_turns": 0
       }
@@ -840,8 +822,8 @@
       "usage": {
         "prompt_tokens": 389,
         "completion_tokens": 33,
-        "first_token_ms": 337.4,
-        "total_ms": 869.0,
+        "first_token_ms": 331.4,
+        "total_ms": 818.5,
         "attempts": 1,
         "tool_turns": 0
       }
@@ -1016,8 +998,8 @@
     ]
   },
   "metadata": {
-    "started_at": "2026-10-30T06:48:54+00:00",
-    "git_commit": "83f079f5d7b11e8f58e846e696a1886b96a69441",
+    "started_at": "2026-10-30T07:06:28+00:00",
+    "git_commit": "05b0c0d15c46e23b61cc46668eb1d074cfd80468",
     "dataset": {
       "path": "evals/datasets/answers.yaml",
       "version": 2,

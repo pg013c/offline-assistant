@@ -1,6 +1,9 @@
 # Answers with the agent, 2026-10-30
 
-The answer suite after F-07: the agent with tools for questions about an article or a comparison, citation markers in the answer text, and answers that say the documents do not cover a question. This run (report `answers-20261030T064854Z.json`) is the new answer baseline in `answer-baseline.json`. The first F-07 run (report `answers-20261030T062959Z.json`) is kept below, because it led to spec decision 6.
+The answer suite after F-07: the agent with tools for questions about an article or a comparison, citation markers in the answer text, and answers that say the documents do not cover a question. The run after the review fixes (report `answers-20261030T070628Z.json`) is the new answer baseline in `answer-baseline.json`. Two earlier runs are kept below for comparison:
+
+- the first F-07 run (report `answers-20261030T062959Z.json`), which led to spec decision 6;
+- the run after decision 6 (report `answers-20261030T064854Z.json`).
 
 ## Setup
 
@@ -59,6 +62,40 @@ Time to first token counts from the model call. For the agent it includes the wh
   - only questions naming an article or annex, or asking to compare, use the tools;
   - such questions are not refused at the threshold.
 
+## After the review
+
+The review fixes changed what is measured as well as the code:
+
+- **Research time:** it is now timed from the question to the answer call, so it includes the searches and tool runs, not only the model's turns.
+- **Routing:** annexes and the adjective "different" leave the routing. As a result, `ref-annex-iii` and `x-pl-to-en-annex-iii` now take the search-then-answer path.
+- **Injection cases:** both now count. `inj-cite-nothing` counts as followed if it cites none of its sources.
+- **Answers:** a sentence ending in a number needs its own marker, and at most 24 passages reach an answer.
+
+| Metric | After decision 6 | After the review | Cases |
+|---|---|---|---|
+| `cites_expected` | 84.6 % | 84.6 % | 26 |
+| `language_match` | 100 % | 100 % | 26 |
+| `valid_first_try` | 96.2 % | 96.2 % | 26 |
+| `answer_failed` | 0 % | 0 % | 26 |
+| `statements_cited` | 100 % | 100 % | 45 |
+| `injection_followed` | 0 % (1 case) | 0 % | 2 |
+| `not_covered_correct` | 100 % | 100 % | 1 |
+
+| Performance | After decision 6 | After the review |
+|---|---|---|
+| Mean tool turns | 0.4 | 0.2 |
+| Time to first token, median | 960 ms | 400 ms |
+| Time to first token, 95th percentile | 6787 ms | 3591 ms |
+
+| Path, after the review | Cases | First token, median | First token, slowest |
+|---|---|---|---|
+| Search then answer | 22 | 329 ms | 878 ms (95th percentile) |
+| Agent with tools, research timed in full | 4 | 3464 ms | 3627 ms |
+
+- **Search-then-answer path:** its median is back near F-06's 280 ms. The 698 ms of the previous run was variation between runs, as suspected.
+- **Agent path:** its four cases (`ref-article-50`, `ref-article-83`, `tool-get-article-pl` and `tool-compare`) take 2.6 to 3.6 s from the question to the first token, including search. That is at or just over NFR-03's 3 s. Spec decision 6 records it, and F-09 measures it against other models.
+- **Misses:** the same four cases miss as in the previous run.
+
 ## Reading the results
 
 - **Gains:**
@@ -84,4 +121,4 @@ Time to first token counts from the model call. For the agent it includes the wh
 
 ## Next
 
-- F-09: other models and servers, a judge for answer correctness, and the agent path's latency against NFR-03.
+- F-09: other models and servers, a judge for answer correctness, the agent path's latency against NFR-03, and reading annexes with the tools (backlog).
