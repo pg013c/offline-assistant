@@ -53,9 +53,18 @@ export function LibraryPanel(): JSX.Element {
           </button>
         ))}
       </div>
-      <div role="tabpanel" id={`library-panel-${active}`} aria-labelledby={`library-tab-${active}`}>
-        {active === 'documents' ? <DocumentPanel /> : <NotesPanel />}
-      </div>
+      {/* Both panels stay mounted, so an upload in progress survives a look at the notes. */}
+      {TABS.map((tab) => (
+        <div
+          key={tab.id}
+          role="tabpanel"
+          id={`library-panel-${tab.id}`}
+          aria-labelledby={`library-tab-${tab.id}`}
+          hidden={active !== tab.id}
+        >
+          {tab.id === 'documents' ? <DocumentPanel /> : <NotesPanel />}
+        </div>
+      ))}
     </section>
   )
 }

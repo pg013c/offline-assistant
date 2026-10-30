@@ -47,7 +47,11 @@ export function NotesPanel(): JSX.Element {
   )
 }
 
-function NoteView({ noteId }: { noteId: string }): JSX.Element {
+interface NoteViewProps {
+  noteId: string
+}
+
+function NoteView({ noteId }: NoteViewProps): JSX.Element {
   const note = useNote(noteId)
   const headingId = useId()
   if (!note.data) {
