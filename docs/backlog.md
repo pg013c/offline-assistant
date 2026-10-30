@@ -43,4 +43,6 @@ Small changes found during reviews, done as chores outside the feature that foun
 | Let an answer say the passages do not cover the question without citing unrelated passages (the schema requires a citation today) | F-06 answer baseline (`ref-article-83`) | done in F-07 |
 | Let the agent read an annex (e.g. Annex III) like an article, and route annex questions to the tools again | F-07 review #4 | planned for F-09b |
 | List the local model only while its server answers, not only at startup | F-08 review #10 | planned for F-09b |
+| Raise the judge's agreement with the calibration set on correctness to the 85 % bar (80 % now): a stronger or second judge, or more calibration items to measure it more finely | F-09a record, review #12 | planned before F-09b compares models |
+| Improve citation support, and check it more strictly than the judge, which errs on the lenient side | F-09a record, review #12 | planned |
 | Decide whether paragraph-level cases accept a sibling paragraph that answers too (dataset-only commit; cross-language cases done in dataset version 2) | F-04 baseline | planned after the indexing change |

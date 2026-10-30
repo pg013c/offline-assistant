@@ -18,7 +18,7 @@ F-09b compares local models, and F-09c adds Claude; both need these measures fir
 ## Scope
 
 - **Evaluation set (FR-42):** the answer suite grows to about 45 cases.
-  - Each answerable case gains a reference answer: two to four key points a correct answer must make.
+  - Each answerable case gains a reference answer: one to four key points a correct answer must make (one for the single-fact injection cases).
   - New cases fill the gaps: more Polish questions, questions spanning articles, comparisons, not-covered and injection cases.
   - The existing ids stay, so earlier results remain comparable.
 - **Judge (FR-43):** a judge model reads each answer with its question, reference and cited passages, and gives two verdicts:
