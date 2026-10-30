@@ -190,6 +190,12 @@ Added after the first measurement: the Polish checklist overran the 256-token ca
 - A prompt change is made only between runs, and each change is measured.
 - [x] recorded: [2026-10-30-answers-notes.md](../../evals/2026-10-30-answers-notes.md), after step 7c
 
+## Changes during the build
+
+- **Note files:** `FileNoteStore` keeps two files per note: `<id>.md` for the user and `<id>.json`, which the API reads back. Each is written to a temporary name and linked into place, so it is whole or absent and never replaces another note (review #4, #8).
+- **Answer notice:** after the tool turns, the answer is told whether the note was saved, with its title and id, or why not (`prompts/note_saved.md`, `prompts/note_not_saved.md`, review #1).
+- **One note per run:** a further `save_note` call is refused. A save that fails in the last turn gets one more turn (review #2, #9).
+
 ## Acceptance criteria mapping
 
 | AC | Proved by step |

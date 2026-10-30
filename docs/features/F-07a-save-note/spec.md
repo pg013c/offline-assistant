@@ -18,7 +18,7 @@ PRD M2 lists four agent tools; F-07 delivered three. The fourth turns an answer 
 
   The content is validated like an answer: every sentence or list item carries a marker of a passage gathered in this run. Invalid content is returned to the model as a tool error it can correct.
 - **Where and how:**
-  - one file per note under `ASSISTANT_NOTES_DIR` (default `<data dir>/notes`), named from the title;
+  - one Markdown file per note under `ASSISTANT_NOTES_DIR` (default `<data dir>/notes`), named from the title, with a JSON record beside it that the API reads back (changed during the build, review #8);
   - a note never overwrites another: a name that exists gets a numeric suffix;
   - no path outside the directory can be named;
   - title and content have length limits.
