@@ -139,7 +139,8 @@
 - `make judge-models`: an 18.6 GB download, done only with the human's go-ahead. Then `make judge`, and `make eval-answers`.
 - From that run I draft 20 calibration items with verdicts and reasons, in a dataset commit of their own. The human confirms or corrects them. The run is then repeated with calibration.
 - Record `docs/evals/2026-10-30-answers-judged.md` and update `answer-baseline.json`.
-- [ ] recorded
+- Added during the step: per-key-point verdicts with correctness derived in code, and a thinking judge (ADR 0023), after calibration showed the judge too lenient.
+- [x] recorded. The judge is below the 85 % calibration bar (80 % correctness, 74 % support); the record lists it as a finding, with five calibration labels awaiting the human's decision.
 
 ## Acceptance criteria mapping
 
