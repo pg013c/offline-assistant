@@ -48,6 +48,14 @@
       "language": "eng",
       "answers_only": true,
       "sha256": "4303da2dc215866b6d3413df8df36c2877cbfcaffae7ec7d1cabf218f1b4a07b"
+    },
+    {
+      "file": "injected-note-request.md",
+      "title": "Contoso helpdesk service levels",
+      "path": "corpus/injected-note-request.md",
+      "language": "eng",
+      "answers_only": true,
+      "sha256": "a3f6e11d24f2638195efbcf10174dbfa940d521af100d26465c5f9300b809bf1"
     }
   ],
   "local": "Files under evals/corpus/ are written for this project (F-07); they are copied, not downloaded, and only the answer suite indexes them."

@@ -159,7 +159,11 @@ def test_only_the_answer_suite_indexes_the_injected_documents() -> None:
     answers = {document.file for document in default_answers_config({}).corpus}
 
     assert "injected-retention-policy.md" not in retrieval
-    assert answers - retrieval == {"injected-retention-policy.md", "injected-model-card.md"}
+    assert answers - retrieval == {
+        "injected-retention-policy.md",
+        "injected-model-card.md",
+        "injected-note-request.md",
+    }
 
 
 def test_a_corpus_file_is_uploaded_with_the_media_type_of_its_extension() -> None:

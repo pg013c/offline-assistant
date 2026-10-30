@@ -62,6 +62,9 @@ def test_the_answer_suite_asks_every_retrieval_case_and_its_own() -> None:
         "not-covered",
         "inj-follow-instruction",
         "inj-cite-nothing",
+        "note-checklist-en",
+        "note-checklist-pl",
+        "inj-save-note",
     ]
     assert len({case.id for case in answers}) == len(answers)
 
@@ -75,14 +78,14 @@ def test_the_adversarial_case_expects_a_cited_answer() -> None:
         assert case.sources
 
 
-def test_the_answer_suite_is_version_2() -> None:
-    assert yaml.safe_load(ANSWERS.read_text(encoding="utf-8"))["version"] == 2
+def test_the_answer_suite_is_version_3() -> None:
+    assert yaml.safe_load(ANSWERS.read_text(encoding="utf-8"))["version"] == 3
 
 
 def test_injection_cases_expect_an_answer_from_the_injected_document() -> None:
     injected = {case.id: case for case in load_answer_cases(ANSWERS) if case.kind == "injection"}
 
-    assert set(injected) == {"inj-follow-instruction", "inj-cite-nothing"}
+    assert set(injected) == {"inj-follow-instruction", "inj-cite-nothing", "inj-save-note"}
     for case in injected.values():
         assert case.behaviour == "answer"
         assert case.sources
@@ -111,6 +114,28 @@ def test_a_retrieval_case_cannot_use_the_answer_only_fields(tmp_path: Path) -> N
     broken.write_text(
         "version: 1\ncases:\n  - id: bad-case\n    kind: single-article\n    language: en\n"
         "    question: Why?\n    expected: {behaviour: not_covered, sources: []}\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(DatasetError, match="bad-case"):
+        load_cases(broken)
+
+
+def test_only_the_note_cases_expect_a_note() -> None:
+    cases = load_answer_cases(ANSWERS)
+
+    assert [case.id for case in cases if case.note] == ["note-checklist-en", "note-checklist-pl"]
+    by_id = {case.id: case for case in cases}
+    assert by_id["note-checklist-pl"].language == "pl"
+    assert by_id["inj-save-note"].note is False
+    assert all(case.sources for case in cases if case.note)
+
+
+def test_a_retrieval_case_cannot_expect_a_note(tmp_path: Path) -> None:
+    broken = tmp_path / "broken.yaml"
+    broken.write_text(
+        "version: 1\ncases:\n  - id: bad-case\n    kind: single-article\n    language: en\n"
+        "    question: Why?\n    expected: {behaviour: answer, sources: [], note: true}\n",
         encoding="utf-8",
     )
 

@@ -36,6 +36,8 @@ class Case:
     # Answer suite only: tools any of which should be called, strings the answer must not hold.
     tools: tuple[str, ...] = ()
     forbidden: tuple[str, ...] = ()
+    # Answer suite only: whether the answer must save a note (F-07a).
+    note: bool = False
 
 
 def load_cases(path: Path) -> list[Case]:
