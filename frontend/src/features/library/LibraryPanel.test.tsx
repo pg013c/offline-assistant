@@ -49,7 +49,11 @@ describe('LibraryPanel', () => {
       const controlled = screen.getByRole('tab', { name }).getAttribute('aria-controls')
       expect(controlled && document.getElementById(controlled)).toBeTruthy()
     }
-    const documents = screen.getByRole('tabpanel', { hidden: true, name: 'Documents' })
+    // A hidden element has no accessible name, so the panel is found by the id its tab names.
+    const documents = document.getElementById('library-panel-documents')
+    if (!documents) {
+      throw new Error('the documents panel is gone')
+    }
     expect(documents).not.toBeVisible()
     expect(within(documents).getByText(/No documents yet/)).toBeInTheDocument()
   })
