@@ -167,7 +167,7 @@ No ADR: no new dependency, model or standard.
   - `app.py` passes the model as a `ToolCallingModel` when `ChatModelSpec.tools` is set;
   - the adapter's `max_tokens` per call, so tool turns are short.
 - Done when: `make check` is green.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 5. API: tool events and the new failure code

@@ -23,6 +23,7 @@ from assistant.domain.answers import (
     AnswerEvent,
     AnswerFailed,
     AnswerText,
+    ToolUsed,
 )
 from assistant.services.questions import QuestionService
 
@@ -75,6 +76,9 @@ def _to_schema(event: AnswerEvent) -> ChatEvent:
                     ),
                 )
             )
+        case ToolUsed():
+            # Step 5 of F-07 puts tool calls on the stream.
+            raise NotImplementedError
         case _:
             assert_never(event)
 

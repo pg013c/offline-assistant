@@ -7,7 +7,7 @@ import httpx
 from assistant.adapters.fakes.chat_model import FakeExtractiveChatModel
 from assistant.adapters.openai_compatible_chat import LlmServer, OpenAICompatibleChat
 from assistant.adapters.pinned_models import QWEN3_8B, PinnedModel
-from assistant.ports.chat_model import ChatModel
+from assistant.ports.chat_model import ChatModel, ToolCallingModel
 from assistant.settings import Settings
 
 
@@ -34,7 +34,9 @@ class ChatModelNotReady(Exception):
     """The configured model cannot answer; the message says how to start it."""
 
 
-def chat_model_for(settings: Settings, transport: httpx.BaseTransport | None = None) -> ChatModel:
+def chat_model_for(
+    settings: Settings, transport: httpx.BaseTransport | None = None
+) -> FakeExtractiveChatModel | OpenAICompatibleChat:
     """The configured chat model; a served one must be answering before the API starts."""
     spec = CHAT_MODELS[settings.chat_model]
     if spec.served_model is None:
@@ -52,6 +54,11 @@ def chat_model_for(settings: Settings, transport: httpx.BaseTransport | None = N
             streaming=spec.streaming,
         ),
     )
+
+
+def tool_model_for(settings: Settings, model: ChatModel) -> ToolCallingModel | None:
+    """The configured model as the agent, when it is declared able to call tools (AI-23)."""
+    raise NotImplementedError
 
 
 def _ensure_served(url: str, served_model: str, transport: httpx.BaseTransport | None) -> None:

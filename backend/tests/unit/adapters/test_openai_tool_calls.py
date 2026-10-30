@@ -105,6 +105,14 @@ def test_the_tools_are_sent_as_function_schemas() -> None:
     ]
 
 
+def test_a_tool_turn_is_capped_far_below_an_answer() -> None:
+    server = StubServer(calling("search_documents", '{"query": "logs"}'))
+
+    turn(model(server))
+
+    assert server.requests[0]["max_tokens"] == 256
+
+
 def test_a_tool_call_comes_back_with_validated_arguments() -> None:
     result = turn(model(StubServer(calling("search_documents", '{"query": "logs"}'))))
 

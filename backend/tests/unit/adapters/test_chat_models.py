@@ -1,7 +1,12 @@
 import httpx
 import pytest
 
-from assistant.adapters.chat_models import CHAT_MODELS, ChatModelNotReady, chat_model_for
+from assistant.adapters.chat_models import (
+    CHAT_MODELS,
+    ChatModelNotReady,
+    chat_model_for,
+    tool_model_for,
+)
 from assistant.adapters.fakes.chat_model import FakeExtractiveChatModel
 from assistant.adapters.openai_compatible_chat import OpenAICompatibleChat
 from assistant.adapters.pinned_models import LLM_MODELS, PINNED_MODELS, QWEN3_8B
@@ -81,3 +86,15 @@ def test_each_served_model_declares_its_capabilities() -> None:
     qwen = CHAT_MODELS["qwen3-8b"]
 
     assert (qwen.tools, qwen.json_schema, qwen.streaming) == (True, True, True)
+
+
+def test_a_model_declared_able_to_call_tools_is_the_agent() -> None:
+    model = chat_model_for(settings("qwen3-8b"), transport=serving("qwen3-8b"))
+
+    assert tool_model_for(settings("qwen3-8b"), model) is model
+
+
+def test_the_test_model_is_no_agent() -> None:
+    model = chat_model_for(settings("fake-extractive"))
+
+    assert tool_model_for(settings("fake-extractive"), model) is None

@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     llm_url: str = "http://127.0.0.1:8080"
     llm_timeout: float = Field(default=60, gt=0)
     max_retries: int = Field(default=2, ge=0, le=5)
+    # Model turns that may call tools before the answer (AI-22, F-07).
+    max_tool_turns: int = Field(default=4, ge=1, le=10)
     # `docling` reads every supported format; `text-only` reads .txt and .md without models.
     document_parser: Literal["docling", "text-only"] = "docling"
     # Where `make models` put the parsing and embedding models (ADR 0004).

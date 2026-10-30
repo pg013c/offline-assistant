@@ -49,6 +49,14 @@ class AnswerFailed:
 
 
 @dataclass(frozen=True, slots=True)
+class ToolUsed:
+    """The agent called a tool; sent before the answer text so the UI can show progress."""
+
+    name: str
+    arguments: dict[str, Any]
+
+
+@dataclass(frozen=True, slots=True)
 class AnswerEnd:
     model_id: str
     found: bool
@@ -56,7 +64,9 @@ class AnswerEnd:
     usage: "Usage | None" = None
 
 
-type AnswerEvent = AnswerText | AnswerDiscarded | AnswerFailed | AnswerCitation | AnswerEnd
+type AnswerEvent = (
+    ToolUsed | AnswerText | AnswerDiscarded | AnswerFailed | AnswerCitation | AnswerEnd
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -68,6 +78,8 @@ class Usage:
     first_token_ms: float | None
     total_ms: float
     attempts: int
+    # Model turns that called tools before the answer (F-07).
+    tool_turns: int = 0
 
 
 @dataclass(frozen=True, slots=True)
