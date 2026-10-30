@@ -2,7 +2,8 @@
 
 import asyncio
 import re
-from collections.abc import AsyncIterator, Sequence
+import time
+from collections.abc import AsyncIterator, Callable, Sequence
 
 from structlog.testing import capture_logs
 
@@ -105,7 +106,10 @@ class ScriptedAgent:
 
 
 def service(
-    agent: ScriptedAgent, max_tool_turns: int = 4, min_similarity: float = 0
+    agent: ScriptedAgent,
+    max_tool_turns: int = 4,
+    min_similarity: float = 0,
+    clock: Callable[[], float] = time.perf_counter,
 ) -> tuple[AgentService, FakeDocumentStore, str]:
     store = FakeDocumentStore()
     index = InMemoryChunkIndex()
@@ -113,7 +117,7 @@ def service(
     document_id = documents.upload("GDPR (EN).md", GDPR).id
     # The in-memory index only finds passages that share a word with the question.
     questions = QuestionService(index, agent, store, min_similarity=min_similarity)
-    return AgentService(questions, agent, store, max_tool_turns), store, document_id
+    return AgentService(questions, agent, store, max_tool_turns, clock), store, document_id
 
 
 def ask(questions: AgentService | QuestionService, question: str = QUESTION) -> list[AnswerEvent]:
@@ -255,7 +259,8 @@ def test_a_failed_tool_turn_ends_the_run_typed_and_keeps_its_usage() -> None:
         usage=usage(300, 0, 60000.0),
     )
     agent = ScriptedAgent([failed])
-    questions, _, _ = service(agent)
+    readings = iter([10.0, 70.5])
+    questions, _, _ = service(agent, clock=lambda: next(readings))
 
     events = ask(questions)
 
@@ -264,7 +269,7 @@ def test_a_failed_tool_turn_ends_the_run_typed_and_keeps_its_usage() -> None:
     end = events[-1]
     assert isinstance(end, AnswerEnd)
     assert end.usage is not None
-    assert (end.usage.prompt_tokens, end.usage.total_ms) == (300, 60000.0)
+    assert (end.usage.prompt_tokens, end.usage.total_ms) == (300, 60500.0)
 
 
 def test_the_usage_of_every_call_in_the_run_is_summed_with_its_tool_turns() -> None:
@@ -275,7 +280,10 @@ def test_the_usage_of_every_call_in_the_run_is_summed_with_its_tool_turns() -> N
         ],
         answered("Within 72 hours [1].", (1,)),
     )
-    questions, _, _ = service(agent)
+    # The research phase, from the question to the answer call, takes 2 s by this clock:
+    # searches, tool runs and both model turns.
+    readings = iter([10.0, 12.0])
+    questions, _, _ = service(agent, clock=lambda: next(readings))
 
     end = ask(questions)[-1]
 
@@ -283,9 +291,9 @@ def test_the_usage_of_every_call_in_the_run_is_summed_with_its_tool_turns() -> N
     assert end.usage == Usage(
         prompt_tokens=200 + 350 + 400,
         completion_tokens=15 + 2 + 40,
-        # The first answer token comes after the whole research phase.
-        first_token_ms=500.0 + 250.0 + 300.0,
-        total_ms=500.0 + 250.0 + 900.0,
+        # The first answer token comes after the whole research phase, not only its model calls.
+        first_token_ms=2000.0 + 300.0,
+        total_ms=2000.0 + 900.0,
         attempts=1,
         tool_turns=1,
     )
@@ -390,3 +398,27 @@ def test_an_article_question_is_refused_when_the_tools_find_nothing_either() -> 
     end = events[-1]
     assert isinstance(end, AnswerEnd)
     assert end.found is False
+
+
+def test_every_tool_turn_is_logged_with_its_model_tokens_and_time_but_no_text() -> None:
+    agent = ScriptedAgent(
+        [
+            ToolCalls(reading("33").calls, usage=usage(200, 15, 500.0)),
+            FinalText("ready", usage=usage(350, 2, 250.0)),
+        ],
+        answered("Within 72 hours [1].", (1,)),
+    )
+    questions, _, _ = service(agent)
+
+    with capture_logs() as logs:
+        ask(questions)
+
+    turns = [entry for entry in logs if entry["event"] == "tool_turn"]
+    assert [
+        (e["model_id"], e["turn"], e["outcome"], e["prompt_tokens"], e["total_ms"]) for e in turns
+    ] == [
+        ("scripted-agent", 1, "tool_calls", 200, 500.0),
+        ("scripted-agent", 2, "ready", 350, 250.0),
+    ]
+    assert all(e["completion_tokens"] in (15, 2) for e in turns)
+    assert not any("ready" in str(e.get("text", "")) or QUESTION in str(e) for e in turns)

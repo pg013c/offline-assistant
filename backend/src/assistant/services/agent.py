@@ -2,7 +2,7 @@
 
 import re
 import time
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from importlib.resources import files
 from string import Template
 
@@ -48,6 +48,7 @@ class AgentService:
         model: ToolCallingModel,
         store: DocumentStore,
         max_tool_turns: int,
+        clock: Callable[[], float] = time.perf_counter,
     ) -> None:
         self._questions = questions
         self._model = model
