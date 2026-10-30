@@ -345,6 +345,47 @@ describe('ChatView', () => {
     expect(bodies).toEqual([{ question: 'How long?', model: 'fake-extractive' }])
   })
 
+  it('names the model a failed turn asked, the default when none was chosen', async () => {
+    server.use(http.post('*/api/chat', () => new HttpResponse(null, { status: 500 })))
+    renderWithQueryClient(<ChatView />)
+    await screen.findByRole('option', { name: 'qwen3-8b' })
+
+    await ask('Anything?')
+
+    const turn = await screen.findByRole('article')
+    await within(turn).findByRole('alert')
+    expect(turn).toHaveTextContent('Asked qwen3-8b')
+  })
+
+  it('lets a new question stop the answer still being written', async () => {
+    let calls = 0
+    server.use(
+      http.post('*/api/chat', () => {
+        calls += 1
+        if (calls === 1) {
+          return new HttpResponse(new ReadableStream(), {
+            headers: { 'Content-Type': 'text/event-stream' },
+          })
+        }
+        const body = [
+          { type: 'text', text: 'Second.' },
+          { type: 'end', model_id: 'qwen3-8b', found: true, is_test_model: false },
+        ]
+          .map((event) => `data: ${JSON.stringify(event)}\n\n`)
+          .join('')
+        return new HttpResponse(body, { headers: { 'Content-Type': 'text/event-stream' } })
+      }),
+    )
+    renderWithQueryClient(<ChatView />)
+
+    await ask('First?')
+    await ask('Second?')
+
+    expect(await screen.findByText('Second.')).toBeInTheDocument()
+    const [first] = screen.getAllByRole('article')
+    expect(first).toHaveTextContent('Stopped for the next question.')
+  })
+
   it('tells the user when the answer failed', async () => {
     server.use(http.post('*/api/chat', () => new HttpResponse(null, { status: 500 })))
     renderWithQueryClient(<ChatView />)
