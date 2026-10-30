@@ -38,6 +38,8 @@ class Case:
     forbidden: tuple[str, ...] = ()
     # Answer suite only: whether the answer must save a note (F-07a).
     note: bool = False
+    # Answer suite only: the key points a correct answer makes, for the judge (F-09a).
+    key_points: tuple[str, ...] = ()
 
 
 def load_cases(path: Path) -> list[Case]:

@@ -127,6 +127,15 @@
         },
         "note": {
           "type": "boolean"
+        },
+        "key_points": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4,
+          "items": {
+            "type": "string",
+            "minLength": 5
+          }
         }
       },
       "if": {

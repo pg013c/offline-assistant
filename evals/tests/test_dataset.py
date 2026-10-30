@@ -66,6 +66,19 @@ def test_the_answer_suite_asks_every_retrieval_case_and_its_own() -> None:
         "note-checklist-pl",
         "inj-save-note",
         "inj-note-content",
+        "en-gdpr-principles",
+        "pl-gdpr-consent",
+        "en-ai-human-oversight",
+        "pl-ai-transparency",
+        "en-gdpr-dpo-tasks",
+        "pl-gdpr-access-and-rectification",
+        "pl-gdpr-erasure-exceptions",
+        "cmp-fines-ai-and-gdpr",
+        "cmp-pl-breach-and-incident",
+        "not-covered-cctv",
+        "not-covered-pl-fee",
+        "inj-audit-logs",
+        "inj-pl-orbit",
     ]
     assert len({case.id for case in answers}) == len(answers)
 
@@ -79,8 +92,8 @@ def test_the_adversarial_case_expects_a_cited_answer() -> None:
         assert case.sources
 
 
-def test_the_answer_suite_is_version_4() -> None:
-    assert yaml.safe_load(ANSWERS.read_text(encoding="utf-8"))["version"] == 4
+def test_the_answer_suite_is_version_5() -> None:
+    assert yaml.safe_load(ANSWERS.read_text(encoding="utf-8"))["version"] == 5
 
 
 def test_injection_cases_expect_an_answer_from_the_injected_document() -> None:
@@ -91,6 +104,8 @@ def test_injection_cases_expect_an_answer_from_the_injected_document() -> None:
         "inj-cite-nothing",
         "inj-save-note",
         "inj-note-content",
+        "inj-audit-logs",
+        "inj-pl-orbit",
     }
     for case in injected.values():
         assert case.behaviour == "answer"
@@ -102,7 +117,11 @@ def test_injection_cases_expect_an_answer_from_the_injected_document() -> None:
 def test_not_covered_cases_expect_no_source() -> None:
     not_covered = [case for case in load_answer_cases(ANSWERS) if case.behaviour == "not_covered"]
 
-    assert [case.id for case in not_covered] == ["not-covered"]
+    assert [case.id for case in not_covered] == [
+        "not-covered",
+        "not-covered-cctv",
+        "not-covered-pl-fee",
+    ]
     assert all(case.sources == () for case in not_covered)
 
 
@@ -151,3 +170,49 @@ def test_a_retrieval_case_cannot_expect_a_note(tmp_path: Path) -> None:
 
     with pytest.raises(DatasetError, match="bad-case"):
         load_cases(broken)
+
+
+def test_the_answer_suite_holds_40_to_50_cases_in_both_languages() -> None:
+    cases = load_answer_cases(ANSWERS)
+
+    assert 40 <= len(cases) <= 50
+    assert Counter(case.language for case in cases)["pl"] >= 15
+
+
+def test_every_answerable_case_has_one_to_four_key_points() -> None:
+    for case in load_answer_cases(ANSWERS):
+        if case.behaviour == "answer":
+            assert 1 <= len(case.key_points) <= 4, case.id
+        else:
+            assert case.key_points == (), case.id
+
+
+def test_reference_answers_name_answerable_retrieval_cases_only() -> None:
+    references = yaml.safe_load(ANSWERS.read_text(encoding="utf-8"))["references"]
+    retrieval = {case.id: case for case in load_cases(DATASET)}
+
+    assert set(references) == {
+        case_id for case_id, case in retrieval.items() if case.behaviour == "answer"
+    }
+
+
+def test_a_reference_for_an_unknown_case_is_rejected(tmp_path: Path) -> None:
+    (tmp_path / "retrieval.yaml").write_text(DATASET.read_text(encoding="utf-8"), encoding="utf-8")
+    broken = tmp_path / "answers.yaml"
+    broken.write_text(
+        "version: 5\nreuse: retrieval.yaml\n"
+        "references:\n  no-such-case: [Something said.]\ncases: []\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(DatasetError, match="no-such-case"):
+        load_answer_cases(broken)
+
+
+def test_the_new_kinds_are_covered() -> None:
+    kinds = Counter(case.kind for case in load_answer_cases(ANSWERS))
+
+    assert kinds["injection"] >= 6
+    assert kinds["not-covered"] >= 3
+    assert kinds["tool-use"] >= 6
+    assert kinds["spans-articles"] >= 3

@@ -67,12 +67,12 @@
 - Tests first, in `evals/tests/test_dataset.py`:
   - version 5;
   - 40 to 50 cases, both languages;
-  - every answerable case has 2 to 4 key points;
+  - every answerable case has 1 to 4 key points (one for the single-fact injection cases);
   - the new kinds are present;
   - every reference id names a case.
 - Change: `answers.yaml`, `answers.schema.json`, `harness/dataset.py` (`Case.key_points`).
 - The human reviews the key points in this commit.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 2. Chunk text for the harness
