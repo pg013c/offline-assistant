@@ -88,3 +88,31 @@ test('a deleted document is no longer used to answer', async ({ page }) => {
   ).toBeVisible()
   await expect(page.getByRole('list', { name: 'Sources' })).toHaveCount(0)
 })
+
+test('markers are easy to hit and the question box stays in view below a long thread', async ({
+  page,
+}) => {
+  test.setTimeout(PARSING_TIMEOUT_MS + 30_000)
+  await page.setViewportSize({ width: 1280, height: 720 })
+  await uploadAiAct(page)
+  const question = page.getByRole('textbox', { name: 'Question' })
+
+  const questions = [
+    'When is an AI system a safety component considered high-risk?',
+    'Which systems referred to in Annex III are high-risk?',
+    'What does Article 6 say about third-party conformity assessment?',
+  ]
+  for (const [asked, text] of questions.entries()) {
+    await question.fill(text)
+    await page.getByRole('button', { name: 'Ask' }).click()
+    // Each answer finishes before the next question, which would otherwise stop it.
+    await expect(page.getByText(/Answered by fake-extractive/)).toHaveCount(asked + 1)
+  }
+
+  // WCAG 2.5.8: a target of at least 24 by 24 CSS pixels.
+  const marker = await page.getByRole('button', { name: 'Source 1' }).first().boundingBox()
+  expect(marker?.width).toBeGreaterThanOrEqual(24)
+  expect(marker?.height).toBeGreaterThanOrEqual(24)
+  await page.mouse.wheel(0, -10_000)
+  await expect(question).toBeInViewport()
+})
