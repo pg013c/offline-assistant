@@ -1,18 +1,26 @@
 """Notes as files in the notes directory: `<id>.md` for the user, `<id>.json` to read back.
 
-Files are created exclusively, so a note never replaces another, and only plain ids are
-read, so no other path can be named (AI-11).
+Each file is written to a temporary name and linked into place, which fails if the name is
+taken: a note never replaces another, and a half-written file is never read. Only files
+named by a plain id are read, so no other path can be named (AI-11); one that cannot be
+read is skipped and logged by its id.
 """
 
 import json
+import os
 import re
+import tempfile
 from dataclasses import asdict, replace
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+import structlog
+
 from assistant.domain.documents import ChunkLocation
 from assistant.domain.notes import Note, NoteSource, render
+
+log = structlog.get_logger(__name__)
 
 _ID = re.compile(r"^[0-9]{8}-[0-9]{6}-[a-z0-9-]+$")
 
@@ -25,26 +33,23 @@ class FileNoteStore:
         self._directory.mkdir(parents=True, exist_ok=True)
         suffix = 1
         while True:
-            note_id = note.id if suffix == 1 else f"{note.id}-{suffix}"
-            try:
-                # Exclusive creation: an existing note is never overwritten.
-                with (self._directory / f"{note_id}.json").open("x", encoding="utf-8") as file:
-                    json.dump(_record(replace(note, id=note_id)), file, ensure_ascii=False)
-            except FileExistsError:
-                suffix += 1
-                continue
-            saved = replace(note, id=note_id)
-            (self._directory / f"{note_id}.md").write_text(render(saved), encoding="utf-8")
-            return note_id
+            saved = replace(note, id=note.id if suffix == 1 else f"{note.id}-{suffix}")
+            # The Markdown first, then the record that makes the note listed.
+            if self._place(f"{saved.id}.md", render(saved)):
+                if self._place(f"{saved.id}.json", json.dumps(_record(saved), ensure_ascii=False)):
+                    return saved.id
+                (self._directory / f"{saved.id}.md").unlink()
+            suffix += 1
 
     def list_notes(self) -> list[Note]:
         if not self._directory.exists():
             return []
-        notes = [
-            _note(json.loads(path.read_text(encoding="utf-8")))
-            for path in self._directory.glob("*.json")
-        ]
-        return sorted(notes, key=lambda note: note.created, reverse=True)
+        notes = [self.get(path.stem) for path in self._directory.glob("*.json")]
+        return sorted(
+            (note for note in notes if note is not None),
+            key=lambda note: note.created,
+            reverse=True,
+        )
 
     def get(self, note_id: str) -> Note | None:
         if not _ID.fullmatch(note_id):
@@ -52,7 +57,26 @@ class FileNoteStore:
         path = self._directory / f"{note_id}.json"
         if not path.exists():
             return None
-        return _note(json.loads(path.read_text(encoding="utf-8")))
+        try:
+            return _note(json.loads(path.read_text(encoding="utf-8")))
+        except (ValueError, KeyError, TypeError):
+            log.warning("note_unreadable", note_id=note_id)
+            return None
+
+    def _place(self, name: str, text: str) -> bool:
+        """Write `name` whole, or not at all; False if the name is taken."""
+        with tempfile.NamedTemporaryFile(
+            "w", encoding="utf-8", dir=self._directory, prefix=".", suffix=".tmp", delete=False
+        ) as file:
+            file.write(text)
+        temporary = Path(file.name)
+        try:
+            os.link(temporary, self._directory / name)
+        except FileExistsError:
+            return False
+        finally:
+            temporary.unlink()
+        return True
 
 
 def _record(note: Note) -> dict[str, Any]:
