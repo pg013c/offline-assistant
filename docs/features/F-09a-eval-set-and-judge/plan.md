@@ -73,7 +73,7 @@
 - Change: `answers.yaml`, `answers.schema.json`, `harness/dataset.py` (`Case.key_points`).
 - The human reviews the key points in this commit.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 2. Chunk text for the harness
 
