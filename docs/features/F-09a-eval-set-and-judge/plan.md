@@ -127,10 +127,10 @@
 - Kind: eval and infra
 - Tests first:
   - `evals/tests/test_calibration.py`: agreement for correctness and support from a calibration file; below 85 % fails the run;
-  - `backend/tests/unit/adapters/test_pinned_models.py`: the judge pin as ADR 0022 says, kept out of `make models` and `make llm-models`;
+  - `backend/tests/unit/adapters/test_chat_models.py`, beside the LLM pin: the judge pin as ADR 0022 says, kept out of `make models` and `make llm-models`;
   - `scripts/ci/test-make.sh`: `judge-models`, `judge-preflight` and `judge` exist and name `JUDGE_PORT`.
 - Change: `harness/calibration.py`, `pinned_models.py` (`QWEN3_30B_A3B`, `JUDGE_MODELS`), `scripts/download_models.py --judge`, `Makefile`, README licence table.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 7. First judged run, calibration labels and the record

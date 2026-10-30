@@ -148,3 +148,7 @@ QWEN3_8B = PinnedModel(
     },
 )
 LLM_MODELS: tuple[PinnedModel, ...] = (QWEN3_8B,)
+
+
+QWEN3_30B_A3B = PinnedModel(repository="", revision="", directory="", files={})
+JUDGE_MODELS: tuple[PinnedModel, ...] = ()

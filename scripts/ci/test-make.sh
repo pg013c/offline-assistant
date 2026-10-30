@@ -52,5 +52,22 @@ set -e
 check "eval-answers refuses to run without the model server, naming make llm" \
   "$([[ $status -ne 0 && "$output" == *"make llm"* ]] && echo yes || echo no)"
 
+# judge_preflight <env(1) arguments>: checks the judge's file and port without starting it.
+judge_preflight() {
+  env "$@" make -C "$root" --no-print-directory judge-preflight \
+    ENV_FILE="$scratch/missing.env" JUDGE_PORT=59995 2>&1
+}
+
+set +e
+output="$(judge_preflight ASSISTANT_MODELS_DIR="$scratch/no-models")"
+status=$?
+set -e
+check "judge refuses to start without the pinned judge file, naming make judge-models" \
+  "$([[ $status -ne 0 && "$output" == *"make judge-models"* ]] && echo yes || echo no)"
+
+check "judge serves on JUDGE_PORT as qwen3-30b-a3b" \
+  "$(make -C "$root" --no-print-directory -n judge JUDGE_PORT=59994 ASSISTANT_MODELS_DIR="$scratch" 2>/dev/null \
+    | grep -q -- "--port 59994.*--alias qwen3-30b-a3b\|--alias qwen3-30b-a3b.*--port 59994" && echo yes || echo no)"
+
 [[ "$failures" -eq 0 ]] || { echo "$failures Makefile test(s) failed"; exit 1; }
 echo "All Makefile tests passed."

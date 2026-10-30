@@ -9,7 +9,13 @@ from assistant.adapters.chat_models import (
 )
 from assistant.adapters.fakes.chat_model import FakeExtractiveChatModel
 from assistant.adapters.openai_compatible_chat import OpenAICompatibleChat
-from assistant.adapters.pinned_models import LLM_MODELS, PINNED_MODELS, QWEN3_8B
+from assistant.adapters.pinned_models import (
+    JUDGE_MODELS,
+    LLM_MODELS,
+    PINNED_MODELS,
+    QWEN3_8B,
+    QWEN3_30B_A3B,
+)
 from assistant.settings import Settings
 
 URL = "http://127.0.0.1:8080"
@@ -68,6 +74,16 @@ def test_the_llm_is_pinned_as_adr_0021_says_and_kept_apart_from_make_models() ->
     }
     assert QWEN3_8B in LLM_MODELS
     assert QWEN3_8B not in PINNED_MODELS
+
+
+def test_the_judge_is_pinned_as_adr_0022_says_and_kept_apart_from_the_app_and_its_llm() -> None:
+    assert QWEN3_30B_A3B.repository == "Qwen/Qwen3-30B-A3B-GGUF"
+    assert QWEN3_30B_A3B.revision == "e4d4bafdfb96a411a163846265362aceb0b9c63a"
+    sha256 = "0d003f6662faee786ed5da3e31b29c978de5ae5d275c8794c606a7f3c01aa8f5"
+    assert QWEN3_30B_A3B.files == {"Qwen3-30B-A3B-Q4_K_M.gguf": sha256}
+    assert JUDGE_MODELS == (QWEN3_30B_A3B,)
+    assert QWEN3_30B_A3B not in PINNED_MODELS
+    assert QWEN3_30B_A3B not in LLM_MODELS
 
 
 @pytest.mark.parametrize(
