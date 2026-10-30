@@ -55,7 +55,8 @@ Notification of a personal data breach
 2. The processor shall notify the controller of a breach.
 """
 
-QUESTION = "When must a breach be notified?"
+# Only questions about an article or a comparison go through the tools (spec decision 6).
+QUESTION = "When must a breach be notified under Article 33?"
 
 
 def usage(
@@ -104,14 +105,14 @@ class ScriptedAgent:
 
 
 def service(
-    agent: ScriptedAgent, max_tool_turns: int = 4
+    agent: ScriptedAgent, max_tool_turns: int = 4, min_similarity: float = 0
 ) -> tuple[AgentService, FakeDocumentStore, str]:
     store = FakeDocumentStore()
     index = InMemoryChunkIndex()
     documents = DocumentService(store, index, TextDocumentParser(), InlineIngestionQueue())
     document_id = documents.upload("GDPR (EN).md", GDPR).id
     # The in-memory index only finds passages that share a word with the question.
-    questions = QuestionService(index, agent, store, min_similarity=0)
+    questions = QuestionService(index, agent, store, min_similarity=min_similarity)
     return AgentService(questions, agent, store, max_tool_turns), store, document_id
 
 
@@ -349,3 +350,43 @@ def test_every_tool_call_is_logged_with_its_name_and_counts_but_no_arguments() -
     ]
     assert all(entry["passages"] >= 1 and "ms" in entry for entry in calls)
     assert not any(QUESTION in str(entry) or "GDPR (EN)" in str(entry) for entry in calls)
+
+
+def test_a_question_about_neither_an_article_nor_a_comparison_makes_no_tool_turn() -> None:
+    agent = ScriptedAgent([], answered("Within 72 hours [1].", (1,)))
+    questions, _, _ = service(agent)
+
+    events = ask(questions, "When must a breach be notified?")
+
+    assert agent.seen == []
+    assert agent.answered_with is not None
+    assert not any(isinstance(event, ToolUsed) for event in events)
+
+
+def test_an_article_question_below_the_threshold_still_reaches_the_tools() -> None:
+    agent = ScriptedAgent(
+        [reading("33"), FinalText("ready")], answered("Within 72 hours [1].", (1,))
+    )
+    questions, store, document_id = service(agent, min_similarity=1.1)
+
+    events = ask(questions, "What does Article 33 say?")
+
+    assert "No passage" in agent.seen[0][-1].content
+    assert agent.answered_with == article(store, document_id, "33")
+    end = events[-1]
+    assert isinstance(end, AnswerEnd)
+    assert end.found is True
+
+
+def test_an_article_question_is_refused_when_the_tools_find_nothing_either() -> None:
+    agent = ScriptedAgent([FinalText("ready")], answered("Should not appear [1].", (1,)))
+    questions, _, _ = service(agent, min_similarity=1.1)
+
+    events = ask(questions, "What does Article 99 say?")
+
+    assert len(agent.seen) == 1
+    assert agent.answered_with is None
+    assert events[-2] == AnswerText(text=NO_RELEVANT_PASSAGE)
+    end = events[-1]
+    assert isinstance(end, AnswerEnd)
+    assert end.found is False

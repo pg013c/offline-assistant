@@ -56,8 +56,10 @@ def upload(settle: Settle) -> Upload:
     return upload_and_wait
 
 
-def ask(client: TestClient) -> tuple[str, list[dict[str, Any]]]:
-    response = client.post("/api/chat", json=QUESTION)
+def ask(
+    client: TestClient, question: dict[str, str] = QUESTION
+) -> tuple[str, list[dict[str, Any]]]:
+    response = client.post("/api/chat", json=question)
     assert response.status_code == 200
     events = [
         json.loads(line.removeprefix("data: "))
@@ -297,7 +299,7 @@ def test_each_tool_call_is_an_event_before_the_answer_text(tmp_path: Path, uploa
     )
     with agent_client(tmp_path, agent) as client:
         upload(client)
-        _, events = ask(client)
+        _, events = ask(client, ARTICLE_QUESTION)
 
     assert [event["type"] for event in events] == ["tool", "tool", "text", "citation", "end"]
     assert events[:2] == [
@@ -308,7 +310,9 @@ def test_each_tool_call_is_an_event_before_the_answer_text(tmp_path: Path, uploa
     assert events[-1]["usage"]["prompt_tokens"] == 100 + 210
 
 
-QUESTION_ARGUMENTS = {"query": QUESTION["question"]}
+# Only questions about an article or a comparison go through the tools (F-07 decision 6).
+ARTICLE_QUESTION = {"question": "How long do providers keep logs under Article 12?"}
+QUESTION_ARGUMENTS = {"query": ARTICLE_QUESTION["question"]}
 
 
 def test_at_the_tool_turn_limit_the_answer_follows_without_an_error(
@@ -323,6 +327,6 @@ def test_at_the_tool_turn_limit_the_answer_follows_without_an_error(
     )
     with agent_client(tmp_path, agent, max_tool_turns=1) as client:
         upload(client)
-        _, events = ask(client)
+        _, events = ask(client, ARTICLE_QUESTION)
 
     assert [event["type"] for event in events] == ["tool", "tool", "text", "citation", "end"]
