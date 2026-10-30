@@ -171,6 +171,15 @@ It uploads the pinned corpus (AI Act and GDPR, English and Polish) and resolves 
 
 It reports time to first token, tokens per second and each case's tools, and compares the run with `docs/evals/answer-baseline.json`. The API it started is stopped at the end.
 
+**The judge** (ADR 0022, ADR 0023) grades the answers when `make judge` serves Qwen3 30B-A3B on port 8081, with thinking on. It is used only by the evaluation, never by the API.
+
+- **Input:** the harness sends each completed answer with its question, its reference key points, its numbered sentences and the full text of the passages they cite (`ChunkSummary.text`), in escaped tags. The request uses a JSON schema at temperature 0.
+- **Verdicts:** the judge says whether each key point is made, and whether each cited sentence is supported. Correctness is derived in code: all points made is correct, none is wrong, otherwise partial.
+- **Retries:** an unreadable or late reply is retried, then the answer counts as not judged. A failed answer counts as wrong.
+- **Calibration:** before its metrics count, the judge re-judges `evals/datasets/calibration.yaml` (48 hand-verified items). Below 85 % agreement on correctness or support, the run fails and the judged metrics are set apart as untrusted.
+- **Gate:** `citation_support` and `tool_call_validity` have floors of 90 % and 95 %. Tool-call validity comes from the usage counters of failed tool turns (`invalid_tool_call`).
+- **Report:** the run records the judge's server build, model file, prompt hash and token budget, and whether it thought.
+
 ## 4. Main flow: a question
 
 ```mermaid

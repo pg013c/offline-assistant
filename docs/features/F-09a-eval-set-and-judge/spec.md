@@ -43,16 +43,16 @@ F-09b compares local models, and F-09c adds Claude; both need these measures fir
 
 ## Acceptance criteria
 
-- [ ] AC-1: Given the answer dataset, then it holds 40 to 50 cases in both languages, every answerable case has a reference answer of key points, and the new cases include Polish, multi-article, comparison, not-covered and injection questions; the dataset validates against its schema.
-- [ ] AC-2: Given an answer, its question, reference and cited passages, when the judge runs, then it returns a correctness verdict and a support verdict per cited sentence as validated structured output; an unreadable judge reply is retried and then recorded as "not judged", never as a pass.
+- [x] AC-1: Given the answer dataset, then it holds 40 to 50 cases in both languages, every answerable case has a reference answer of key points, and the new cases include Polish, multi-article, comparison, not-covered and injection questions; the dataset validates against its schema. Proved by `evals/tests/test_dataset.py` (`test_the_answer_suite_holds_40_to_50_cases_in_both_languages`, `test_every_answerable_case_has_one_to_four_key_points`, `test_the_new_kinds_are_covered`, `test_every_case_validates_and_ids_are_unique`): 47 cases, version 5.
+- [x] AC-2: Given an answer, its question, reference and cited passages, when the judge runs, then it returns a correctness verdict and a support verdict per cited sentence as validated structured output; an unreadable judge reply is retried and then recorded as "not judged", never as a pass. Proved by `evals/tests/test_judge.py` (the schema request, a valid reply, an invalid or late reply retried then not judged) and `evals/tests/test_answers.py` (`test_a_failed_answer_counts_as_wrong_and_only_a_judge_failure_as_not_judged`).
 - [x] AC-3: Given the hand-labelled sample, then the report gives the judge's agreement with it, for correctness and for support; a judge below the agreed bar fails the run. Proved by `evals/tests/test_calibration.py`, `evals/tests/test_judging.py` and report `answers-20261030T180237Z.json` (85.4 % and 90.5 % on 48 items).
-- [ ] AC-4: Given `make eval-answers` with the judge available, then the report gives, per case and overall:
+- [x] AC-4: Given `make eval-answers` with the judge available, then the report gives, per case and overall:
   - judged correctness;
   - citation support;
-  - tool-call validity.
-- [ ] AC-5: Given citation support and tool-call validity, then the gate fails a run below their PRD targets (90 %, 95 %) or more than 5 points worse than the baseline; judged correctness is reported and compared, not floored.
-- [ ] AC-6: Given the judge is not running, then `make eval-answers` still runs the unjudged metrics and says the judged ones were skipped, naming the command that starts the judge.
-- [ ] AC-7: Given the first judged run of Qwen3 8B, then it is recorded in `docs/evals/` with the judge's identity and calibration, and becomes the answer baseline.
+  - tool-call validity. Proved by `evals/tests/test_answers.py` (`test_judged_metrics_count_partial_as_half_and_supported_cited_sentences`, `test_tool_call_validity_is_valid_turns_over_all_tool_turns`, `test_each_case_reports_its_judged_measures`) and report `answers-20261030T180237Z.json`.
+- [x] AC-5: Given citation support and tool-call validity, then the gate fails a run below their PRD targets (90 %, 95 %) or more than 5 points worse than the baseline; judged correctness is reported and compared, not floored. Proved by `evals/tests/test_gate.py` (`test_the_answer_floors_are_those_of_adr_0022`, `test_an_answer_metric_below_its_floor_fails_and_a_skipped_one_does_not`, `test_a_drop_of_more_than_5_points_fails_and_names_the_metric`) and `evals/tests/test_judging.py` (`answer_failures`).
+- [x] AC-6: Given the judge is not running, then `make eval-answers` still runs the unjudged metrics and says the judged ones were skipped, naming the command that starts the judge. Proved by `evals/tests/test_judging.py` (`test_without_a_judge_the_note_says_how_to_start_it`, `test_a_judge_that_stops_answering_mid_run_skips_the_judged_metrics`) and `evals/tests/test_answers.py` (`test_without_a_judge_the_judged_metrics_are_skipped`).
+- [x] AC-7: Given the first judged run of Qwen3 8B, then it is recorded in `docs/evals/` with the judge's identity and calibration, and becomes the answer baseline. Proved by [the record](../../evals/2026-10-30-answers-judged.md), `docs/evals/answer-baseline.json` (its metadata holds the judge and the calibration) and `evals/tests/test_judging.py` (`test_the_judge_rules_on_each_completed_answer_only`, the judge's identity).
 
 ## Evaluation cases
 
