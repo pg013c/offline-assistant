@@ -499,6 +499,23 @@ def calibrate(judge_url: str, path: Path = CALIBRATION_FILE) -> Agreement | None
     return agreement(items, {item.id: client.judge(item.judged) for item in items})
 
 
+def answer_failures(
+    values: Mapping[str, float | None],
+    baseline: Mapping[str, float | None],
+    calibration: Agreement | None,
+    judged: bool,
+) -> list[str]:
+    """The answer gate's failures, the judge's calibration among them (ADR 0022)."""
+    raise NotImplementedError
+
+
+def trusted_judged(
+    values: Mapping[str, float | None], calibration: Agreement | None
+) -> tuple[dict[str, float | None], dict[str, float | None]]:
+    """The metrics with the judge's set apart when the judge is below its bar."""
+    raise NotImplementedError
+
+
 def media_type(path: Path) -> str:
     """The media type a corpus file is uploaded with."""
     return "text/markdown" if path.suffix == ".md" else "application/pdf"

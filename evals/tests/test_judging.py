@@ -1,10 +1,13 @@
 """How a run uses the judge (ADR 0022): the health check, the verdicts and a judge that stops."""
 
+from pathlib import Path
+
 import httpx
 import pytest
 
 from harness import run
 from harness.answers import AnswerCase, ChatResult
+from harness.calibration import Agreement
 from harness.judge import JudgeInput, JudgeUnavailable, Verdict
 
 CASES = [
@@ -58,3 +61,79 @@ def test_a_judge_that_stops_answering_mid_run_skips_the_judged_metrics(
 
     assert verdicts is None
     assert "make judge" in note
+
+
+def test_without_a_judge_the_note_says_how_to_start_it(monkeypatch: pytest.MonkeyPatch) -> None:
+    def down(url: str, **_: object) -> httpx.Response:
+        raise httpx.ConnectError("refused", request=httpx.Request("GET", url))
+
+    monkeypatch.setattr(httpx, "get", down)
+
+    verdicts, note = run.judge_answers(CASES, QUESTIONS, RESULTS, {}, "http://judge")
+
+    assert verdicts is None
+    assert note == "skipped: no judge answers at http://judge; start it with make judge"
+
+
+@pytest.mark.usefixtures("healthy")
+def test_the_judge_rules_on_each_completed_answer_only(monkeypatch: pytest.MonkeyPatch) -> None:
+    judge = FakeJudge(verdicts=5)
+    monkeypatch.setattr(run, "JudgeClient", judge)
+    failed = ChatResult(answer="", cited=(), usage=None, error="x", found=False, complete=False)
+
+    verdicts, note = run.judge_answers(
+        CASES, QUESTIONS, {**RESULTS, "b": failed}, {"d:1": "Text."}, "http://judge"
+    )
+
+    assert verdicts == {"a": VERDICT}
+    assert [judged.question for judged in judge.judged] == ["A?"]
+    assert note == "qwen3-30b-a3b at http://judge"
+
+
+def test_without_its_calibration_set_the_judge_is_not_calibrated(tmp_path: Path) -> None:
+    assert run.calibrate("http://judge", tmp_path / "missing.yaml") is None
+
+
+def test_a_judge_that_stops_during_calibration_is_not_calibrated(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(run, "JudgeClient", FakeJudge(verdicts=3))
+
+    assert run.calibrate("http://judge") is None
+
+
+BELOW = Agreement(correctness=0.8, support=0.9, items=20)
+ABOVE = Agreement(correctness=0.9, support=0.9, items=20)
+JUDGED = {"cites_expected": 0.9, "judged_correct": 0.65, "citation_support": 0.95}
+
+
+def test_judged_metrics_without_calibration_fail_the_run() -> None:
+    failures = run.answer_failures(JUDGED, {}, calibration=None, judged=True)
+
+    assert failures == ["the judge was not calibrated: its calibration set did not run (ADR 0022)"]
+
+
+def test_a_judge_below_the_bar_fails_the_run() -> None:
+    failures = run.answer_failures(JUDGED, {}, calibration=BELOW, judged=True)
+
+    assert failures == [
+        "the judge agrees with the calibration set on 80.0 % of correctness verdicts, "
+        "below 85 % (ADR 0022)"
+    ]
+
+
+def test_an_unjudged_run_needs_no_calibration() -> None:
+    unjudged = {**JUDGED, "judged_correct": None, "citation_support": None}
+
+    assert run.answer_failures(unjudged, {}, calibration=None, judged=False) == []
+
+
+def test_metrics_from_a_judge_below_the_bar_are_set_apart() -> None:
+    values, untrusted = run.trusted_judged(JUDGED, BELOW)
+
+    assert values == {"cites_expected": 0.9, "judged_correct": None, "citation_support": None}
+    assert untrusted == {"judged_correct": 0.65, "citation_support": 0.95}
+
+
+def test_metrics_from_a_calibrated_judge_are_kept() -> None:
+    assert run.trusted_judged(JUDGED, ABOVE) == (JUDGED, {})

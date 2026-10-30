@@ -1,9 +1,8 @@
 from pathlib import Path
 
-import pytest
-
 from harness.calibration import (
     AGREEMENT_BAR,
+    CALIBRATION_FILE,
     CalibrationItem,
     agreement,
     calibration_failures,
@@ -76,9 +75,8 @@ def agreement_result(correctness: float, support: float):  # type: ignore[no-unt
     return Agreement(correctness=correctness, support=support, items=20)
 
 
-def test_the_repository_calibration_set_loads_when_present() -> None:
+def test_the_repository_calibration_set_is_the_one_a_run_uses() -> None:
     path = Path(__file__).parents[1] / "datasets" / "calibration.yaml"
-    if not path.exists():
-        pytest.skip("written in F-09a step 7")
 
+    assert path == CALIBRATION_FILE
     assert len(load_calibration(path)) == 20
