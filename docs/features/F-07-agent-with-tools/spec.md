@@ -10,13 +10,14 @@ F-06 answers from the three passages that a search for the whole question return
 
 ## Scope
 
-- **Agent loop:** the local model answers through tool calls (FR-10), up to `ASSISTANT_MAX_TOOL_TURNS` turns (default 4), then gives a final answer (AI-22). The loop needs a model declared able to call tools (AI-23).
+- **Agent loop:** the local model answers through tool calls (FR-10), up to `ASSISTANT_MAX_TOOL_TURNS` turns (default 2, changed during the build), then gives a final answer (AI-22). The loop needs a model declared able to call tools (AI-23).
+- **Routing (changed during the build):** only a question that names an article or annex, or asks to compare, goes through the tools. Every other question takes the F-06 search-then-answer path, so it keeps F-06's time to the first token.
 - **Tools**, each with Pydantic arguments validated on return and invalid calls fed back for correction (AI-20, AI-21):
   - `search_documents(query, document?)`: the F-05 search, with the similarity threshold applied;
   - `get_article(document, number)`: every stored chunk of one article, in order;
   - `compare(a, b)`: two articles side by side.
 - **Citations that resolve (FR-11, AI-01):** the final answer cites chunk ids from tool results. Each statement in the answer carries a citation marker; the service checks that every cited id is one a tool returned in this run and is stored, and retries otherwise.
-- **Not covered (FR-12):** the question is still refused without a model call when nothing is above the threshold (AI-02). The model can also answer that the documents do not cover the question, with no citations; the UI shows it as a "no answer" state (`found=false`).
+- **Not covered (FR-12):** the question is still refused without a model call when nothing is above the threshold (AI-02), except a question about an article, which the tools may still find (decision 6). The model can also answer that the documents do not cover the question, with no citations; the UI shows it as a "no answer" state (`found=false`).
 - **Prompt injection (FR-14, AI-10, AI-12):** tool results reach the model as delimited data. The evaluation corpus gets documents with planted instructions, and the evaluation checks they are not followed.
 - **Stream:** the API reports each tool call (name and arguments) as an event before the answer text streams, so the UI can show "searching…".
 - **Measurement:** each run records its tool calls and turns, plus AI-60's figures per model call.
@@ -29,7 +30,7 @@ F-06 answers from the three passages that a search for the whole question return
 
 ## Acceptance criteria
 
-- [ ] AC-1: Given a model that calls tools, when a question is asked, then the service runs the requested tools, returns their results to the model, and streams the final answer; a run stops after `ASSISTANT_MAX_TOOL_TURNS` turns with a typed failure, never an unbounded loop.
+- [ ] AC-1: Given a model that calls tools, when a question is asked, then the service runs the requested tools, returns their results to the model, and streams the final answer. After `ASSISTANT_MAX_TOOL_TURNS` tool turns the model is not asked again: the answer rests on the passages gathered so far, never an unbounded loop (changed during the build). A repeated call with the same arguments is answered with the numbers of the passages it already returned, not the passages again.
 - [ ] AC-2: Given `get_article` or `compare` with a document and article that exist, then the result holds all of that article's stored chunks in order; for ones that do not exist, the model gets an error it can correct.
 - [ ] AC-3: Given a final answer, then every citation resolves to a chunk a tool returned in this run, and every statement carries a citation marker; otherwise the answer is retried with the reason (AI-21) and fails typed after the last retry.
 - [ ] AC-4: Given the model answers that the documents do not cover the question, then the answer has no citations, the end event says `found=false`, and the UI shows the "no answer" state.
@@ -60,6 +61,12 @@ Confirmed by the human on 2026-10-30.
 3. **Injected documents:** two short text files written for the project, committed under `evals/corpus/` and pinned by hash in `corpus.json` (TEST-22, ADR 0018).
 4. **A model without tool calling** (`fake-extractive`, the browser journeys) keeps the F-06 search-then-answer path. A scripted fake agent covers the loop in unit and API tests.
 5. **No ADR:** no dependency, model or standard changes. The tool schemas and prompts are model-behaviour changes measured by `/eval-run`.
+6. **After the first measurement** (2026-10-30, confirmed by the human): the agent made the first token 35 times slower (9.7 s median against 280 ms), mostly by repeating the same calls. So:
+   - repeated calls return passage numbers only;
+   - the limit ends research and the answer follows, instead of a failure;
+   - the default limit is 2 turns;
+   - only questions about an article or annex, or comparisons, use the tools;
+   - such a question is not refused at the gate, because a short reference ("Co stanowi art. 17 RODO?") can be under the threshold. It is refused only if the tools find no passage either, and no answer is ever written without passages (AI-02).
 
 ## Open questions
 

@@ -218,6 +218,35 @@ No ADR: no new dependency, model or standard.
 - [x] red
 - [x] green
 
+### Step 10. No repeated calls, an answer at the limit, two turns by default
+
+Added after the first measurement (spec decision 6).
+
+- Kind: code
+- Tests first, in `tests/unit/services/test_agent.py`:
+  - a call repeated with the same arguments is answered with the passage numbers it returned before, and the tool does not run again;
+  - after `max_tool_turns` tool turns the model is not called again, and the answer rests on every gathered passage;
+  - with no `too_many_tool_turns` failure left, its code leaves the domain, the API schema and the UI copy;
+  - `ASSISTANT_MAX_TOOL_TURNS` defaults to 2.
+- Change: `services/agent.py`, `domain/answers.py`, `api/schemas.py`, `settings.py`, `useChatStream.ts`; `make api-client`.
+- Done when: `make check` is green.
+- [ ] red
+- [ ] green
+
+### Step 11. Tools only for articles and comparisons; such questions pass the gate
+
+- Kind: code
+- Tests first:
+  - `tests/unit/domain/test_routing.py`: questions naming an article or annex (English and Polish: "Article 83", "art. 17", "Artykuł 5", "Annex III", "załącznik III") or asking to compare ("compare", "difference between", "porównaj", "różnica") need tools; others do not.
+  - `tests/unit/services/test_agent.py`:
+    - other questions take the question service's path with no tool turn;
+    - an article question with no passage above the threshold still reaches the model;
+    - it is refused, with no answer call, when the tools find nothing either.
+- Change: `domain/routing.py`, `services/agent.py`, `prompts/agent.md` (the search result may be empty).
+- Done when: `make check` is green.
+- [ ] red
+- [ ] green
+
 ### Step 9. Measure and record the answer baseline
 
 - Kind: eval
@@ -232,11 +261,13 @@ No ADR: no new dependency, model or standard.
 
 - **Step 7:** the integration tests passed on the first run, three runs in a row, so the step has no green commit.
 
+- **Steps 10 and 11** were added after the first measurement: the first token was 9.7 s median, against 280 ms in F-06 (spec decision 6). That run: `evals/results/answers-20261030T062959Z.json`, not committed.
+
 ## Acceptance criteria mapping
 
 | AC | Proved by step |
 |---|---|
-| AC-1 | 4, 5, 7 |
+| AC-1 | 4, 5, 7, 10, 11 |
 | AC-2 | 3 |
 | AC-3 | 2, 4, 8 |
 | AC-4 | 2, 6, 1 (`not-covered` case) |
