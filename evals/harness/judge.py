@@ -8,7 +8,7 @@ import json
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Literal, cast
+from typing import Any, Literal
 
 import httpx
 
@@ -16,11 +16,17 @@ JUDGE_PROMPT = (Path(__file__).parents[1] / "prompts" / "judge.md").read_text(en
 JUDGE_MODEL = "qwen3-30b-a3b"
 TIMEOUT_SECONDS = 120
 MAX_TOKENS = 1024
-_CORRECTNESS = ("correct", "partial", "wrong")
 _SCHEMA: dict[str, Any] = {
     "type": "object",
     "properties": {
-        "correctness": {"type": "string", "enum": list(_CORRECTNESS)},
+        "key_points": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {"index": {"type": "integer"}, "made": {"type": "boolean"}},
+                "required": ["index", "made"],
+            },
+        },
         "reason": {"type": "string"},
         "sentences": {
             "type": "array",
@@ -31,7 +37,7 @@ _SCHEMA: dict[str, Any] = {
             },
         },
     },
-    "required": ["correctness", "reason", "sentences"],
+    "required": ["key_points", "reason", "sentences"],
 }
 
 
@@ -64,7 +70,7 @@ class Verdict:
     reason: str
     # Sentence index -> whether its cited passages support it; cited sentences only.
     supported: Mapping[int, bool]
-    # Key point index (from 1) -> whether the answer makes it (F-09a calibration).
+    # Key point index (from 1) -> whether the answer makes it; correctness follows from these.
     made: Mapping[int, bool] = field(default_factory=dict)
 
 
@@ -109,7 +115,7 @@ class JudgeClient:
 
 
 def _user_message(judged: JudgeInput) -> str:
-    key_points = "\n".join(f"- {point}" for point in judged.key_points)
+    key_points = "\n".join(f"{index}. {point}" for index, point in enumerate(judged.key_points, 1))
     sentences = "\n".join(f"{sentence.index}. {sentence.text}" for sentence in judged.sentences)
     passages = "\n\n".join(f"[{number}] {text}" for number, text in sorted(judged.passages.items()))
     return (
@@ -122,18 +128,30 @@ def _verdict(response: httpx.Response, judged: JudgeInput) -> Verdict:
     try:
         content = response.json()["choices"][0]["message"]["content"]
         reply = json.loads(content)
-        correctness = reply["correctness"]
+        made = {int(item["index"]): bool(item["made"]) for item in reply["key_points"]}
         supported = {int(item["index"]): bool(item["supported"]) for item in reply["sentences"]}
         reason = str(reply["reason"])
     except (ValueError, KeyError, IndexError, TypeError) as error:
         raise _Invalid from error
-    if correctness not in _CORRECTNESS:
+    points = range(1, len(judged.key_points) + 1)
+    if not set(points) <= set(made):
         raise _Invalid
     cited = {sentence.index for sentence in judged.sentences if sentence.cites}
     if not cited <= set(supported):
         raise _Invalid
+    made = {index: made[index] for index in points}
     return Verdict(
-        correctness=cast(Literal["correct", "partial", "wrong"], correctness),
+        correctness=_correctness(made),
         reason=reason,
         supported={index: supported[index] for index in sorted(cited)},
+        made=made,
     )
+
+
+def _correctness(made: Mapping[int, bool]) -> Literal["correct", "partial", "wrong"]:
+    """All key points made is correct, none is wrong, the rest is partial."""
+    if all(made.values()):
+        return "correct"
+    if any(made.values()):
+        return "partial"
+    return "wrong"
