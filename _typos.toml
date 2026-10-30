@@ -11,5 +11,6 @@ tak = "tak"
 ue = "ue"
 
 [files]
-# Baselines record the model's answers as given, in Polish too; they are output, not prose.
-extend-exclude = ["docs/evals/*-baseline.json"]
+# Baselines and the calibration set record answers and passages as given, in Polish too,
+# with the PDF's broken words; they are data, not prose.
+extend-exclude = ["docs/evals/*-baseline.json", "evals/datasets/calibration.yaml"]
