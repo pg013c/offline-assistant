@@ -79,3 +79,11 @@ def gate_failures(
 def _value(name: str, value: float) -> str:
     # MRR is a mean of reciprocal ranks, not a share.
     return f"{value:.3f}" if name == "mrr" else f"{value * 100:.1f}"
+
+
+# The answer floors of ADR 0022 (PRD §9).
+ANSWER_FLOORS: dict[str, float] = {}
+
+
+def below_answer_floors(current: Mapping[str, float | None]) -> list[str]:
+    raise NotImplementedError

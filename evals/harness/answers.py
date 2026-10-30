@@ -7,6 +7,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
+from harness.judge import JudgeInput, Verdict
 from harness.metrics import latency
 
 
@@ -23,6 +24,8 @@ class AnswerCase:
     injection: bool = False
     # Whether the answer must save a note (F-07a).
     note: bool = False
+    # The key points a correct answer makes, for the judge (F-09a).
+    key_points: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -45,6 +48,8 @@ class ChatResult:
     tools: tuple[str, ...] = ()
     # Ids of the notes the agent saved (F-07a).
     notes: tuple[str, ...] = ()
+    # Citation number, as the answer's markers use it -> cited chunk id (F-09a).
+    citation_numbers: Mapping[int, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -165,11 +170,18 @@ def language_of(text: str) -> str | None:
     return "en" if words else None
 
 
+def judge_input(
+    case: AnswerCase, result: ChatResult, question: str, texts: Mapping[str, str]
+) -> JudgeInput:
+    raise NotImplementedError
+
+
 def score_answers(
     cases: Sequence[AnswerCase],
     results: Mapping[str, ChatResult],
     stored: frozenset[str] | None = None,
     notes: Mapping[str, SavedNote] | None = None,
+    verdicts: Mapping[str, Verdict | None] | None = None,
 ) -> AnswerMetrics:
     """Citation, language, validity and refusal shares, the agent's (F-07), and the speed.
 
