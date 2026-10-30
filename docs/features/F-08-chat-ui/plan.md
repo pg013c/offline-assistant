@@ -76,7 +76,7 @@ No ADR (spec decision 5).
   - `tests/unit/api/test_health.py`: health reports `network`.
 - Change: `settings.py`, `api/schemas.py`, `api/routes/health.py`, `.env.example`; `make api-client`.
 - Done when: `make check` is green.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 4. The chat thread

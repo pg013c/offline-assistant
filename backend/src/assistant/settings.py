@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     max_tool_turns: int = Field(default=2, ge=1, le=10)
     # Where the agent saves notes (F-07a, AI-11); `<data_dir>/notes` unless set.
     notes_dir: Path = Path()
+    # Comparison mode may use the network (ADR 0004); nothing does until F-09.
+    allow_network: bool = False
     # `docling` reads every supported format; `text-only` reads .txt and .md without models.
     document_parser: Literal["docling", "text-only"] = "docling"
     # Where `make models` put the parsing and embedding models (ADR 0004).

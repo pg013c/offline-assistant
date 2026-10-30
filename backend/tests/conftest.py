@@ -26,7 +26,7 @@ from assistant.settings import Settings
 SETTLE_TIMEOUT_SECONDS = 5.0
 
 
-type ClientFor = Callable[[Path], TestClient]
+type ClientFor = Callable[..., TestClient]
 type Settle = Callable[[TestClient, str], dict[str, Any]]
 
 
@@ -36,9 +36,10 @@ def client_for() -> ClientFor:
     restart, and start with an empty index."""
     stores: dict[Path, FakeDocumentStore] = {}
 
-    def build(data_dir: Path) -> TestClient:
+    def build(data_dir: Path, allow_network: bool = False) -> TestClient:
         settings = Settings(
             data_dir=data_dir,
+            allow_network=allow_network,
             models_dir=data_dir / "models",
             # The in-memory index returns only passages sharing a word with the question.
             min_similarity=0,
