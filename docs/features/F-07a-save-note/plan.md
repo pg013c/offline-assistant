@@ -95,7 +95,7 @@ No ADR (spec decision 5).
   - `tests/unit/adapters/test_file_note_store.py`: files stay in the directory, and an id with a path separator is not read.
 - Change: `domain/notes.py`, `ports/note_store.py`, `adapters/file_note_store.py`, `adapters/fakes/note_store.py`.
 - Done when: `make check` is green.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 3. The `save_note` tool
