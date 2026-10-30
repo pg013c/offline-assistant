@@ -14,8 +14,8 @@ import httpx
 
 JUDGE_PROMPT = (Path(__file__).parents[1] / "prompts" / "judge.md").read_text(encoding="utf-8")
 JUDGE_MODEL = "qwen3-30b-a3b"
-TIMEOUT_SECONDS = 120
-MAX_TOKENS = 1024
+TIMEOUT_SECONDS = 600
+MAX_TOKENS = 8192
 _SCHEMA: dict[str, Any] = {
     "type": "object",
     "properties": {

@@ -72,7 +72,7 @@ llm-preflight: ## Check that make llm can start: llama-server installed, model f
 
 llm: llm-preflight ## Serve the local LLM with llama-server on LLM_PORT (Metal, thinking off; ADR 0021)
 	llama-server -m "$(LLM_FILE)" --alias qwen3-8b --host 127.0.0.1 --port $(LLM_PORT) \
-	  --n-gpu-layers 99 --ctx-size 16384 --jinja --reasoning-budget 0
+	  --n-gpu-layers 99 --ctx-size 16384 --jinja
 
 judge-models: ## Download the evaluation's judge (Qwen3 30B-A3B, about 18.6 GB) into ASSISTANT_MODELS_DIR, checked by hash
 	$(BACKEND) python scripts/download_models.py "$(ASSISTANT_MODELS_DIR)" --judge
@@ -86,9 +86,9 @@ judge-preflight: ## Check that make judge can start: llama-server installed, jud
 	  echo "Port $(JUDGE_PORT) is already used by $$owner. Stop it or set JUDGE_PORT."; exit 1; \
 	fi
 
-judge: judge-preflight ## Serve the evaluation's judge with llama-server on JUDGE_PORT (thinking off; ADR 0022)
+judge: judge-preflight ## Serve the evaluation's judge with llama-server on JUDGE_PORT (thinking on; ADR 0023)
 	llama-server -m "$(JUDGE_FILE)" --alias qwen3-30b-a3b --host 127.0.0.1 --port $(JUDGE_PORT) \
-	  --n-gpu-layers 99 --ctx-size 16384 --jinja --reasoning-budget 0
+	  --n-gpu-layers 99 --ctx-size 16384 --jinja
 
 eval-corpus: ## Download the evaluation corpus into EVAL_CORPUS_DIR, checked against pinned hashes
 	$(EVALS) python -m harness.corpus "$(EVAL_CORPUS_DIR)"
