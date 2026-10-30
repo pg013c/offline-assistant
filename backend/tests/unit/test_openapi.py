@@ -52,3 +52,19 @@ def test_notes_and_the_note_event_are_documented() -> None:
 
     assert {"/api/notes", "/api/notes/{note_id}"} <= set(schema["paths"])
     assert {"NoteSummary", "NoteDetail", "ChatNoteEvent"} <= set(schema["components"]["schemas"])
+
+
+def test_a_citation_event_carries_the_number_its_marker_uses() -> None:
+    schemas = json.loads(openapi_json())["components"]["schemas"]
+
+    assert "number" in schemas["ChatCitationEvent"]["required"]
+
+
+def test_models_are_listed_and_a_chat_request_may_name_one() -> None:
+    schema = json.loads(openapi_json())
+
+    assert "/api/models" in schema["paths"]
+    assert "ModelChoiceResponse" in schema["components"]["schemas"]
+    request = schema["components"]["schemas"]["ChatRequest"]
+    assert "model" in request["properties"]
+    assert "model" not in request.get("required", [])

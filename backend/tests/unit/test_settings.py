@@ -231,6 +231,7 @@ def test_the_chat_model_is_the_test_model_unless_configured(
     assert settings.max_retries == 2
     assert settings.max_tool_turns == 2
     assert settings.notes_dir == tmp_path / "notes"
+    assert settings.allow_network is False
 
 
 def test_a_local_model_is_chosen_by_configuration(
@@ -263,3 +264,13 @@ def test_the_notes_directory_can_be_set(monkeypatch: pytest.MonkeyPatch, tmp_pat
     monkeypatch.setenv("ASSISTANT_NOTES_DIR", str(tmp_path / "elsewhere"))
 
     assert load_settings().notes_dir == tmp_path / "elsewhere"
+
+
+def test_network_mode_is_switched_on_by_its_variable(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("ASSISTANT_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("ASSISTANT_MODELS_DIR", str(tmp_path / "models"))
+    monkeypatch.setenv("ASSISTANT_ALLOW_NETWORK", "1")
+
+    assert load_settings().allow_network is True

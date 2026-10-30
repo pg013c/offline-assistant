@@ -9,6 +9,8 @@ from pydantic import BaseModel, Field, RootModel
 class HealthResponse(BaseModel):
     status: Literal["ok"]
     version: str
+    # True in comparison mode, which may use the network (ADR 0004); the UI shows it.
+    network: bool
 
 
 class DocumentResponse(BaseModel):
@@ -40,6 +42,16 @@ class ErrorResponse(BaseModel):
 
 class ChatRequest(BaseModel):
     question: str = Field(min_length=1, max_length=2000)
+    # A model from GET /api/models; the default when left out (F-08).
+    model: str | None = Field(default=None, max_length=100)
+
+
+class ModelChoiceResponse(BaseModel):
+    """A model the API can answer with now."""
+
+    id: str
+    is_test_model: bool
+    is_default: bool
 
 
 class ChunkSummary(BaseModel):
@@ -108,6 +120,8 @@ class ChatCitationEvent(BaseModel):
     """A passage the answer is based on, quoted verbatim."""
 
     type: Literal["citation"]
+    # The passage number the answer's markers use for this citation, e.g. 2 for "[2]".
+    number: int
     chunk_id: str
     document_id: str
     document_title: str

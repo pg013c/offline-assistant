@@ -35,3 +35,7 @@ class RerankerOff(Exception):
 
 class NoteNotFound(Exception):
     """No note has this id."""
+
+
+class UnknownModel(Exception):
+    """A request names a model the API cannot answer with."""

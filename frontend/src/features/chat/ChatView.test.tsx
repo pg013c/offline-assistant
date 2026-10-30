@@ -1,13 +1,22 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 
 import { renderWithQueryClient } from '../../test/render'
 import { server } from '../../test/server'
 import { ChatView } from './ChatView'
 
 const QUOTE = 'Providers keep logs for six months.'
+
+const MODELS = [
+  { id: 'qwen3-8b', is_test_model: false, is_default: true },
+  { id: 'fake-extractive', is_test_model: true, is_default: false },
+]
+
+beforeEach(() => {
+  server.use(http.get('*/api/models', () => HttpResponse.json(MODELS)))
+})
 
 function serveAnswer(events: object[]) {
   const body = events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join('')
@@ -52,7 +61,7 @@ describe('ChatView', () => {
     await ask('How long are logs kept?')
 
     expect(await screen.findByText('Providers keep logs for six months.')).toBeInTheDocument()
-    expect(screen.getByText(/fake-extractive/)).toBeInTheDocument()
+    expect(screen.getByText(/Answered by fake-extractive/)).toBeInTheDocument()
     expect(screen.getByText(/test model, not AI/i)).toBeInTheDocument()
   })
 
@@ -240,6 +249,141 @@ describe('ChatView', () => {
       'Saving note: Breach duties',
       'Saved note: Breach duties',
     ])
+  })
+
+  it('keeps every question and its answer on screen, in order, and clears the input', async () => {
+    serveAnswer(FOUND)
+    renderWithQueryClient(<ChatView />)
+
+    await ask('First question?')
+    expect(await screen.findByText(/Answered by fake-extractive/)).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Question' })).toHaveValue('')
+    await ask('Second question?')
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/Answered by fake-extractive/)).toHaveLength(2)
+    })
+    const turns = screen.getAllByRole('article')
+    expect(turns).toHaveLength(2)
+    expect(turns[0]).toHaveTextContent('First question?')
+    expect(turns[1]).toHaveTextContent('Second question?')
+    expect(within(turns[0]!).getByRole('list', { name: 'Sources' })).toBeInTheDocument()
+  })
+
+  it('opens the passage a marker cites, by click and from the keyboard', async () => {
+    serveAnswer([
+      { type: 'text', text: 'Logs are kept six months [2]. Providers keep them [1].' },
+      {
+        type: 'citation',
+        number: 2,
+        chunk_id: 'a1:1',
+        document_id: 'a1',
+        document_title: 'retention',
+        quote: 'Logs are kept for six months.',
+        location: { heading_path: [], article: '19', paragraph: null, page: null },
+      },
+      {
+        type: 'citation',
+        number: 1,
+        chunk_id: 'a1:0',
+        document_id: 'a1',
+        document_title: 'policy',
+        quote: QUOTE,
+        location: { heading_path: [], article: '12', paragraph: null, page: null },
+      },
+      { type: 'end', model_id: 'qwen3-8b', found: true, is_test_model: false },
+    ])
+    renderWithQueryClient(<ChatView />)
+    await ask('How long are logs kept?')
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Source 2' }))
+    expect(screen.getByRole('dialog', { name: 'retention' })).toBeInTheDocument()
+    await userEvent.keyboard('{Escape}')
+    screen.getByRole('button', { name: 'Source 1' }).focus()
+    await userEvent.keyboard('{Enter}')
+
+    expect(screen.getByRole('dialog', { name: 'policy' })).toBeInTheDocument()
+    expect(screen.getByText(/Logs are kept six months/)).toBeInTheDocument()
+  })
+
+  it('leaves a marker without a citation as text', async () => {
+    serveAnswer([
+      { type: 'text', text: 'Kept [3].' },
+      { type: 'end', model_id: 'qwen3-8b', found: true, is_test_model: false },
+    ])
+    renderWithQueryClient(<ChatView />)
+    await ask('How long?')
+
+    expect(await screen.findByText('Kept [3].')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Source/ })).not.toBeInTheDocument()
+  })
+
+  it('asks with the model the user chose', async () => {
+    const bodies: unknown[] = []
+    server.use(
+      http.post('*/api/chat', async ({ request }) => {
+        bodies.push(await request.json())
+        const body = [
+          { type: 'text', text: 'Quoted.' },
+          { type: 'end', model_id: 'fake-extractive', found: true, is_test_model: true },
+        ]
+          .map((event) => `data: ${JSON.stringify(event)}\n\n`)
+          .join('')
+        return new HttpResponse(body, { headers: { 'Content-Type': 'text/event-stream' } })
+      }),
+    )
+    renderWithQueryClient(<ChatView />)
+    await screen.findByRole('option', { name: 'qwen3-8b' })
+
+    await userEvent.selectOptions(
+      screen.getByRole('combobox', { name: 'Model' }),
+      'fake-extractive',
+    )
+    await ask('How long?')
+
+    expect(await screen.findByText(/Answered by fake-extractive/)).toBeInTheDocument()
+    expect(bodies).toEqual([{ question: 'How long?', model: 'fake-extractive' }])
+  })
+
+  it('names the model a failed turn asked, the default when none was chosen', async () => {
+    server.use(http.post('*/api/chat', () => new HttpResponse(null, { status: 500 })))
+    renderWithQueryClient(<ChatView />)
+    await screen.findByRole('option', { name: 'qwen3-8b' })
+
+    await ask('Anything?')
+
+    const turn = await screen.findByRole('article')
+    await within(turn).findByRole('alert')
+    expect(turn).toHaveTextContent('Asked qwen3-8b')
+  })
+
+  it('lets a new question stop the answer still being written', async () => {
+    let calls = 0
+    server.use(
+      http.post('*/api/chat', () => {
+        calls += 1
+        if (calls === 1) {
+          return new HttpResponse(new ReadableStream(), {
+            headers: { 'Content-Type': 'text/event-stream' },
+          })
+        }
+        const body = [
+          { type: 'text', text: 'Second.' },
+          { type: 'end', model_id: 'qwen3-8b', found: true, is_test_model: false },
+        ]
+          .map((event) => `data: ${JSON.stringify(event)}\n\n`)
+          .join('')
+        return new HttpResponse(body, { headers: { 'Content-Type': 'text/event-stream' } })
+      }),
+    )
+    renderWithQueryClient(<ChatView />)
+
+    await ask('First?')
+    await ask('Second?')
+
+    expect(await screen.findByText('Second.')).toBeInTheDocument()
+    const [first] = screen.getAllByRole('article')
+    expect(first).toHaveTextContent('Stopped for the next question.')
   })
 
   it('tells the user when the answer failed', async () => {

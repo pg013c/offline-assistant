@@ -1,5 +1,4 @@
 import { createParser } from 'eventsource-parser'
-import { useCallback, useEffect, useReducer, useRef } from 'react'
 
 import { apiClient } from '../../api/client'
 import type { components } from '../../api/schema'
@@ -12,8 +11,8 @@ type ChatEvent = Schemas['ChatEvent']
 type ChatErrorCode = Schemas['ChatErrorEvent']['code']
 
 export interface ChatAnswer {
-  status: 'idle' | 'streaming' | 'done' | 'error'
-  question?: string
+  // `stopped`: a newer question cut the answer short.
+  status: 'streaming' | 'done' | 'error' | 'stopped'
   text: string
   citations: ChatCitation[]
   // The agent's tool calls, in order, before the answer text (F-07).
@@ -26,24 +25,20 @@ export interface ChatAnswer {
   error?: string
 }
 
-type Action =
-  | { type: 'asked'; question: string }
-  | { type: 'event'; event: ChatEvent }
-  | { type: 'failed'; message: string }
+export type AnswerAction = { type: 'event'; event: ChatEvent } | { type: 'failed'; message: string }
 
-const IDLE: ChatAnswer = { status: 'idle', text: '', citations: [], tools: [], notes: [] }
+/** An answer before its first event. */
+export const STREAMING: ChatAnswer = {
+  status: 'streaming',
+  text: '',
+  citations: [],
+  tools: [],
+  notes: [],
+}
 
-function reduce(answer: ChatAnswer, action: Action): ChatAnswer {
+/** The answer after one more event of its stream, or after the stream failed. */
+export function reduceAnswer(answer: ChatAnswer, action: AnswerAction): ChatAnswer {
   switch (action.type) {
-    case 'asked':
-      return {
-        status: 'streaming',
-        question: action.question,
-        text: '',
-        citations: [],
-        tools: [],
-        notes: [],
-      }
     case 'failed':
       return { ...answer, status: 'error', error: action.message }
     case 'event':
@@ -117,13 +112,15 @@ function isChatEvent(value: unknown): value is ChatEvent {
   )
 }
 
-async function streamAnswer(
+/** Posts the question and calls `onEvent` for each event of the streamed answer (FE-12). */
+export async function streamAnswer(
   question: string,
+  model: string | undefined,
   signal: AbortSignal,
   onEvent: (event: ChatEvent) => void,
 ): Promise<void> {
   const { response } = await apiClient.POST('/api/chat', {
-    body: { question },
+    body: model === undefined ? { question } : { question, model },
     parseAs: 'stream',
     signal,
   })
@@ -152,31 +149,4 @@ async function streamAnswer(
   if (!progress.ended) {
     throw new Error('The answer stopped before it was complete.')
   }
-}
-
-/** Asks a question and follows the streamed answer (FE-12). A new question cancels the last one. */
-export function useChatStream(): { answer: ChatAnswer; ask: (question: string) => void } {
-  const [answer, dispatch] = useReducer(reduce, IDLE)
-  const current = useRef<AbortController | null>(null)
-
-  useEffect(() => () => current.current?.abort(), [])
-
-  const ask = useCallback((question: string) => {
-    current.current?.abort()
-    const controller = new AbortController()
-    current.current = controller
-    dispatch({ type: 'asked', question })
-    streamAnswer(question, controller.signal, (event) => {
-      dispatch({ type: 'event', event })
-    }).catch((error: unknown) => {
-      if (!controller.signal.aborted) {
-        dispatch({
-          type: 'failed',
-          message: error instanceof Error ? error.message : String(error),
-        })
-      }
-    })
-  }, [])
-
-  return { answer, ask }
 }

@@ -27,6 +27,7 @@ from assistant.adapters.text_document_parser import TextDocumentParser
 from assistant.adapters.thread_ingestion_queue import ThreadIngestionQueue
 from assistant.api.errors import register_error_handlers
 from assistant.api.routes import chat, documents, health, search
+from assistant.api.routes import models as models_routes
 from assistant.api.routes import notes as notes_routes
 from assistant.log import configure_logging
 from assistant.ports.chat_model import ChatModel, ToolCallingModel
@@ -37,6 +38,7 @@ from assistant.ports.ingestion_queue import IngestionQueue
 from assistant.ports.reranker import Reranker
 from assistant.services.agent import AgentService
 from assistant.services.documents import DocumentService
+from assistant.services.models import ChatModels, ModelEntry
 from assistant.services.notes import NoteService
 from assistant.services.questions import Answerer, QuestionService
 from assistant.services.tools import DocumentTools
@@ -143,6 +145,29 @@ def create_app(settings: Settings, adapters: Adapters | None = None) -> FastAPI:
         if adapters.tool_model
         else question_service
     )
+    entries = [
+        ModelEntry(
+            id=adapters.chat_model.model_id,
+            is_test_model=adapters.chat_model.is_test_model,
+            answerer=answers,
+        )
+    ]
+    # The test model is always offered beside a real one, to compare with (F-08).
+    test_model = FakeExtractiveChatModel()
+    if adapters.chat_model.model_id != test_model.model_id:
+        entries.append(
+            ModelEntry(
+                id=test_model.model_id,
+                is_test_model=True,
+                answerer=QuestionService(
+                    adapters.index,
+                    test_model,
+                    adapters.store,
+                    settings.min_similarity,
+                    adapters.reranker,
+                ),
+            )
+        )
 
     async def restore() -> None:
         # Refilling an empty index embeds every stored chunk; the API answers meanwhile.
@@ -176,7 +201,7 @@ def create_app(settings: Settings, adapters: Adapters | None = None) -> FastAPI:
     app.state.settings = settings
     app.state.document_service = document_service
     app.state.question_service = question_service
-    app.state.answers = answers
+    app.state.models = ChatModels(entries)
     app.state.note_service = NoteService(notes)
     register_error_handlers(app)
     app.include_router(health.router, prefix=API_PREFIX)
@@ -184,6 +209,7 @@ def create_app(settings: Settings, adapters: Adapters | None = None) -> FastAPI:
     app.include_router(chat.router, prefix=API_PREFIX)
     app.include_router(search.router, prefix=API_PREFIX)
     app.include_router(notes_routes.router, prefix=API_PREFIX)
+    app.include_router(models_routes.router, prefix=API_PREFIX)
     return app
 
 

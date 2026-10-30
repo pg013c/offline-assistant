@@ -26,7 +26,8 @@ playwright-report/
 test-results/
 
 # Models, data and runtime state (never committed, see ADR 0004)
-models/
+/models/
+data/models/
 data/raw/
 data/storage/
 data/eval/

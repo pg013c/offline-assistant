@@ -13,7 +13,7 @@ export interface paths {
         };
         /**
          * Get Health
-         * @description Report that the API is up and which version is running.
+         * @description Report that the API is up, which version is running and whether network mode is on.
          */
         get: operations["get_health"];
         put?: never;
@@ -194,6 +194,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Models
+         * @description The models a question can name now; the default answers when none is named.
+         */
+        get: operations["list_models"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -213,6 +233,8 @@ export interface components {
              * @enum {string}
              */
             type: "citation";
+            /** Number */
+            number: number;
             /** Chunk Id */
             chunk_id: string;
             /** Document Id */
@@ -296,6 +318,8 @@ export interface components {
         ChatRequest: {
             /** Question */
             question: string;
+            /** Model */
+            model?: string | null;
         };
         /**
          * ChatTextEvent
@@ -426,6 +450,20 @@ export interface components {
             status: "ok";
             /** Version */
             version: string;
+            /** Network */
+            network: boolean;
+        };
+        /**
+         * ModelChoiceResponse
+         * @description A model the API can answer with now.
+         */
+        ModelChoiceResponse: {
+            /** Id */
+            id: string;
+            /** Is Test Model */
+            is_test_model: boolean;
+            /** Is Default */
+            is_default: boolean;
         };
         /**
          * NoteDetail
@@ -762,13 +800,13 @@ export interface operations {
                     "text/event-stream": unknown;
                 };
             };
-            /** @description Validation Error */
+            /** @description Unprocessable Content */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "text/event-stream": components["schemas"]["ErrorResponse"];
                 };
             };
         };
@@ -862,6 +900,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_models: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelChoiceResponse"][];
                 };
             };
         };

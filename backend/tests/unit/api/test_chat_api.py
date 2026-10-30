@@ -105,6 +105,7 @@ def test_citation_events_carry_the_quoted_passage(client: TestClient, upload: Up
     _, events = ask(client)
 
     citation = next(event for event in events if event["type"] == "citation")
+    assert citation["number"] == 1
     assert citation["document_title"] == "policy"
     parsed = TextDocumentParser().parse("policy.txt", POLICY)
     chunks = {chunk.id: chunk.text for chunk in chunk_document(document_id_for(POLICY), parsed)}

@@ -11,7 +11,7 @@
           "health"
         ],
         "summary": "Get Health",
-        "description": "Report that the API is up and which version is running.",
+        "description": "Report that the API is up, which version is running and whether network mode is on.",
         "operationId": "get_health",
         "responses": {
           "200": {
@@ -321,11 +321,11 @@
             }
           },
           "422": {
-            "description": "Validation Error",
+            "description": "Unprocessable Content",
             "content": {
-              "application/json": {
+              "text/event-stream": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -457,6 +457,32 @@
           }
         }
       }
+    },
+    "/api/models": {
+      "get": {
+        "tags": [
+          "models"
+        ],
+        "summary": "List Models",
+        "description": "The models a question can name now; the default answers when none is named.",
+        "operationId": "list_models",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ModelChoiceResponse"
+                  },
+                  "type": "array",
+                  "title": "Response List Models"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -482,6 +508,10 @@
             "const": "citation",
             "title": "Type"
           },
+          "number": {
+            "type": "integer",
+            "title": "Number"
+          },
           "chunk_id": {
             "type": "string",
             "title": "Chunk Id"
@@ -505,6 +535,7 @@
         "type": "object",
         "required": [
           "type",
+          "number",
           "chunk_id",
           "document_id",
           "document_title",
@@ -677,6 +708,18 @@
             "maxLength": 2000,
             "minLength": 1,
             "title": "Question"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
           }
         },
         "type": "object",
@@ -990,14 +1033,43 @@
           "version": {
             "type": "string",
             "title": "Version"
+          },
+          "network": {
+            "type": "boolean",
+            "title": "Network"
           }
         },
         "type": "object",
         "required": [
           "status",
-          "version"
+          "version",
+          "network"
         ],
         "title": "HealthResponse"
+      },
+      "ModelChoiceResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "is_test_model": {
+            "type": "boolean",
+            "title": "Is Test Model"
+          },
+          "is_default": {
+            "type": "boolean",
+            "title": "Is Default"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "is_test_model",
+          "is_default"
+        ],
+        "title": "ModelChoiceResponse",
+        "description": "A model the API can answer with now."
       },
       "NoteDetail": {
         "properties": {

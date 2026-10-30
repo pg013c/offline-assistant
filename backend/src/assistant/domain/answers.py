@@ -31,6 +31,8 @@ class AnswerText:
 @dataclass(frozen=True, slots=True)
 class AnswerCitation:
     citation: Citation
+    # The passage number the answer's markers use for it, e.g. 2 for "[2]" (F-08).
+    number: int
 
 
 @dataclass(frozen=True, slots=True)
