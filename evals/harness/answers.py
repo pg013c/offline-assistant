@@ -19,6 +19,8 @@ class AnswerCase:
     # Tools any of which should be called, and strings the answer must not hold (F-07).
     tools: tuple[str, ...] = ()
     forbidden: tuple[str, ...] = ()
+    # A case whose source holds a planted instruction (AI-12).
+    injection: bool = False
 
 
 @dataclass(frozen=True)
