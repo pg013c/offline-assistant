@@ -111,7 +111,7 @@ class OpenAICompatibleChat:
     ) -> AsyncIterator[ModelEvent]:
         messages: list[dict[str, str]] = [
             {"role": "system", "content": ANSWER_PROMPT},
-            {"role": "user", "content": _user_message(question, passages)},
+            {"role": "user", "content": _user_message(question, passages, notice)},
         ]
         tally = _Tally()
         async with httpx.AsyncClient(
@@ -378,13 +378,18 @@ def _error_status(url: str, response: httpx.Response) -> ModelFailed:
     )
 
 
-def _user_message(question: str, passages: Sequence[Chunk]) -> str:
+def _user_message(question: str, passages: Sequence[Chunk], notice: str | None = None) -> str:
     # Passages are delimited data, each with its heading path for context (AI-10).
     blocks = [
         f'<passage number="{number}">\n{neutralised(indexed_text(chunk))}\n</passage>'
         for number, chunk in enumerate(passages, start=1)
     ]
-    return USER_PROMPT.substitute(passages="\n\n".join(blocks), question=question)
+    # A notice is the service's own word, e.g. whether a note was saved (F-07a); not data.
+    return USER_PROMPT.substitute(
+        passages="\n\n".join(blocks),
+        question=question,
+        notice=f"\n\n{notice}" if notice else "",
+    )
 
 
 def _chunk(line: str) -> dict[str, Any] | None:

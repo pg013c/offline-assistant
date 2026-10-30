@@ -117,6 +117,11 @@ class DocumentTools:
     ) -> str:
         """Saves the note when every line cites passages of this run; the service, not the
         model, turns the markers into the note's sources (FR-11)."""
+        if ledger.saved_notes:
+            raise _ToolError(
+                f"a note was already saved in this run ({ledger.saved_notes[0].id}); "
+                "do not save another"
+            )
         cited = list(dict.fromkeys(markers(arguments.content)))
         for number in cited:
             if not 1 <= number <= len(ledger):
