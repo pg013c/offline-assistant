@@ -61,7 +61,7 @@ describe('ChatView', () => {
     await ask('How long are logs kept?')
 
     expect(await screen.findByText('Providers keep logs for six months.')).toBeInTheDocument()
-    expect(screen.getByText(/fake-extractive/)).toBeInTheDocument()
+    expect(screen.getByText(/Answered by fake-extractive/)).toBeInTheDocument()
     expect(screen.getByText(/test model, not AI/i)).toBeInTheDocument()
   })
 
