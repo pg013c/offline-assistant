@@ -7,6 +7,7 @@ that `make judge` starts, with a JSON schema and at temperature 0.
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from html import escape
 from pathlib import Path
 from typing import Any, Literal
 
@@ -120,12 +121,21 @@ class JudgeClient:
 
 
 def _user_message(judged: JudgeInput) -> str:
+    """The input with the question, answer and passages in tags; their text is escaped, so
+    that nothing in it can close a tag (AI-10)."""
     key_points = "\n".join(f"{index}. {point}" for index, point in enumerate(judged.key_points, 1))
-    sentences = "\n".join(f"{sentence.index}. {sentence.text}" for sentence in judged.sentences)
-    passages = "\n\n".join(f"[{number}] {text}" for number, text in sorted(judged.passages.items()))
+    sentences = "\n".join(
+        f'<sentence n="{sentence.index}">{escape(sentence.text, quote=False)}</sentence>'
+        for sentence in judged.sentences
+    )
+    passages = "\n".join(
+        f'<passage n="{number}">{escape(text, quote=False)}</passage>'
+        for number, text in sorted(judged.passages.items())
+    )
     return (
-        f"Question: {judged.question}\n\nKey points:\n{key_points}\n\n"
-        f"Answer, by sentence:\n{sentences}\n\nCited passages:\n{passages or '(none)'}"
+        f"<question>{escape(judged.question, quote=False)}</question>\n\n"
+        f"Key points:\n{key_points}\n\n<answer>\n{sentences}\n</answer>\n\n"
+        f"<passages>\n{passages}\n</passages>"
     )
 
 

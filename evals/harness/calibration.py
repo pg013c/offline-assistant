@@ -4,7 +4,6 @@ Every judged run judges these answers again. Agreement below the bar fails the r
 verdicts from a judge that disagrees with people cannot be reported.
 """
 
-import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -12,7 +11,7 @@ from typing import Any, Literal, cast
 
 import yaml
 
-from harness.answers import statements_of
+from harness.answers import cited_numbers, statements_of
 from harness.judge import JudgedSentence, JudgeInput, Verdict
 
 AGREEMENT_BAR = 0.85
@@ -42,7 +41,7 @@ def load_calibration(path: Path) -> list[CalibrationItem]:
 def _item(entry: Mapping[str, Any]) -> CalibrationItem:
     answer = str(entry["answer"])
     sentences = tuple(
-        JudgedSentence(index=index, text=text, cites=_cites(text))
+        JudgedSentence(index=index, text=text, cites=cited_numbers(text))
         for index, text in enumerate(statements_of(answer), start=1)
     )
     expected = entry["expected"]
@@ -61,11 +60,6 @@ def _item(entry: Mapping[str, Any]) -> CalibrationItem:
             supported={int(index): bool(value) for index, value in expected["supported"].items()},
         ),
     )
-
-
-def _cites(text: str) -> tuple[int, ...]:
-    numbers = [int(n) for marker in re.findall(r"\[([\d,\s]+)\]", text) for n in marker.split(",")]
-    return tuple(dict.fromkeys(numbers))
 
 
 def agreement(

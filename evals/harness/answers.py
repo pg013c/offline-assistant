@@ -183,7 +183,7 @@ def judge_input(
         JudgedSentence(
             index=index,
             text=sentence,
-            cites=tuple(dict.fromkeys(_marker_numbers(sentence))),
+            cites=cited_numbers(sentence),
         )
         for index, sentence in enumerate(statements_of(result.answer), start=1)
     )
@@ -203,7 +203,7 @@ def judge_input(
 
 def cited_numbers(text: str) -> tuple[int, ...]:
     """The passage numbers a text's citation markers name, each once, in order."""
-    raise NotImplementedError
+    return tuple(dict.fromkeys(_marker_numbers(text)))
 
 
 def _marker_numbers(text: str) -> list[int]:
