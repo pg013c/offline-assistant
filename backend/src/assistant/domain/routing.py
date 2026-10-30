@@ -6,17 +6,17 @@ provision, which search finds by meaning rather than by number, or compares two 
 
 import re
 
-# "Article 83", "art. 17", "Artykuł 26", "Annex III", "załącznik III", with a number after it.
-_PROVISION = re.compile(
-    r"\b(?:article|art\.|artyku\w*|annex|za[łl][ąa]cznik\w*)\s*(?:\d+|[IVXLC]+\b)",
-    re.IGNORECASE,
-)
+# "Article 83", "articles 5 and 6", "art. 17", "Art 17", "Artykuł 26", followed by a number.
+# Annexes are left out: no tool reads an annex yet (F-07 review #4).
+_PROVISION = re.compile(r"\b(?:articles?|art\.?|artyku\w*)\s*\d+", re.IGNORECASE)
+# "Compare", "differ", "difference between", "versus", "porównaj", "różnica", but not the
+# adjective "different".
 _COMPARISON = re.compile(
-    r"\b(?:compar\w*|differ\w*|versus|vs\.?|porówna\w*|różni\w*)\b",
+    r"\b(?:compar\w*|differ(?:s|ence|ences)?|versus|vs\.?|porówna\w*|różni\w*)\b",
     re.IGNORECASE,
 )
 
 
 def needs_tools(question: str) -> bool:
-    """True for a question about a numbered article or annex, or one asking to compare."""
+    """True for a question about a numbered article, or one asking to compare."""
     return bool(_PROVISION.search(question) or _COMPARISON.search(question))

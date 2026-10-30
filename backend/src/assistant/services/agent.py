@@ -58,7 +58,7 @@ class AgentService:
     async def ask(self, question: str) -> AsyncIterator[AnswerEvent]:
         """Tool calls, then text pieces, citations and an end event; or a refusal.
 
-        Only a question about an article or annex, or a comparison, uses the tools; any other
+        Only a question about an article, or a comparison, uses the tools; any other
         takes the question service's search-then-answer path (spec decision 6).
         """
         if not needs_tools(question):
