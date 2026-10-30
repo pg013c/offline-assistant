@@ -105,7 +105,7 @@
   - an invalid reply is retried, then "not judged";
   - the prompt comes from its file.
 - Change: `harness/judge.py`, `evals/prompts/judge.md`.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 5. Judged metrics, tool validity and the gate
