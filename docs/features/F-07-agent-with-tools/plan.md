@@ -192,7 +192,7 @@ No ADR: no new dependency, model or standard.
   - `ChatView.test.tsx`: `found=false` shows the no-answer notice and no citations, and a tool line shows "Searching: …" or "Reading: …".
 - Change: `useChatStream.ts`, `ChatView.tsx`.
 - Done when: `make check` is green and `make e2e` passes unchanged (`fake-extractive`).
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 7. Integration with the local model

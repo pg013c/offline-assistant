@@ -153,6 +153,68 @@ describe('ChatView', () => {
     expect(screen.queryByRole('list', { name: 'Sources' })).not.toBeInTheDocument()
   })
 
+  it('shows an answer the documents do not cover as no answer, without sources', async () => {
+    serveAnswer([
+      { type: 'text', text: 'The documents do not say what penalties apply.' },
+      { type: 'end', model_id: 'qwen3-8b', found: false, is_test_model: false },
+    ])
+    renderWithQueryClient(<ChatView />)
+
+    await ask('What penalties apply?')
+
+    expect(await screen.findByRole('note')).toHaveTextContent(
+      /no answer in the uploaded documents/i,
+    )
+    expect(screen.getByText(/do not say what penalties apply/i)).toBeInTheDocument()
+    expect(screen.queryByRole('list', { name: 'Sources' })).not.toBeInTheDocument()
+  })
+
+  it('shows a found answer without the no-answer note', async () => {
+    serveAnswer(FOUND)
+    renderWithQueryClient(<ChatView />)
+
+    await ask('How long are logs kept?')
+
+    expect(await screen.findByRole('list', { name: 'Sources' })).toBeInTheDocument()
+    expect(screen.queryByRole('note')).not.toBeInTheDocument()
+  })
+
+  it('shows each step the agent took', async () => {
+    serveAnswer([
+      { type: 'tool', name: 'search_documents', arguments: { query: 'breach notification' } },
+      {
+        type: 'tool',
+        name: 'search_documents',
+        arguments: { query: 'deadline', document: 'GDPR (EN)' },
+      },
+      { type: 'tool', name: 'get_article', arguments: { document: 'GDPR (EN)', number: '33' } },
+      {
+        type: 'tool',
+        name: 'compare',
+        arguments: {
+          a: { document: 'GDPR (EN)', number: '33' },
+          b: { document: 'AI Act (EN)', number: '73' },
+        },
+      },
+      ...FOUND,
+    ])
+    renderWithQueryClient(<ChatView />)
+
+    await ask('When must a breach be notified?')
+
+    const steps = await screen.findByRole('list', { name: 'Steps' })
+    expect(
+      within(steps)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual([
+      'Searching: breach notification',
+      'Searching GDPR (EN): deadline',
+      'Reading: GDPR (EN), Art. 33',
+      'Comparing: GDPR (EN), Art. 33 with AI Act (EN), Art. 73',
+    ])
+  })
+
   it('tells the user when the answer failed', async () => {
     server.use(http.post('*/api/chat', () => new HttpResponse(null, { status: 500 })))
     renderWithQueryClient(<ChatView />)
@@ -170,6 +232,7 @@ describe('ChatView', () => {
       /not reachable.*127\.0\.0\.1:8080/i,
     ],
     ['model_timeout', 'The model server took over 60 s.', /took too long.*60 s/i],
+    ['too_many_tool_turns', 'Still calling tools after 4 turns.', /kept looking things up/i],
     [
       'model_error',
       'The model server at http://127.0.0.1:8080 answered 400: context size exceeded',
