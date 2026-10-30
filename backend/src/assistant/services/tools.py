@@ -6,19 +6,22 @@ A mistake in the arguments is a result too, so the model can correct it (AI-21).
 
 import asyncio
 import re
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
+from datetime import UTC, datetime
 
 from assistant.domain.documents import Chunk, Document, indexed_text
 from assistant.domain.tools import (
     CompareArguments,
     GetArticleArguments,
     PassageLedger,
+    SaveNoteArguments,
     SearchDocumentsArguments,
     ToolCall,
     ToolSpec,
     neutralised,
 )
 from assistant.ports.document_store import DocumentStore
+from assistant.ports.note_store import NoteStore
 from assistant.services.questions import CANDIDATES, RERANK_CANDIDATES, QuestionService
 
 # Passages a tool returns at most: a search, one article, each article of a comparison.
@@ -50,6 +53,9 @@ TOOLS: tuple[ToolSpec, ...] = (
 _ARTICLE_NUMBER = re.compile(r"\d+[a-z]?", re.IGNORECASE)
 
 
+SAVE_NOTE = ToolSpec(name="save_note", description="", arguments=SaveNoteArguments)
+
+
 class _ToolError(Exception):
     """The arguments name something that does not exist; the message goes to the model."""
 
@@ -57,7 +63,13 @@ class _ToolError(Exception):
 class DocumentTools:
     """Runs the agent's tool calls against the stored and indexed documents."""
 
-    def __init__(self, questions: QuestionService, store: DocumentStore) -> None:
+    def __init__(
+        self,
+        questions: QuestionService,
+        store: DocumentStore,
+        notes: NoteStore | None = None,
+        clock: Callable[[], datetime] = lambda: datetime.now(UTC),
+    ) -> None:
         self._questions = questions
         self._store = store
 

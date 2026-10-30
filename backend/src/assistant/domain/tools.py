@@ -9,6 +9,7 @@ from pydantic import BaseModel, ValidationError
 
 from assistant.domain.answers import Usage
 from assistant.domain.documents import Chunk
+from assistant.domain.notes import Note
 
 
 @dataclass(frozen=True, slots=True)
@@ -65,6 +66,11 @@ class GetArticleArguments(ArticleRef):
     pass
 
 
+class SaveNoteArguments(BaseModel):
+    title: str
+    content: str
+
+
 class CompareArguments(BaseModel):
     a: ArticleRef
     b: ArticleRef
@@ -96,6 +102,10 @@ class PassageLedger:
             self._passages.append(chunk)
             self._numbers[chunk.id] = len(self._passages)
         return self._numbers[chunk.id]
+
+    @property
+    def saved_notes(self) -> tuple["Note", ...]:
+        raise NotImplementedError
 
     @property
     def passages(self) -> tuple[Chunk, ...]:

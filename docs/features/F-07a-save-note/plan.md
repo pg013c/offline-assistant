@@ -101,14 +101,14 @@ No ADR (spec decision 5).
 ### Step 3. The `save_note` tool
 
 - Kind: code
-- Tests first, in `tests/unit/services/test_tools.py`:
+- Tests first, in `tests/unit/services/test_save_note.py`:
   - a valid call saves one note whose sources are the cited ledger passages, and returns its id;
   - a sentence without a marker, or a marker not in the ledger, is an error, and nothing is saved;
   - an over-limit title or content fails argument validation;
   - the saved Markdown matches `render`.
 - Change: `domain/tools.py` (`SaveNoteArguments`), `services/tools.py` (`SAVE_NOTE`, note store, clock).
 - Done when: `make check` is green.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 4. The agent offers `save_note` only when asked
