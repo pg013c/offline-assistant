@@ -72,7 +72,7 @@ llm-preflight: ## Check that make llm can start: llama-server installed, model f
 
 llm: llm-preflight ## Serve the local LLM with llama-server on LLM_PORT (Metal, thinking off; ADR 0021)
 	llama-server -m "$(LLM_FILE)" --alias qwen3-8b --host 127.0.0.1 --port $(LLM_PORT) \
-	  --n-gpu-layers 99 --ctx-size 16384 --jinja
+	  --n-gpu-layers 99 --ctx-size 16384 --jinja --reasoning-budget 0
 
 judge-models: ## Download the evaluation's judge (Qwen3 30B-A3B, about 18.6 GB) into ASSISTANT_MODELS_DIR, checked by hash
 	$(BACKEND) python scripts/download_models.py "$(ASSISTANT_MODELS_DIR)" --judge
