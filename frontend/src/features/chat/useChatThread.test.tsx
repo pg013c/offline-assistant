@@ -319,4 +319,28 @@ describe('useChatThread', () => {
     )
     expect(last(result.current).text).toBe('')
   })
+
+  it('refreshes the notes list when the agent saves a note', async () => {
+    serveAnswer([
+      { type: 'note', id: '20261030-091507-breach-duties', title: 'Breach duties' },
+      { type: 'text', text: 'Saved [1].' },
+      { type: 'end', model_id: 'qwen3-8b', found: true, is_test_model: false },
+    ])
+    const client = new QueryClient()
+    client.setQueryData(['notes'], [])
+    const { result } = renderHook(() => useChatThread(), {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      ),
+    })
+
+    act(() => {
+      result.current.ask('Save a note on breaches.')
+    })
+
+    await waitFor(() => {
+      expect(last(result.current).status).toBe('done')
+    })
+    expect(client.getQueryState(['notes'])?.isInvalidated).toBe(true)
+  })
 })

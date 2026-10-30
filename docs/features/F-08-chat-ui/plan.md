@@ -122,7 +122,7 @@ No ADR (spec decision 5).
   - `useChatThread.test.tsx`: a `note` event refreshes the notes list.
 - Change: `features/notes/` (`useNotes.ts`, `NotesPanel.tsx`), `features/library/LibraryPanel.tsx`, `App.tsx`.
 - Done when: `make check` is green.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 8. The browser journey
