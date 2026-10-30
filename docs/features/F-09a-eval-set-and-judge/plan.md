@@ -93,7 +93,7 @@
   - the API and OpenAPI tests for the code and the usage field;
   - the UI error copy.
 - Change: `domain/answers.py`, `services/agent.py`, `api/schemas.py`, `useChatThread`/`chatStream.ts` copy; `make api-client`.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 4. The judge client

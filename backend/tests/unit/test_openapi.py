@@ -35,6 +35,7 @@ def test_the_chat_stream_documents_discard_and_error_events_and_usage() -> None:
         "model_unreachable",
         "model_timeout",
         "model_error",
+        "invalid_tool_call",
     ]
     assert "usage" in schemas["ChatEndEvent"]["properties"]
 

@@ -141,7 +141,9 @@ class ChatErrorEvent(BaseModel):
     """The model gave no valid answer; an end event still follows."""
 
     type: Literal["error"]
-    code: Literal["invalid_answer", "model_unreachable", "model_timeout", "model_error"]
+    code: Literal[
+        "invalid_answer", "model_unreachable", "model_timeout", "model_error", "invalid_tool_call"
+    ]
     message: str
 
 

@@ -90,6 +90,8 @@ class Usage:
     attempts: int
     # Model turns that called tools before the answer (F-07).
     tool_turns: int = 0
+    # Model turns that made no valid tool call even after retries (F-09a).
+    failed_tool_turns: int = 0
 
     def plus(self, other: "Usage") -> "Usage":
         """Two parts of one run side by side: tokens, time, attempts and tool turns added."""
@@ -140,7 +142,9 @@ class Answered:
     usage: Usage
 
 
-type ModelFailure = Literal["invalid_answer", "model_unreachable", "model_timeout", "model_error"]
+type ModelFailure = Literal[
+    "invalid_answer", "model_unreachable", "model_timeout", "model_error", "invalid_tool_call"
+]
 
 
 @dataclass(frozen=True, slots=True)
