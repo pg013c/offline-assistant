@@ -110,7 +110,7 @@ No ADR (spec decision 5).
   - `NetworkBadge.test.tsx`: "Offline" when network is off, a warning when it is on.
 - Change: `features/models/` (`useModels.ts`, `ModelSelect.tsx`), `features/status/NetworkBadge.tsx`, `App.tsx`.
 - Done when: `make check` is green.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 7. Notes in the library

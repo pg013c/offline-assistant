@@ -1,13 +1,22 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 
 import { renderWithQueryClient } from '../../test/render'
 import { server } from '../../test/server'
 import { ChatView } from './ChatView'
 
 const QUOTE = 'Providers keep logs for six months.'
+
+const MODELS = [
+  { id: 'qwen3-8b', is_test_model: false, is_default: true },
+  { id: 'fake-extractive', is_test_model: true, is_default: false },
+]
+
+beforeEach(() => {
+  server.use(http.get('*/api/models', () => HttpResponse.json(MODELS)))
+})
 
 function serveAnswer(events: object[]) {
   const body = events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join('')
@@ -307,6 +316,33 @@ describe('ChatView', () => {
 
     expect(await screen.findByText('Kept [3].')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Source/ })).not.toBeInTheDocument()
+  })
+
+  it('asks with the model the user chose', async () => {
+    const bodies: unknown[] = []
+    server.use(
+      http.post('*/api/chat', async ({ request }) => {
+        bodies.push(await request.json())
+        const body = [
+          { type: 'text', text: 'Quoted.' },
+          { type: 'end', model_id: 'fake-extractive', found: true, is_test_model: true },
+        ]
+          .map((event) => `data: ${JSON.stringify(event)}\n\n`)
+          .join('')
+        return new HttpResponse(body, { headers: { 'Content-Type': 'text/event-stream' } })
+      }),
+    )
+    renderWithQueryClient(<ChatView />)
+    await screen.findByRole('option', { name: 'qwen3-8b' })
+
+    await userEvent.selectOptions(
+      screen.getByRole('combobox', { name: 'Model' }),
+      'fake-extractive',
+    )
+    await ask('How long?')
+
+    expect(await screen.findByText(/Answered by fake-extractive/)).toBeInTheDocument()
+    expect(bodies).toEqual([{ question: 'How long?', model: 'fake-extractive' }])
   })
 
   it('tells the user when the answer failed', async () => {
