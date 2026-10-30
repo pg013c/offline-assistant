@@ -106,7 +106,9 @@ class OpenAICompatibleChat:
         self._server = server
         self._transport = transport
 
-    async def answer(self, question: str, passages: Sequence[Chunk]) -> AsyncIterator[ModelEvent]:
+    async def answer(
+        self, question: str, passages: Sequence[Chunk], notice: str | None = None
+    ) -> AsyncIterator[ModelEvent]:
         messages: list[dict[str, str]] = [
             {"role": "system", "content": ANSWER_PROMPT},
             {"role": "user", "content": _user_message(question, passages)},

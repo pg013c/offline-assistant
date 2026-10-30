@@ -180,3 +180,13 @@ def test_the_schema_sent_to_the_model_has_no_bound_a_server_grammar_cannot_take(
 
     assert "pattern" not in content
     assert "maxLength" not in content
+
+
+def test_a_run_saves_one_note_and_refuses_a_second(setup: Setup) -> None:
+    tools, notes, ledger = setup
+    save(tools, ledger, "Breach", "Notify within 72 hours [1].")
+
+    result = save(tools, ledger, "Another", "Inform the controller [2].")
+
+    assert result.startswith("Error: a note was already saved in this run")
+    assert len(notes.list_notes()) == 1

@@ -19,7 +19,9 @@ class ChatModel(Protocol):
         """True for stand-ins that are not language models; the UI must say so (AC-8)."""
         ...
 
-    def answer(self, question: str, passages: Sequence[Chunk]) -> AsyncIterator[ModelEvent]:
+    def answer(
+        self, question: str, passages: Sequence[Chunk], notice: str | None = None
+    ) -> AsyncIterator[ModelEvent]:
         """Text deltas of each attempt, ending with exactly one `Answered` or `ModelFailed`.
 
         An attempt whose output was rejected is followed by `AttemptDiscarded`; the text of the

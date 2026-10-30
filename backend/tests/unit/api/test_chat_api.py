@@ -255,7 +255,9 @@ class ScriptedAgent:
     ) -> ToolCalls | FinalText | ModelFailed:
         return self._turns.pop(0)
 
-    async def answer(self, question: str, passages: Sequence[Chunk]) -> AsyncIterator[ModelEvent]:
+    async def answer(
+        self, question: str, passages: Sequence[Chunk], notice: str | None = None
+    ) -> AsyncIterator[ModelEvent]:
         for event in self._answer:
             yield event
 

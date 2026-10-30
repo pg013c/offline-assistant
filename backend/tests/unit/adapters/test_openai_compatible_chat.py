@@ -95,6 +95,22 @@ def answer(
     return asyncio.run(gather())
 
 
+def test_a_notice_from_the_service_follows_the_question() -> None:
+    server = StubServer(VALID)
+    chat = model(server)
+
+    async def gather() -> list[ModelEvent]:
+        notice = 'The note "Breach" was saved.'
+        return [event async for event in chat.answer("How long?", PASSAGES, notice)]
+
+    asyncio.run(gather())
+
+    user = server.requests[0]["messages"]
+    assert isinstance(user, list)
+    content = user[1]["content"]
+    assert content.index("Question: How long?") < content.index('The note "Breach" was saved.')
+
+
 def test_the_answer_text_streams_and_the_outcome_carries_answer_usage_and_attempts() -> None:
     events = answer(model(StubServer(VALID)))
 
@@ -314,7 +330,7 @@ def test_the_user_message_and_the_retry_come_from_prompt_files() -> None:
     assert isinstance(first, list)
     assert isinstance(retry, list)
     assert first[1]["content"] == USER_PROMPT.substitute(
-        passages=first[1]["content"].split("\n\nQuestion:")[0], question="How long?"
+        passages=first[1]["content"].split("\n\nQuestion:")[0], question="How long?", notice=""
     )
     assert retry[-1]["content"] == RETRY_PROMPT.substitute(
         reason="passage 5 does not exist; cite passages 1 to 2"

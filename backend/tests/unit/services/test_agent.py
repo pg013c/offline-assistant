@@ -98,6 +98,7 @@ class ScriptedAgent:
         self.seen: list[list[Message]] = []
         self.tools: list[str] = []
         self.answered_with: list[Chunk] | None = None
+        self.notice: str | None = None
 
     async def call_tools(
         self, messages: Sequence[Message], tools: Sequence[ToolSpec]
@@ -106,8 +107,11 @@ class ScriptedAgent:
         self.tools = [tool.name for tool in tools]
         return self._turns.pop(0)
 
-    async def answer(self, question: str, passages: Sequence[Chunk]) -> AsyncIterator[ModelEvent]:
+    async def answer(
+        self, question: str, passages: Sequence[Chunk], notice: str | None = None
+    ) -> AsyncIterator[ModelEvent]:
         self.answered_with = list(passages)
+        self.notice = notice
         for event in self._answer:
             yield event
 
@@ -504,3 +508,60 @@ def test_a_repeated_call_that_failed_gets_its_error_again() -> None:
     assert first.content.startswith("Error:")
     assert repeated.content == first.content
     assert notes.list_notes() == []
+
+
+def test_the_answer_is_told_which_note_was_saved() -> None:
+    notes = InMemoryNoteStore()
+    agent = ScriptedAgent(
+        [saving("- Notify the authority within 72 hours [1]"), FinalText("ready")],
+        answered("Saved the checklist [1].", (1,)),
+    )
+    questions, _, _ = service(agent, notes=notes)
+
+    ask(questions, NOTE_REQUEST)
+
+    [note] = notes.list_notes()
+    assert agent.notice is not None
+    assert '"Breach duties"' in agent.notice
+    assert note.id in agent.notice
+
+
+def test_the_answer_is_told_when_no_note_was_saved_and_why() -> None:
+    agent = ScriptedAgent(
+        [saving("No marker here.", "n1"), FinalText("ready")],
+        answered("I could not save the note [1].", (1,)),
+    )
+    questions, _, _ = service(agent)
+
+    ask(questions, NOTE_REQUEST)
+
+    assert agent.notice is not None
+    assert agent.notice.startswith("No note was saved")
+    assert "cites no passage" in agent.notice
+
+
+def test_a_question_without_a_note_request_gets_no_notice() -> None:
+    agent = ScriptedAgent([FinalText("ready")], answered("Within 72 hours [1].", (1,)))
+    questions, _, _ = service(agent)
+
+    ask(questions)
+
+    assert agent.notice is None
+
+
+def test_a_save_that_fails_in_the_last_turn_gets_one_more_turn_to_be_corrected() -> None:
+    notes = InMemoryNoteStore()
+    agent = ScriptedAgent(
+        [
+            reading("33"),
+            saving("No marker here.", "n1"),
+            saving("Notify within 72 hours [1].", "n2"),
+        ],
+        answered("Saved [1].", (1,)),
+    )
+    questions, _, _ = service(agent, max_tool_turns=2, notes=notes)
+
+    ask(questions, NOTE_REQUEST)
+
+    assert len(agent.seen) == 3
+    assert len(notes.list_notes()) == 1
