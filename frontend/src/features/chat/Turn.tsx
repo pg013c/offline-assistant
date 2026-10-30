@@ -1,5 +1,6 @@
 import type { JSX } from 'react'
 
+import { AnswerText } from './AnswerText'
 import type { ChatCitation } from './chatStream'
 import { citationLabel } from './citationLabel'
 import { toolStep } from './toolStep'
@@ -36,7 +37,13 @@ export function Turn({ turn, onOpenCitation }: TurnProps): JSX.Element {
           No answer in the uploaded documents.
         </p>
       )}
-      {answer.status !== 'error' && <p className="text-sm whitespace-pre-line">{answer.text}</p>}
+      {answer.status !== 'error' && (
+        <AnswerText
+          text={answer.text}
+          citations={answer.citations}
+          onOpenCitation={onOpenCitation}
+        />
+      )}
       {answer.status === 'stopped' && (
         <p className="text-xs text-gray-500">Stopped for the next question.</p>
       )}

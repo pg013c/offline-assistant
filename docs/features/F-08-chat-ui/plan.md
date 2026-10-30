@@ -99,7 +99,7 @@ No ADR (spec decision 5).
 - Change: `answerParts.ts`, `AnswerText.tsx`, `Turn.tsx`.
 - Done when: `make check` is green.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 6. Model selector and network badge
 
