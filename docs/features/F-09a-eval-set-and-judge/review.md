@@ -56,3 +56,17 @@ Report `answers-20261030T165457Z.json`, the new answer baseline:
 | `cites_expected` | 90.2 % (41) | regression rule |
 
 AC-3 is not proved while the judge is below the bar on correctness; raising it is in the backlog.
+
+## Calibration on 48 items
+
+The calibration set grew to 48 items (`6e69bb1`), all confirmed by the human. Report `answers-20261030T180237Z.json`, the new answer baseline, passes the gate:
+
+| Measure | Value | Bar or floor |
+|---|---|---|
+| Calibration, correctness | 85.4 % (48 items) | 85 % |
+| Calibration, support | 90.5 % (74 sentences) | 85 % |
+| `judged_correct` | 68.3 % | regression rule only |
+| `citation_support` | 100 % | 90 % |
+| `tool_call_validity` | 100 % (16 tool turns) | 95 % |
+
+AC-3 is proved. The margin is one item, and the judge is lenient on answers on another subject (cal-46); both are in the record and the backlog.

@@ -45,7 +45,7 @@ F-09b compares local models, and F-09c adds Claude; both need these measures fir
 
 - [ ] AC-1: Given the answer dataset, then it holds 40 to 50 cases in both languages, every answerable case has a reference answer of key points, and the new cases include Polish, multi-article, comparison, not-covered and injection questions; the dataset validates against its schema.
 - [ ] AC-2: Given an answer, its question, reference and cited passages, when the judge runs, then it returns a correctness verdict and a support verdict per cited sentence as validated structured output; an unreadable judge reply is retried and then recorded as "not judged", never as a pass.
-- [ ] AC-3: Given the hand-labelled sample, then the report gives the judge's agreement with it, for correctness and for support; a judge below the agreed bar fails the run.
+- [x] AC-3: Given the hand-labelled sample, then the report gives the judge's agreement with it, for correctness and for support; a judge below the agreed bar fails the run. Proved by `evals/tests/test_calibration.py`, `evals/tests/test_judging.py` and report `answers-20261030T180237Z.json` (85.4 % and 90.5 % on 48 items).
 - [ ] AC-4: Given `make eval-answers` with the judge available, then the report gives, per case and overall:
   - judged correctness;
   - citation support;
