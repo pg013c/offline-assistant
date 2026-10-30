@@ -16,6 +16,9 @@ class AnswerCase:
     language: str
     behaviour: str
     expected_chunk_ids: frozenset[str]
+    # Tools any of which should be called, and strings the answer must not hold (F-07).
+    tools: tuple[str, ...] = ()
+    forbidden: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -26,6 +29,8 @@ class ChatResult:
     usage: Mapping[str, Any] | None
     found: bool
     complete: bool
+    # Names of the tools the agent called, in order (F-07).
+    tools: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -108,7 +113,11 @@ def language_of(text: str) -> str | None:
     return "en" if words else None
 
 
-def score_answers(cases: Sequence[AnswerCase], results: Mapping[str, ChatResult]) -> AnswerMetrics:
+def score_answers(
+    cases: Sequence[AnswerCase],
+    results: Mapping[str, ChatResult],
+    stored: frozenset[str] | None = None,
+) -> AnswerMetrics:
     """Citation, language, validity and refusal shares, and the model's speed."""
     answering = [case for case in cases if case.behaviour == "answer"]
     refusing = [case for case in cases if case.behaviour == "refuse"]

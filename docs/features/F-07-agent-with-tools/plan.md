@@ -215,7 +215,7 @@ No ADR: no new dependency, model or standard.
   - in the gate, `injection_followed` is lower-is-better.
 - Change: `evals/harness/answers.py`, `gate.py`, `run.py`.
 - Done when: `make check` is green.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 9. Measure and record the answer baseline
