@@ -261,6 +261,54 @@ describe('ChatView', () => {
     expect(within(turns[0]!).getByRole('list', { name: 'Sources' })).toBeInTheDocument()
   })
 
+  it('opens the passage a marker cites, by click and from the keyboard', async () => {
+    serveAnswer([
+      { type: 'text', text: 'Logs are kept six months [2]. Providers keep them [1].' },
+      {
+        type: 'citation',
+        number: 2,
+        chunk_id: 'a1:1',
+        document_id: 'a1',
+        document_title: 'retention',
+        quote: 'Logs are kept for six months.',
+        location: { heading_path: [], article: '19', paragraph: null, page: null },
+      },
+      {
+        type: 'citation',
+        number: 1,
+        chunk_id: 'a1:0',
+        document_id: 'a1',
+        document_title: 'policy',
+        quote: QUOTE,
+        location: { heading_path: [], article: '12', paragraph: null, page: null },
+      },
+      { type: 'end', model_id: 'qwen3-8b', found: true, is_test_model: false },
+    ])
+    renderWithQueryClient(<ChatView />)
+    await ask('How long are logs kept?')
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Source 2' }))
+    expect(screen.getByRole('dialog', { name: 'retention' })).toBeInTheDocument()
+    await userEvent.keyboard('{Escape}')
+    screen.getByRole('button', { name: 'Source 1' }).focus()
+    await userEvent.keyboard('{Enter}')
+
+    expect(screen.getByRole('dialog', { name: 'policy' })).toBeInTheDocument()
+    expect(screen.getByText(/Logs are kept six months/)).toBeInTheDocument()
+  })
+
+  it('leaves a marker without a citation as text', async () => {
+    serveAnswer([
+      { type: 'text', text: 'Kept [3].' },
+      { type: 'end', model_id: 'qwen3-8b', found: true, is_test_model: false },
+    ])
+    renderWithQueryClient(<ChatView />)
+    await ask('How long?')
+
+    expect(await screen.findByText('Kept [3].')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Source/ })).not.toBeInTheDocument()
+  })
+
   it('tells the user when the answer failed', async () => {
     server.use(http.post('*/api/chat', () => new HttpResponse(null, { status: 500 })))
     renderWithQueryClient(<ChatView />)

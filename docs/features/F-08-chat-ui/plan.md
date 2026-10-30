@@ -98,7 +98,7 @@ No ADR (spec decision 5).
   - `ChatView.test.tsx`: a marker opens the dialog on its citation, by click and with the keyboard.
 - Change: `answerParts.ts`, `AnswerText.tsx`, `Turn.tsx`.
 - Done when: `make check` is green.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 6. Model selector and network badge
