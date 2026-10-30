@@ -177,8 +177,9 @@ _SENTENCE_BREAK = re.compile(
     r"[.!?](?P<markers>(?:\s*\[\d+(?:\s*,\s*\d+)*\])*)(?=\s+[\"„(]?(?P<next>\w))"
 )
 _WORD_BEFORE = re.compile(r"(\S+)$")
-# A full stop after these words, or after a number, does not end a sentence.
-_ABBREVIATIONS = frozenset({"art", "ust", "pkt", "lit", "no", "nr", "e.g", "i.e", "zob", "tj"})
+# A full stop after these abbreviations, such as "art." or the "r." after a year, does not end
+# a sentence; after a number it does ("…set out in Article 83. Fines reach…").
+_ABBREVIATIONS = frozenset({"art", "ust", "pkt", "lit", "no", "nr", "e.g", "i.e", "zob", "tj", "r"})
 
 
 def statements(text: str) -> list[str]:
@@ -200,7 +201,7 @@ def statements(text: str) -> list[str]:
 
 def _no_sentence_end(word: str) -> bool:
     bare = word.lstrip('("„').lower()
-    return bare in _ABBREVIATIONS or bare.isdigit()
+    return bare in _ABBREVIATIONS
 
 
 def markers(text: str) -> list[int]:
