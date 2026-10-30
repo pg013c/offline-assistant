@@ -130,9 +130,7 @@ class Answered:
     usage: Usage
 
 
-type ModelFailure = Literal[
-    "invalid_answer", "model_unreachable", "model_timeout", "model_error", "too_many_tool_turns"
-]
+type ModelFailure = Literal["invalid_answer", "model_unreachable", "model_timeout", "model_error"]
 
 
 @dataclass(frozen=True, slots=True)

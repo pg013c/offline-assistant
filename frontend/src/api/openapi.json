@@ -509,8 +509,7 @@
               "invalid_answer",
               "model_unreachable",
               "model_timeout",
-              "model_error",
-              "too_many_tool_turns"
+              "model_error"
             ],
             "title": "Code"
           },

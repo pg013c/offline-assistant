@@ -1,5 +1,6 @@
 """The agent: it looks passages up with tools, then answers from them (F-07, FR-10)."""
 
+import re
 import time
 from collections.abc import AsyncIterator
 from importlib.resources import files
@@ -59,7 +60,8 @@ class AgentService:
             name="search_documents",
             arguments=SearchDocumentsArguments(query=question),
         )
-        result = await self._run(gate, ledger, turn=0)
+        calls = _CallLog()
+        result = await self._run(gate, ledger, 0, calls)
         if not ledger:
             for event in self._questions.refusal():
                 yield event
@@ -72,30 +74,21 @@ class AgentService:
             Message(role="tool", content=result, tool_call_id=gate.id),
         ]
         research = NO_USAGE
-        for turn in range(1, self._max_tool_turns + 2):
+        # At the limit the model is not asked again; the answer rests on what it found.
+        for turn in range(1, self._max_tool_turns + 1):
             reply = await self._model.call_tools(messages, TOOLS)
             if reply.usage is not None:
                 research = research.plus(reply.usage)
             match reply:
                 case FinalText():
                     break
-                case ToolCalls(calls=calls) if turn <= self._max_tool_turns:
+                case ToolCalls(calls=requested):
                     research = research.plus(_ONE_TOOL_TURN)
-                    messages.append(Message(role="assistant", content="", tool_calls=calls))
-                    for call in calls:
+                    messages.append(Message(role="assistant", content="", tool_calls=requested))
+                    for call in requested:
                         yield _announced(call)
-                        content = await self._run(call, ledger, turn)
+                        content = await self._run(call, ledger, turn, calls)
                         messages.append(Message(role="tool", content=content, tool_call_id=call.id))
-                case ToolCalls():
-                    yield AnswerFailed(
-                        code="too_many_tool_turns",
-                        message=(
-                            f"The model was still calling tools after {self._max_tool_turns} "
-                            "turns, so it gave no answer."
-                        ),
-                    )
-                    yield self._questions.end(found=True, usage=research)
-                    return
                 case _:
                     yield AnswerFailed(code=reply.code, message=reply.detail)
                     yield self._questions.end(found=True, usage=research)
@@ -103,11 +96,21 @@ class AgentService:
         async for event in self._questions.answer(question, ledger.passages, research):
             yield event
 
-    async def _run(self, call: ToolCall, ledger: PassageLedger, turn: int) -> str:
-        """The tool's result; logged with ids, counts and time, never arguments (AI-53)."""
+    async def _run(
+        self, call: ToolCall, ledger: PassageLedger, turn: int, calls: "_CallLog"
+    ) -> str:
+        """The tool's result; logged with ids, counts and time, never arguments (AI-53).
+
+        A call repeated with the same arguments does not run again: the model gets the numbers
+        of the passages it already has, not the passages a second time.
+        """
+        repeated = calls.repeat(call)
+        if repeated is not None:
+            return repeated
         started = time.perf_counter()
         before = len(ledger)
         result = await self._tools.run(call, ledger)
+        calls.record(call, result)
         log.info(
             "tool_called",
             tool=call.name,
@@ -121,6 +124,32 @@ class AgentService:
     def _system_prompt(self) -> str:
         titles = sorted(document.title for document in self._store.list_documents())
         return AGENT_PROMPT.substitute(documents=", ".join(f'"{title}"' for title in titles))
+
+
+class _CallLog:
+    """The calls of one run by tool and arguments, with the passage numbers they returned."""
+
+    def __init__(self) -> None:
+        self._numbers: dict[str, list[str]] = {}
+
+    def record(self, call: ToolCall, result: str) -> None:
+        self._numbers[_key(call)] = _PASSAGE_NUMBER.findall(result)
+
+    def repeat(self, call: ToolCall) -> str | None:
+        numbers = self._numbers.get(_key(call))
+        if numbers is None:
+            return None
+        found = (
+            f"its results are passages {', '.join(numbers)}." if numbers else "it found no passage."
+        )
+        return f"You already called {call.name} with these arguments; {found}"
+
+
+_PASSAGE_NUMBER = re.compile(r'<passage number="(\d+)"')
+
+
+def _key(call: ToolCall) -> str:
+    return f"{call.name}:{call.arguments.model_dump_json()}"
 
 
 _ONE_TOOL_TURN = Usage(

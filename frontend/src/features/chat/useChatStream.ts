@@ -73,7 +73,7 @@ function reduce(answer: ChatAnswer, action: Action): ChatAnswer {
   }
 }
 
-/** What the user reads when the model gives no answer (F-06, F-07). */
+/** What the user reads when the model gives no answer (F-06). */
 function errorMessage(code: ChatErrorCode, message: string): string {
   switch (code) {
     case 'invalid_answer':
@@ -84,8 +84,6 @@ function errorMessage(code: ChatErrorCode, message: string): string {
       return `The language model took too long to answer. ${message}`
     case 'model_error':
       return `The model server failed to answer. ${message}`
-    case 'too_many_tool_turns':
-      return 'The model kept looking things up and gave no answer. Try a narrower question.'
   }
 }
 
