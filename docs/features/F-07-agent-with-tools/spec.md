@@ -11,7 +11,7 @@ F-06 answers from the three passages that a search for the whole question return
 ## Scope
 
 - **Agent loop:** the local model answers through tool calls (FR-10), up to `ASSISTANT_MAX_TOOL_TURNS` turns (default 2, changed during the build), then gives a final answer (AI-22). The loop needs a model declared able to call tools (AI-23).
-- **Routing (changed during the build):** only a question that names an article, or asks to compare, goes through the tools (annexes left out after review #4). Every other question takes the F-06 search-then-answer path, so it keeps F-06's time to the first token.
+- **Routing (changed during the build):** only a question that names an article, or asks to compare, goes through the tools (annexes left out after review #4). Every other question takes the F-06 search-then-answer path. Measured after the review: 329 ms median to the first token on that path, and 2.6 to 3.6 s on the agent path including search ([record](../../evals/2026-10-30-answers-agent.md)).
 - **Tools**, each with Pydantic arguments validated on return and invalid calls fed back for correction (AI-20, AI-21):
   - `search_documents(query, document?)`: the F-05 search, with the similarity threshold applied;
   - `get_article(document, number)`: every stored chunk of one article, in order;
@@ -66,6 +66,7 @@ Confirmed by the human on 2026-10-30.
    - the limit ends research and the answer follows, instead of a failure;
    - the default limit is 2 turns;
    - only questions about an article, or comparisons, use the tools (annexes left out after review #4);
+   - the agent path may take up to about 3.6 s to the first token, at or just over NFR-03's 3 s; F-09 decides it against other models (review #2);
    - such a question is not refused at the gate, because a short reference ("Co stanowi art. 17 RODO?") can be under the threshold. It is refused only if the tools find no passage either, and no answer is ever written without passages (AI-02).
 
 ## Open questions

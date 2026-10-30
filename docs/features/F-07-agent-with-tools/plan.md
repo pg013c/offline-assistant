@@ -129,7 +129,7 @@ No ADR: no new dependency, model or standard.
   - `FakeExtractiveChatModel` writes `[1]` after its quote;
   - `prompts/answer.md`.
 - Done when: `make check` is green. The prompt change is measured in step 9.
-- [ ] red
+- [x] red
 - [x] green
 
 ### Step 3. Tools over the store and the index
@@ -198,7 +198,7 @@ No ADR: no new dependency, model or standard.
 ### Step 7. Integration with the local model
 
 - Kind: code
-- Tests first: `tests/integration/test_local_llm.py`, run only when the model server is up:
+- Tests first: `tests/integration/test_local_agent.py` (planned as `test_local_llm.py`), run only when the model server is up:
   - "What does Article 83 of the GDPR set out?" calls `get_article` and cites a chunk of GDPR Art. 83;
   - a Polish question answers in Polish with markers.
 - Change: prompt wording only if the tests show the model misreads the tools.
@@ -259,7 +259,7 @@ Added after the first measurement (spec decision 6).
 - **Step 4:** the loop lives in `AgentService` (`services/agent.py`), which wraps `QuestionService`, instead of `QuestionService` taking the agent as more constructor arguments. The chat route asks an `Answerer`: the agent when the model can call tools, the question service otherwise. Until step 5 the route leaves tool events out of the stream.
 - **Step 4:** the failure code `too_many_tool_turns` reached the API schema, the generated client and the UI copy in this step rather than in step 5, because the route has to send it once the agent is wired. Step 10 removed it again.
 
-- **Step 7:** the integration tests passed on the first run, three runs in a row, so the step has no green commit.
+- **Step 7:** the integration tests passed on the first run, three runs in a row, so the step has no green commit. They passed again after step 11, and after the review fixes (`05b0c0d`, 4 local-model tests).
 
 - **Steps 10 and 11** were added after the first measurement: the first token was 9.7 s median, against 280 ms in F-06 (spec decision 6). That run: `evals/results/answers-20261030T062959Z.json`, not committed.
 

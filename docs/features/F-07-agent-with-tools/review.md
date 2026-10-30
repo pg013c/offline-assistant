@@ -50,3 +50,18 @@ Decision is filled in by the human: `fix`, `backlog (F-xx)`, or `reject: <reason
 
 | # | Commits |
 |---|---|
+| 1 | `93ec272` test, `3b5794e` fix |
+| 2 | docs commit (spec routing and decision 6 state the measured latency; evaluation record "After the review") |
+| 3 | `59e262a` test, `f22a199` fix |
+| 4 | `d59d43a` test, `9dc5d7a` fix; reading annexes is in the backlog for F-09 |
+| 5 | `6960394` test, `9aefa1d` fix |
+| 6 | `59e262a` test, `f22a199` fix |
+| 7 | `6960394` test, `9aefa1d` fix |
+| 8 | `7ce095a` fix (described in `_agent_scores`; the name stays so runs compare) |
+| 9 | `95cc2d2` test, `7ce095a` fix |
+| 10 | `d59d43a` test, `9dc5d7a` fix |
+| 11 | `05b0c0d` refactor |
+| 12 | docs commit (plan) |
+| 13 | at /ship |
+| 14 | rejected |
+| 15 | docs commit (plan: file name and the runs after step 11 and the review) |
