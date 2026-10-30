@@ -79,4 +79,4 @@ def test_the_repository_calibration_set_is_the_one_a_run_uses() -> None:
     path = Path(__file__).parents[1] / "datasets" / "calibration.yaml"
 
     assert path == CALIBRATION_FILE
-    assert len(load_calibration(path)) == 20
+    assert len(load_calibration(path)) == 48
