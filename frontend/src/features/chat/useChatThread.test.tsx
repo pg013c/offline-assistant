@@ -5,7 +5,7 @@ import type { ReactNode } from 'react'
 import { describe, expect, it } from 'vitest'
 
 import { server } from '../../test/server'
-import { useChatStream } from './useChatStream'
+import { useChatThread, type ChatThread } from './useChatThread'
 
 const CITATION = {
   type: 'citation',
@@ -45,21 +45,23 @@ function serveAnswer(events: object[]) {
   return questions
 }
 
+function last(thread: ChatThread) {
+  const turn = thread.turns[thread.turns.length - 1]
+  if (!turn) {
+    throw new Error('no turn yet')
+  }
+  return turn.answer
+}
+
 function wrapper({ children }: { children: ReactNode }) {
   return <QueryClientProvider client={new QueryClient()}>{children}</QueryClientProvider>
 }
 
-describe('useChatStream', () => {
-  it('starts idle with an empty answer', () => {
-    const { result } = renderHook(() => useChatStream(), { wrapper })
+describe('useChatThread', () => {
+  it('starts with an empty thread', () => {
+    const { result } = renderHook(() => useChatThread(), { wrapper })
 
-    expect(result.current.answer).toEqual({
-      status: 'idle',
-      text: '',
-      citations: [],
-      tools: [],
-      notes: [],
-    })
+    expect(result.current.turns).toEqual([])
   })
 
   it('sends the question and collects text, citations and the model', async () => {
@@ -69,19 +71,19 @@ describe('useChatStream', () => {
       CITATION,
       { type: 'end', model_id: 'fake-extractive', found: true, is_test_model: true },
     ])
-    const { result } = renderHook(() => useChatStream(), { wrapper })
+    const { result } = renderHook(() => useChatThread(), { wrapper })
 
     act(() => {
       result.current.ask('How long are logs kept?')
     })
 
     await waitFor(() => {
-      expect(result.current.answer.status).toBe('done')
+      expect(last(result.current).status).toBe('done')
     })
     expect(questions).toEqual([{ question: 'How long are logs kept?' }])
-    expect(result.current.answer).toEqual({
+    expect(result.current.turns[0]?.question).toBe('How long are logs kept?')
+    expect(last(result.current)).toEqual({
       status: 'done',
-      question: 'How long are logs kept?',
       text: 'Providers keep logs.',
       citations: [CITATION],
       tools: [],
@@ -99,16 +101,16 @@ describe('useChatStream', () => {
       { type: 'text', text: 'Saved the checklist [1].' },
       { type: 'end', model_id: 'qwen3-8b', found: true, is_test_model: false },
     ])
-    const { result } = renderHook(() => useChatStream(), { wrapper })
+    const { result } = renderHook(() => useChatThread(), { wrapper })
 
     act(() => {
       result.current.ask('Save a checklist of breach duties as a note.')
     })
 
     await waitFor(() => {
-      expect(result.current.answer.status).toBe('done')
+      expect(last(result.current).status).toBe('done')
     })
-    expect(result.current.answer.notes).toEqual([
+    expect(last(result.current).notes).toEqual([
       { id: '20261030-091507-breach-duties', title: 'Breach duties' },
     ])
   })
@@ -120,16 +122,16 @@ describe('useChatStream', () => {
       { type: 'text', text: 'Within 72 hours [1].' },
       { type: 'end', model_id: 'qwen3-8b', found: true, is_test_model: false },
     ])
-    const { result } = renderHook(() => useChatStream(), { wrapper })
+    const { result } = renderHook(() => useChatThread(), { wrapper })
 
     act(() => {
       result.current.ask('When must a breach be notified?')
     })
 
     await waitFor(() => {
-      expect(result.current.answer.status).toBe('done')
+      expect(last(result.current).status).toBe('done')
     })
-    expect(result.current.answer.tools).toEqual([
+    expect(last(result.current).tools).toEqual([
       { name: 'search_documents', arguments: { query: 'breach' } },
       { name: 'get_article', arguments: { document: 'GDPR (EN)', number: '33' } },
     ])
@@ -137,46 +139,48 @@ describe('useChatStream', () => {
 
   it('reports an error when the request fails', async () => {
     server.use(http.post('*/api/chat', () => new HttpResponse(null, { status: 500 })))
-    const { result } = renderHook(() => useChatStream(), { wrapper })
+    const { result } = renderHook(() => useChatThread(), { wrapper })
 
     act(() => {
       result.current.ask('Anything?')
     })
 
     await waitFor(() => {
-      expect(result.current.answer.status).toBe('error')
+      expect(last(result.current).status).toBe('error')
     })
   })
 
   it('reports an error when the stream ends without an end event', async () => {
     serveAnswer([{ type: 'text', text: 'Cut off mid' }])
-    const { result } = renderHook(() => useChatStream(), { wrapper })
+    const { result } = renderHook(() => useChatThread(), { wrapper })
 
     act(() => {
       result.current.ask('Anything?')
     })
 
     await waitFor(() => {
-      expect(result.current.answer.status).toBe('error')
+      expect(last(result.current).status).toBe('error')
     })
-    expect(result.current.answer.text).toBe('Cut off mid')
+    expect(last(result.current).text).toBe('Cut off mid')
   })
 
-  it('starts a fresh answer for a new question', async () => {
+  it('keeps each question with its own answer, in order', async () => {
     serveAnswer([
+      { type: 'tool', name: 'search_documents', arguments: { query: 'first' } },
       { type: 'text', text: 'First answer.' },
-      { type: 'end', model_id: 'fake-extractive', found: true },
+      CITATION,
+      { type: 'end', model_id: 'fake-extractive', found: true, is_test_model: true },
     ])
-    const { result } = renderHook(() => useChatStream(), { wrapper })
+    const { result } = renderHook(() => useChatThread(), { wrapper })
     act(() => {
       result.current.ask('First?')
     })
     await waitFor(() => {
-      expect(result.current.answer.status).toBe('done')
+      expect(last(result.current).status).toBe('done')
     })
     serveAnswer([
       { type: 'text', text: 'Second answer.' },
-      { type: 'end', model_id: 'fake-extractive', found: false },
+      { type: 'end', model_id: 'qwen3-8b', found: false, is_test_model: false },
     ])
 
     act(() => {
@@ -184,11 +188,65 @@ describe('useChatStream', () => {
     })
 
     await waitFor(() => {
-      expect(result.current.answer.question).toBe('Second?')
-      expect(result.current.answer.status).toBe('done')
+      expect(result.current.turns).toHaveLength(2)
+      expect(last(result.current).status).toBe('done')
     })
-    expect(result.current.answer.text).toBe('Second answer.')
-    expect(result.current.answer.citations).toEqual([])
+    const [first, second] = result.current.turns
+    expect(first?.question).toBe('First?')
+    expect(first?.answer.text).toBe('First answer.')
+    expect(first?.answer.citations).toEqual([CITATION])
+    expect(first?.answer.tools).toHaveLength(1)
+    expect(second?.question).toBe('Second?')
+    expect(second?.answer.text).toBe('Second answer.')
+    expect(second?.answer.citations).toEqual([])
+    expect(second?.answer.modelId).toBe('qwen3-8b')
+  })
+
+  it('stops the running answer when a new question is asked', async () => {
+    const signals: AbortSignal[] = []
+    server.use(
+      http.post('*/api/chat', ({ request }) => {
+        signals.push(request.signal)
+        // A stream that never ends, as an answer still being written.
+        return new HttpResponse(new ReadableStream(), {
+          headers: { 'Content-Type': 'text/event-stream' },
+        })
+      }),
+    )
+    const { result } = renderHook(() => useChatThread(), { wrapper })
+    act(() => {
+      result.current.ask('First?')
+    })
+    await waitFor(() => {
+      expect(signals).toHaveLength(1)
+    })
+
+    act(() => {
+      result.current.ask('Second?')
+    })
+
+    await waitFor(() => {
+      expect(signals[0]?.aborted).toBe(true)
+    })
+    expect(result.current.turns.map((turn) => turn.question)).toEqual(['First?', 'Second?'])
+  })
+
+  it('names the chosen model in the request and on the turn', async () => {
+    const questions = serveAnswer([
+      { type: 'text', text: 'Quoted.' },
+      { type: 'end', model_id: 'fake-extractive', found: true, is_test_model: true },
+    ])
+    const { result } = renderHook(() => useChatThread(), { wrapper })
+
+    act(() => {
+      result.current.ask('How long?', 'fake-extractive')
+    })
+
+    await waitFor(() => {
+      expect(last(result.current).status).toBe('done')
+    })
+    expect(questions).toEqual([{ question: 'How long?', model: 'fake-extractive' }])
+    expect(result.current.turns[0]?.model).toBe('fake-extractive')
   })
 
   it('drops the text and citations of a discarded attempt', async () => {
@@ -200,17 +258,17 @@ describe('useChatStream', () => {
       CITATION,
       { type: 'end', model_id: 'qwen3-8b', found: true, is_test_model: false, usage: null },
     ])
-    const { result } = renderHook(() => useChatStream(), { wrapper })
+    const { result } = renderHook(() => useChatThread(), { wrapper })
 
     act(() => {
       result.current.ask('How long are logs kept?')
     })
 
     await waitFor(() => {
-      expect(result.current.answer.status).toBe('done')
+      expect(last(result.current).status).toBe('done')
     })
-    expect(result.current.answer.text).toBe('Right answer.')
-    expect(result.current.answer.citations).toEqual([CITATION])
+    expect(last(result.current).text).toBe('Right answer.')
+    expect(last(result.current).citations).toEqual([CITATION])
   })
 
   it('ends with the error of an error event, not as an unfinished stream', async () => {
@@ -224,18 +282,18 @@ describe('useChatStream', () => {
       },
       { type: 'end', model_id: 'qwen3-8b', found: true, is_test_model: false, usage: null },
     ])
-    const { result } = renderHook(() => useChatStream(), { wrapper })
+    const { result } = renderHook(() => useChatThread(), { wrapper })
 
     act(() => {
       result.current.ask('Anything?')
     })
 
     await waitFor(() => {
-      expect(result.current.answer.status).toBe('error')
+      expect(last(result.current).status).toBe('error')
     })
-    expect(result.current.answer.error).toBe(
+    expect(last(result.current).error).toBe(
       'The model could not produce a valid answer. Try asking again.',
     )
-    expect(result.current.answer.text).toBe('')
+    expect(last(result.current).text).toBe('')
   })
 })

@@ -87,7 +87,7 @@ No ADR (spec decision 5).
   - `ChatView.test.tsx`: both questions and answers stay on screen; the input is empty after asking.
 - Change: `useChatStream.ts` becomes `useChatThread.ts`; `ChatView.tsx`; `Turn.tsx`.
 - Done when: `make check` is green.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 5. Clickable markers

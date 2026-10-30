@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
@@ -240,6 +240,25 @@ describe('ChatView', () => {
       'Saving note: Breach duties',
       'Saved note: Breach duties',
     ])
+  })
+
+  it('keeps every question and its answer on screen, in order, and clears the input', async () => {
+    serveAnswer(FOUND)
+    renderWithQueryClient(<ChatView />)
+
+    await ask('First question?')
+    expect(await screen.findByText(/Answered by fake-extractive/)).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Question' })).toHaveValue('')
+    await ask('Second question?')
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/Answered by fake-extractive/)).toHaveLength(2)
+    })
+    const turns = screen.getAllByRole('article')
+    expect(turns).toHaveLength(2)
+    expect(turns[0]).toHaveTextContent('First question?')
+    expect(turns[1]).toHaveTextContent('Second question?')
+    expect(within(turns[0]!).getByRole('list', { name: 'Sources' })).toBeInTheDocument()
   })
 
   it('tells the user when the answer failed', async () => {
