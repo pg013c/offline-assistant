@@ -155,7 +155,7 @@ No ADR (spec decision 5).
 - Change: `evals/harness/answers.py`, `gate.py`, `run.py`.
 - Done when: `make check` passes, and the integration test passes with `make llm`.
 - [x] red
-- [ ] green
+- [x] green: `8773320` (metrics, schema bounds); the integration test passes after step 7b
 
 ### Step 7b. What the local model showed
 
@@ -171,7 +171,7 @@ Added during step 7: the integration test against Qwen3 8B found three problems.
 - Change: `services/tools.py`, `services/agent.py`.
 - Done when: `make check` is green and step 7's integration test passes against Qwen3 8B.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 8. Measure and record
 

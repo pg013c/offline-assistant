@@ -125,7 +125,8 @@ class DocumentTools:
                     f"cite passages 1 to {len(ledger)}"
                 )
         for statement in statements(arguments.content):
-            if not markers(statement):
+            # A line ending in a colon opens the list after it and states nothing itself.
+            if not markers(statement) and not statement.endswith(":"):
                 kind = "line" if statement[:1] in "-*•" or statement[:1].isdigit() else "sentence"
                 raise _ToolError(
                     f'the {kind} "{statement}" cites no passage; end every sentence and list '

@@ -191,11 +191,19 @@ class _CallLog:
 
     def __init__(self) -> None:
         self._numbers: dict[str, list[str]] = {}
+        self._errors: dict[str, str] = {}
 
     def record(self, call: ToolCall, result: str) -> None:
-        self._numbers[_key(call)] = _PASSAGE_NUMBER.findall(result)
+        if result.startswith("Error:"):
+            self._errors[_key(call)] = result
+        else:
+            self._numbers[_key(call)] = _PASSAGE_NUMBER.findall(result)
 
     def repeat(self, call: ToolCall) -> str | None:
+        """What a call made before with the same arguments returned, in short; a failed call
+        gets its error again, so the model sees what to correct."""
+        if _key(call) in self._errors:
+            return self._errors[_key(call)]
         numbers = self._numbers.get(_key(call))
         if numbers is None:
             return None
