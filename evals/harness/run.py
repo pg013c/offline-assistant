@@ -61,6 +61,8 @@ PROMPTFOO_CONFIG = ROOT / "evals" / "promptfoo" / "retrieval.yaml"
 GATED_MODE = "reranked"
 BASELINE = ROOT / "docs" / "evals" / "retrieval-baseline.json"
 ANSWER_BASELINE = ROOT / "docs" / "evals" / "answer-baseline.json"
+# The metrics that only the judge measures (ADR 0022).
+JUDGED = ("judged_correct", "citation_support")
 ANSWERS_CONFIG = ROOT / "evals" / "promptfoo" / "answers.yaml"
 STARTUP_SECONDS = 180
 INGESTION_SECONDS = 1800
@@ -222,6 +224,8 @@ def run_answers(config: RunConfig) -> Outcome:
         notes=notes,
         verdicts=verdicts,
     )
+    trusted, untrusted = trusted_judged(metrics.values, calibration)
+    metrics = replace(metrics, values=trusted)
     metadata = {
         **_metadata(config, started_at),
         "corpus": corpus,
@@ -237,6 +241,10 @@ def run_answers(config: RunConfig) -> Outcome:
             if calibration
             else "not run"
         ),
+        "untrusted": {
+            name: {"value": value, "cases": metrics.cases[name]}
+            for name, value in untrusted.items()
+        },
     }
     report = {
         "metrics": {
@@ -269,13 +277,12 @@ def run_answers(config: RunConfig) -> Outcome:
         if config.baseline.exists()
         else {}
     )
-    failures = gate_failures(
-        dict(metrics.values),
+    failures = answer_failures(
+        metrics.values,
         {name: values["value"] for name, values in baseline.items()},
-        floors=False,
-    ) + below_answer_floors(metrics.values)
-    if calibration is not None:
-        failures += calibration_failures(calibration)
+        calibration,
+        judged=verdicts is not None,
+    )
     stem = config.results_dir / f"answers-{started_at:%Y%m%dT%H%M%SZ}"
     report_json = stem.with_suffix(".json")
     report_markdown = stem.with_suffix(".md")
@@ -491,12 +498,16 @@ def judge_answers(
 
 
 def calibrate(judge_url: str, path: Path = CALIBRATION_FILE) -> Agreement | None:
-    """The judge's agreement with the hand-labelled calibration set, when there is one."""
+    """The judge's agreement with the hand-labelled calibration set; None when the set is
+    missing or the judge stops answering, which fails a judged run."""
     if not path.exists():
         return None
     client = JudgeClient(judge_url)
     items = load_calibration(path)
-    return agreement(items, {item.id: client.judge(item.judged) for item in items})
+    try:
+        return agreement(items, {item.id: client.judge(item.judged) for item in items})
+    except JudgeUnavailable:
+        return None
 
 
 def answer_failures(
@@ -506,14 +517,25 @@ def answer_failures(
     judged: bool,
 ) -> list[str]:
     """The answer gate's failures, the judge's calibration among them (ADR 0022)."""
-    raise NotImplementedError
+    failures = gate_failures(dict(values), dict(baseline), floors=False) + below_answer_floors(
+        values
+    )
+    if calibration is not None:
+        failures += calibration_failures(calibration)
+    elif judged:
+        failures.append("the judge was not calibrated: its calibration set did not run (ADR 0022)")
+    return failures
 
 
 def trusted_judged(
     values: Mapping[str, float | None], calibration: Agreement | None
 ) -> tuple[dict[str, float | None], dict[str, float | None]]:
-    """The metrics with the judge's set apart when the judge is below its bar."""
-    raise NotImplementedError
+    """The metrics with the judge's set apart when the judge is below its bar or was not
+    calibrated, so that neither the gate nor a baseline takes them as measured."""
+    if calibration is not None and not calibration_failures(calibration):
+        return dict(values), {}
+    untrusted = {name: values[name] for name in JUDGED if values.get(name) is not None}
+    return {**values, **dict.fromkeys(untrusted)}, untrusted
 
 
 def media_type(path: Path) -> str:
