@@ -488,3 +488,19 @@ def test_a_save_note_call_that_was_not_offered_writes_nothing() -> None:
     assert agent.seen[1][-1].content == "Error: there is no tool save_note."
     assert notes.list_notes() == []
     assert not any(isinstance(event, NoteSaved) for event in events)
+
+
+def test_a_repeated_call_that_failed_gets_its_error_again() -> None:
+    notes = InMemoryNoteStore()
+    agent = ScriptedAgent(
+        [saving("No marker here.", "n1"), saving("No marker here.", "n2"), FinalText("ready")],
+        answered("A breach is notified [1].", (1,)),
+    )
+    questions, _, _ = service(agent, notes=notes)
+
+    ask(questions, NOTE_REQUEST)
+
+    first, repeated = agent.seen[1][-1], agent.seen[2][-1]
+    assert first.content.startswith("Error:")
+    assert repeated.content == first.content
+    assert notes.list_notes() == []

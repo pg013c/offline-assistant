@@ -154,3 +154,17 @@ def test_without_a_note_store_there_is_no_save_note_tool(setup: Setup) -> None:
     result = save(read_only, ledger, "Breach", "Notify [1].")
 
     assert result == "Error: there is no tool save_note."
+
+
+def test_a_line_that_introduces_a_list_with_a_colon_needs_no_marker(setup: Setup) -> None:
+    tools, notes, ledger = setup
+
+    result = save(
+        tools,
+        ledger,
+        "Breach duties",
+        "The controller's duties under Article 33 include:\n- Notify within 72 hours [1]",
+    )
+
+    assert result.startswith("Saved note ")
+    assert len(notes.list_notes()) == 1

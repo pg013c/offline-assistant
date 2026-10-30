@@ -157,6 +157,22 @@ No ADR (spec decision 5).
 - [x] red
 - [ ] green
 
+### Step 7b. What the local model showed
+
+Added during step 7: the integration test against Qwen3 8B found three problems.
+- llama-server rejected the tool schema: an unanchored pattern and a 20,000-character bound. These were fixed with step 7's green commit.
+- The model opens a checklist with a line such as "…duties include:", which has no marker.
+- A repeated call that had failed got "it found no passage" instead of its error, so the model repeated it.
+
+- Kind: code
+- Tests first:
+  - `test_save_note.py`: a line ending with a colon, which introduces a list, needs no marker;
+  - `test_agent.py`: a repeated call that failed gets its error again.
+- Change: `services/tools.py`, `services/agent.py`.
+- Done when: `make check` is green and step 7's integration test passes against Qwen3 8B.
+- [x] red
+- [ ] green
+
 ### Step 8. Measure and record
 
 - Kind: eval
