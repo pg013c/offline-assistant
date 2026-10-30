@@ -1,6 +1,7 @@
 import asyncio
 from collections.abc import AsyncIterator, Sequence
 from dataclasses import dataclass
+from typing import Protocol
 
 import structlog
 
@@ -45,6 +46,12 @@ class FoundPassage:
     document_title: str
     similarity: float
     rerank_score: float | None = None
+
+
+class Answerer(Protocol):
+    """What answers a question: the question service alone, or the agent around it (F-07)."""
+
+    def ask(self, question: str) -> AsyncIterator[AnswerEvent]: ...
 
 
 class QuestionService:
@@ -109,15 +116,32 @@ class QuestionService:
             :PASSAGES_PER_ANSWER
         ]
         if not results:
-            yield AnswerText(text=NO_RELEVANT_PASSAGE)
-            yield AnswerEnd(
-                model_id=self._model.model_id,
-                found=False,
-                is_test_model=self._model.is_test_model,
-            )
+            for event in self.refusal():
+                yield event
             return
+        async for event in self.answer(question, [result.chunk for result in results]):
+            yield event
 
-        passages = [result.chunk for result in results]
+    def refusal(self) -> list[AnswerEvent]:
+        """The answer when no passage reaches the threshold: no model call (AI-02)."""
+        return [AnswerText(text=NO_RELEVANT_PASSAGE), self.end(found=False, usage=None)]
+
+    def end(self, found: bool, usage: Usage | None) -> AnswerEnd:
+        return AnswerEnd(
+            model_id=self._model.model_id,
+            found=found,
+            is_test_model=self._model.is_test_model,
+            usage=usage,
+        )
+
+    async def answer(
+        self, question: str, passages: Sequence[Chunk], research: Usage | None = None
+    ) -> AsyncIterator[AnswerEvent]:
+        """The model's answer from these passages, numbered from 1 in this order.
+
+        `research` is what the agent's tool turns cost before it (F-07); the end event
+        reports the whole run.
+        """
         usage: Usage | None = None
         outcome = "no_outcome"
         covered = True
@@ -137,12 +161,9 @@ class QuestionService:
                     for number in dict.fromkeys(answer.cited):
                         yield AnswerCitation(citation=self._citation(passages[number - 1]))
         _log_model_call(self._model.model_id, outcome, len(passages), usage)
-        yield AnswerEnd(
-            model_id=self._model.model_id,
-            found=covered,
-            is_test_model=self._model.is_test_model,
-            usage=usage,
-        )
+        if research is not None:
+            usage = research.then(usage) if usage else research
+        yield self.end(found=covered, usage=usage)
 
     def _citation(self, chunk: Chunk) -> Citation:
         document = self._store.get(chunk.document_id)

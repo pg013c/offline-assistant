@@ -4,7 +4,7 @@ from typing import Annotated, assert_never
 from fastapi import APIRouter, Depends
 from fastapi.sse import EventSourceResponse
 
-from assistant.api.dependencies import get_question_service
+from assistant.api.dependencies import get_answers
 from assistant.api.schemas import (
     ChatCitationEvent,
     ChatDiscardEvent,
@@ -25,11 +25,11 @@ from assistant.domain.answers import (
     AnswerText,
     ToolUsed,
 )
-from assistant.services.questions import QuestionService
+from assistant.services.questions import Answerer
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
-Questions = Annotated[QuestionService, Depends(get_question_service)]
+Answers = Annotated[Answerer, Depends(get_answers)]
 
 
 def _to_schema(event: AnswerEvent) -> ChatEvent:
@@ -77,14 +77,14 @@ def _to_schema(event: AnswerEvent) -> ChatEvent:
                 )
             )
         case ToolUsed():
-            # Step 5 of F-07 puts tool calls on the stream.
-            raise NotImplementedError
+            raise ValueError("tool calls are not part of the chat stream yet")
         case _:
             assert_never(event)
 
 
 @router.post("", response_class=EventSourceResponse)
-async def ask_question(request: ChatRequest, questions: Questions) -> AsyncIterable[ChatEvent]:
+async def ask_question(request: ChatRequest, answers: Answers) -> AsyncIterable[ChatEvent]:
     """Answer a question from the uploaded documents as Server-Sent Events."""
-    async for event in questions.ask(request.question):
-        yield _to_schema(event)
+    async for event in answers.ask(request.question):
+        if not isinstance(event, ToolUsed):
+            yield _to_schema(event)

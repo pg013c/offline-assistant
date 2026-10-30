@@ -58,7 +58,9 @@ def chat_model_for(
 
 def tool_model_for(settings: Settings, model: ChatModel) -> ToolCallingModel | None:
     """The configured model as the agent, when it is declared able to call tools (AI-23)."""
-    raise NotImplementedError
+    if CHAT_MODELS[settings.chat_model].tools and isinstance(model, OpenAICompatibleChat):
+        return model
+    return None
 
 
 def _ensure_served(url: str, served_model: str, transport: httpx.BaseTransport | None) -> None:

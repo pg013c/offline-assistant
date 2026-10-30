@@ -81,6 +81,34 @@ class Usage:
     # Model turns that called tools before the answer (F-07).
     tool_turns: int = 0
 
+    def plus(self, other: "Usage") -> "Usage":
+        """Two parts of one run side by side: tokens, time, attempts and tool turns added."""
+        return Usage(
+            prompt_tokens=self.prompt_tokens + other.prompt_tokens,
+            completion_tokens=self.completion_tokens + other.completion_tokens,
+            first_token_ms=self.first_token_ms,
+            total_ms=self.total_ms + other.total_ms,
+            attempts=self.attempts + other.attempts,
+            tool_turns=self.tool_turns + other.tool_turns,
+        )
+
+    def then(self, answer: "Usage") -> "Usage":
+        """This research phase followed by the answer: the first token counts from the start."""
+        first = None if answer.first_token_ms is None else self.total_ms + answer.first_token_ms
+        return Usage(
+            prompt_tokens=self.prompt_tokens + answer.prompt_tokens,
+            completion_tokens=self.completion_tokens + answer.completion_tokens,
+            first_token_ms=first,
+            total_ms=self.total_ms + answer.total_ms,
+            attempts=answer.attempts,
+            tool_turns=self.tool_turns,
+        )
+
+
+NO_USAGE = Usage(
+    prompt_tokens=0, completion_tokens=0, first_token_ms=None, total_ms=0.0, attempts=0
+)
+
 
 @dataclass(frozen=True, slots=True)
 class TextDelta:
@@ -102,7 +130,9 @@ class Answered:
     usage: Usage
 
 
-type ModelFailure = Literal["invalid_answer", "model_unreachable", "model_timeout", "model_error"]
+type ModelFailure = Literal[
+    "invalid_answer", "model_unreachable", "model_timeout", "model_error", "too_many_tool_turns"
+]
 
 
 @dataclass(frozen=True, slots=True)

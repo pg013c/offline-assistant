@@ -168,7 +168,7 @@ No ADR: no new dependency, model or standard.
   - the adapter's `max_tokens` per call, so tool turns are short.
 - Done when: `make check` is green.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 5. API: tool events and the new failure code
 
@@ -224,6 +224,11 @@ No ADR: no new dependency, model or standard.
 - `make eval-answers` with Qwen3 8B. Record `docs/evals/2026-10-30-answers-agent.md` with the before and after against the F-06 baseline, and update `answer-baseline.json`.
 - The prompt is changed only between runs, in `fix(prompts)` commits, and each change is measured. Any metric worse than the F-06 baseline goes to the human before review.
 - [ ] recorded
+
+## Changes during the build
+
+- **Step 4:** the loop lives in `AgentService` (`services/agent.py`), which wraps `QuestionService`, instead of `QuestionService` taking the agent as more constructor arguments. The chat route asks an `Answerer`: the agent when the model can call tools, the question service otherwise. Until step 5 the route leaves tool events out of the stream.
+- **Step 4:** the failure code `too_many_tool_turns` reached the API schema, the generated client and the UI copy in this step rather than in step 5, because the route has to send it once the agent is wired.
 
 ## Acceptance criteria mapping
 

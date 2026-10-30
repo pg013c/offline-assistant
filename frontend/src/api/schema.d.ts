@@ -228,7 +228,7 @@ export interface components {
              * Code
              * @enum {string}
              */
-            code: "invalid_answer" | "model_unreachable" | "model_timeout" | "model_error";
+            code: "invalid_answer" | "model_unreachable" | "model_timeout" | "model_error" | "too_many_tool_turns";
             /** Message */
             message: string;
         };

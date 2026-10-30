@@ -58,6 +58,8 @@ class LlmServer:
     tools: bool = True
     # A cap on each answer, so a runaway generation ends (AI-22).
     max_tokens: int = 1024
+    # Tool turns hold calls or the word "ready", not an answer (F-07).
+    tool_max_tokens: int = 256
     json_schema: bool = True
     streaming: bool = True
 
@@ -311,7 +313,7 @@ def _tools_body(
             for tool in tools
         ],
         "temperature": 0,
-        "max_tokens": server.max_tokens,
+        "max_tokens": server.tool_max_tokens,
     }
 
 
