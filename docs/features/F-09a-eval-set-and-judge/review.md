@@ -34,3 +34,25 @@ Decision is filled in by the human: `fix`, `backlog (F-xx)`, or `reject: <reason
 
 | # | Commits |
 |---|---|
+| 1, 9 | `6677ce0` test, `5c6460a` fix |
+| 3, 6 | `c2f8762` test, `d6f76e9` fix |
+| 2, 7, 8 | `e1252cf` test, `e894bd9` fix |
+| 4, 5 | `6cbbd5d` and `8ec44c2` test, `6bb45d1` fix |
+| 10, 11 | `a302a03` test, `ff87ec7` fix |
+| 12, 14 | `52d1553` docs |
+| 13 | The other 30 support labels were re-read against the full passages; none needed a change (recorded in the record) |
+
+## Evaluation after the fixes
+
+Report `answers-20261030T165457Z.json`, the new answer baseline:
+
+| Measure | Value | Bar or floor |
+|---|---|---|
+| Calibration, correctness | 75.0 % (20 items) | 85 %, fails |
+| Calibration, support | 91.4 % (35 sentences) | 85 % |
+| `judged_correct` | 68.3 %, untrusted | regression rule only |
+| `citation_support` | 98.4 %, untrusted | 90 % |
+| `tool_call_validity` | 100 % (16 tool turns) | 95 % |
+| `cites_expected` | 90.2 % (41) | regression rule |
+
+AC-3 is not proved while the judge is below the bar on correctness; raising it is in the backlog.
