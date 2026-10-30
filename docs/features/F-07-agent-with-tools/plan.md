@@ -109,7 +109,7 @@ No ADR: no new dependency, model or standard.
   - `evals/corpus/*.md`, `corpus.json`, `evals/harness/corpus.py`;
   - `evals/datasets/answers.yaml` (version 2), the dataset schema and loader. The harness does not score the new fields yet.
 - Done when: `make eval-answers` on the current code indexes the new documents and runs the new cases, with the expected misses.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 2. Answer schema with markers and `covered`

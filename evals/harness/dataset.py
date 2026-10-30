@@ -31,6 +31,9 @@ class Case:
     question: str
     behaviour: str
     sources: tuple[ExpectedSource, ...]
+    # Answer suite only: tools any of which should be called, strings the answer must not hold.
+    tools: tuple[str, ...] = ()
+    forbidden: tuple[str, ...] = ()
 
 
 def load_cases(path: Path) -> list[Case]:

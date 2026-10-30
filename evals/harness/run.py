@@ -380,6 +380,11 @@ def _wait_until_healthy(api_url: str, server: subprocess.Popen[bytes]) -> None:
     raise RuntimeError(f"the API did not start within {STARTUP_SECONDS} s")
 
 
+def media_type(path: Path) -> str:
+    """The media type a corpus file is uploaded with."""
+    raise NotImplementedError
+
+
 def _index_corpus(
     api: httpx.Client, corpus_dir: Path, pins: Sequence[CorpusDocument]
 ) -> dict[str, str]:

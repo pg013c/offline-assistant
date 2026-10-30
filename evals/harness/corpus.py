@@ -14,7 +14,8 @@ from pathlib import Path
 
 import httpx
 
-CORPUS_FILE = Path(__file__).parents[1] / "corpus.json"
+EVALS_DIR = Path(__file__).parents[1]
+CORPUS_FILE = EVALS_DIR / "corpus.json"
 SOURCE = "https://publications.europa.eu/resource/celex/{celex}"
 TIMEOUT_SECONDS = 120
 
@@ -23,10 +24,14 @@ TIMEOUT_SECONDS = 120
 class CorpusDocument:
     file: str
     title: str
-    celex: str
     language: str
-    accept: str
     sha256: str
+    # Downloaded from EUR-Lex by CELEX number, or copied from `path` under evals/ (F-07).
+    celex: str | None = None
+    accept: str | None = None
+    path: str | None = None
+    # Indexed only by the answer suite, so retrieval metrics stay comparable.
+    answers_only: bool = False
 
 
 def documents() -> list[CorpusDocument]:

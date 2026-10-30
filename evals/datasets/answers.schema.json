@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Answer evaluation case (TEST-20, F-07)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "kind",
+    "language",
+    "question",
+    "expected"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$"
+    },
+    "kind": {
+      "enum": [
+        "single-article",
+        "cross-language",
+        "exact-reference",
+        "spans-articles",
+        "out-of-scope",
+        "adversarial",
+        "tool-use",
+        "not-covered",
+        "injection"
+      ]
+    },
+    "language": {
+      "enum": [
+        "en",
+        "pl"
+      ]
+    },
+    "question": {
+      "type": "string",
+      "minLength": 3
+    },
+    "expected": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "behaviour",
+        "sources"
+      ],
+      "properties": {
+        "behaviour": {
+          "enum": [
+            "answer",
+            "refuse",
+            "not_covered"
+          ]
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "document"
+            ],
+            "properties": {
+              "document": {
+                "enum": [
+                  "ai-act-en",
+                  "ai-act-pl",
+                  "gdpr-en",
+                  "gdpr-pl",
+                  "injected-retention-policy",
+                  "injected-model-card"
+                ]
+              },
+              "article": {
+                "type": "string",
+                "pattern": "^[0-9]+[a-z]?$"
+              },
+              "paragraph": {
+                "type": "string",
+                "pattern": "^[0-9]+[a-z]?$"
+              },
+              "heading": {
+                "type": "string",
+                "minLength": 3
+              }
+            },
+            "oneOf": [
+              {
+                "required": [
+                  "article"
+                ]
+              },
+              {
+                "required": [
+                  "heading"
+                ]
+              }
+            ],
+            "dependentRequired": {
+              "paragraph": [
+                "article"
+              ]
+            }
+          }
+        },
+        "tools": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "enum": [
+              "search_documents",
+              "get_article",
+              "compare"
+            ]
+          }
+        },
+        "forbidden": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "if": {
+        "properties": {
+          "behaviour": {
+            "enum": [
+              "refuse",
+              "not_covered"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "sources": {
+            "maxItems": 0
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "sources": {
+            "minItems": 1
+          }
+        }
+      }
+    }
+  }
+}

@@ -17,6 +17,7 @@ from harness.run import (
     default_config,
     drop_collections,
     ensure_port_free,
+    media_type,
     verify_corpus,
     warm_up,
 )
@@ -151,3 +152,16 @@ def test_the_retrieval_suite_runs_the_api_with_the_test_model() -> None:
     env = api_environment(default_config({}), {"ASSISTANT_CHAT_MODEL": "qwen3-8b"})
 
     assert env["ASSISTANT_CHAT_MODEL"] == "fake-extractive"
+
+
+def test_only_the_answer_suite_indexes_the_injected_documents() -> None:
+    retrieval = {document.file for document in default_config({}).corpus}
+    answers = {document.file for document in default_answers_config({}).corpus}
+
+    assert "injected-retention-policy.md" not in retrieval
+    assert answers - retrieval == {"injected-retention-policy.md", "injected-model-card.md"}
+
+
+def test_a_corpus_file_is_uploaded_with_the_media_type_of_its_extension() -> None:
+    assert media_type(Path("gdpr-en.pdf")) == "application/pdf"
+    assert media_type(Path("injected-model-card.md")) == "text/markdown"
