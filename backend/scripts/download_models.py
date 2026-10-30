@@ -5,7 +5,7 @@ the files the app loads are fetched, and every file is checked against its pinne
 the API checks them again at startup. The directory can be copied to a machine without
 network instead of running this script there.
 
-Usage: python scripts/download_models.py <models-dir>
+Usage: python scripts/download_models.py <models-dir> [--llm]
 """
 
 import sys
@@ -13,26 +13,29 @@ from pathlib import Path
 
 from huggingface_hub import snapshot_download
 
-from assistant.adapters.pinned_models import PINNED_MODELS, verify_models
+from assistant.adapters.pinned_models import LLM_MODELS, PINNED_MODELS, PinnedModel, verify_models
 
 
-def main(models_dir: str) -> None:
+def main(models_dir: str, models: tuple[PinnedModel, ...] = PINNED_MODELS) -> None:
     directory = Path(models_dir).resolve()
-    for model in PINNED_MODELS:
+    for model in models:
         snapshot_download(
             repo_id=model.repository,
             revision=model.revision,
             local_dir=directory / model.directory,
             allow_patterns=list(model.files),
         )
-    verify_models(directory, PINNED_MODELS)
-    files = sum(len(model.files) for model in PINNED_MODELS)
-    print(f"{len(PINNED_MODELS)} models, {files} files verified in {directory}")
+    verify_models(directory, models)
+    files = sum(len(model.files) for model in models)
+    print(f"{len(models)} models, {files} files verified in {directory}")
 
 
 if __name__ == "__main__":
     match sys.argv[1:]:
         case [models_dir]:
             main(models_dir)
+        case [models_dir, "--llm"]:
+            # The local LLM for llama-server, about 5 GB (ADR 0021).
+            main(models_dir, LLM_MODELS)
         case _:
             sys.exit(__doc__)

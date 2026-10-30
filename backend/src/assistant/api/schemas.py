@@ -98,18 +98,47 @@ class ChatCitationEvent(BaseModel):
     location: CitationLocation
 
 
+class ChatDiscardEvent(BaseModel):
+    """The text sent since the last discard (or the start) is void; the retry's text follows."""
+
+    type: Literal["discard"]
+    reason: str
+
+
+class ChatErrorEvent(BaseModel):
+    """The model gave no valid answer; an end event still follows."""
+
+    type: Literal["error"]
+    code: Literal["invalid_answer", "model_unreachable", "model_timeout", "model_error"]
+    message: str
+
+
+class ChatUsage(BaseModel):
+    """What the answer cost: tokens over every attempt, and its timings in milliseconds."""
+
+    prompt_tokens: int
+    completion_tokens: int
+    first_token_ms: float | None
+    total_ms: float
+    attempts: int
+
+
 class ChatEndEvent(BaseModel):
-    """The last event of an answer."""
+    """The last event of an answer; `usage` is null when no model answered."""
 
     type: Literal["end"]
     model_id: str
     found: bool
     is_test_model: bool
+    usage: ChatUsage | None
 
 
 class ChatEvent(
     RootModel[
-        Annotated[ChatTextEvent | ChatCitationEvent | ChatEndEvent, Field(discriminator="type")]
+        Annotated[
+            ChatTextEvent | ChatDiscardEvent | ChatErrorEvent | ChatCitationEvent | ChatEndEvent,
+            Field(discriminator="type"),
+        ]
     ]
 ):
-    """One event of a streamed answer: text, citation or end."""
+    """One event of a streamed answer: text, discard, error, citation or end."""

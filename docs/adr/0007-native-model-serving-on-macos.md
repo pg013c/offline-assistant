@@ -1,6 +1,6 @@
 # 0007. Native model serving on macOS
 
-- Status: accepted
+- Status: accepted, amended by [0021](0021-llama-server-and-qwen3-8b.md)
 - Date: 2026-10-28
 - Related: FR-51, NFR-03, ADR 0003
 

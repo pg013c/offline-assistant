@@ -13,6 +13,7 @@ from harness.run import (
     PortInUse,
     api_environment,
     api_log_tail,
+    default_answers_config,
     default_config,
     drop_collections,
     ensure_port_free,
@@ -132,3 +133,21 @@ def test_a_missing_api_log_is_said_so(tmp_path: Path) -> None:
 
 def test_make_eval_holds_the_corpus_to_the_floors_of_adr_0020() -> None:
     assert default_config({}).floors is True
+
+
+def test_the_answer_suite_runs_the_api_with_the_local_model() -> None:
+    config = default_answers_config({"ASSISTANT_CHAT_MODEL": "fake-extractive"})
+
+    env = api_environment(config, {"PATH": "/usr/bin"})
+
+    assert env["ASSISTANT_CHAT_MODEL"] == "qwen3-8b"
+    assert env["ASSISTANT_LLM_URL"] == "http://127.0.0.1:8080"
+    assert config.dataset.name == "answers.yaml"
+    assert config.baseline.name == "answer-baseline.json"
+    assert config.floors is False
+
+
+def test_the_retrieval_suite_runs_the_api_with_the_test_model() -> None:
+    env = api_environment(default_config({}), {"ASSISTANT_CHAT_MODEL": "qwen3-8b"})
+
+    assert env["ASSISTANT_CHAT_MODEL"] == "fake-extractive"

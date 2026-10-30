@@ -26,13 +26,18 @@ QDRANT_IMAGE := qdrant/qdrant:v1.20.0@sha256:9bfc89f9914fc14876a88c05270685921a5
 QDRANT_CONTAINER := offline-assistant-qdrant
 export QDRANT_PORT ?= 6333
 
+# The local LLM for `make llm` (ADR 0021): llama.cpp's llama-server on LLM_PORT.
+export LLM_PORT ?= 8080
+# The model file's path comes from its pin (pinned_models.py), so the two cannot drift apart.
+LLM_FILE = $(shell $(BACKEND) python -c "from assistant.adapters.pinned_models import QWEN3_8B as m; print('$(ASSISTANT_MODELS_DIR)/' + m.directory + '/' + next(iter(m.files)))")
+
 # Evaluation corpus, fetched by `make eval-corpus` (ADR 0018).
 export EVAL_CORPUS_DIR := $(abspath $(or $(EVAL_CORPUS_DIR),data/eval-corpus))
 
 # Where `make api-client` writes the schema and generated types (ADR 0005).
 API_OUT ?= $(CURDIR)/frontend/src/api
 
-.PHONY: help setup models qdrant eval-corpus eval check-evals dev dev-preflight e2e test-integration check check-backend check-frontend check-api-client api-client test test-backend test-frontend node-version
+.PHONY: help setup models llm-models llm-preflight llm qdrant eval-corpus eval eval-answers check-evals dev dev-preflight e2e test-integration check check-backend check-frontend check-api-client api-client test test-backend test-frontend node-version
 
 help: ## List targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
@@ -49,6 +54,22 @@ setup: node-version ## Install project dependencies
 models: ## Download the parsing and embedding models into ASSISTANT_MODELS_DIR (the only step that needs the network)
 	$(BACKEND) python scripts/download_models.py "$(ASSISTANT_MODELS_DIR)"
 
+llm-models: ## Download the local LLM (Qwen3 8B, about 5 GB) into ASSISTANT_MODELS_DIR, checked by hash
+	$(BACKEND) python scripts/download_models.py "$(ASSISTANT_MODELS_DIR)" --llm
+
+llm-preflight: ## Check that make llm can start: llama-server installed, model file pinned, port free
+	@$(BACKEND) python -c "from pathlib import Path; from assistant.adapters.pinned_models import LLM_MODELS, verify_models; verify_models(Path('$(ASSISTANT_MODELS_DIR)'), LLM_MODELS)" 2>/dev/null \
+	  || { echo "The local LLM is missing or changed in $(ASSISTANT_MODELS_DIR). Fetch it with: make llm-models"; exit 1; }
+	@command -v llama-server >/dev/null || { echo "llama-server is not installed. Install it with: brew install llama.cpp"; exit 1; }
+	@if lsof -nP -iTCP:$(LLM_PORT) -sTCP:LISTEN >/dev/null 2>&1; then \
+	  owner="$$(lsof -nP -iTCP:$(LLM_PORT) -sTCP:LISTEN | awk 'NR==2 {print $$1 " (pid " $$2 ")"}')"; \
+	  echo "Port $(LLM_PORT) is already used by $$owner. Stop it or set LLM_PORT."; exit 1; \
+	fi
+
+llm: llm-preflight ## Serve the local LLM with llama-server on LLM_PORT (Metal, thinking off; ADR 0021)
+	llama-server -m "$(LLM_FILE)" --alias qwen3-8b --host 127.0.0.1 --port $(LLM_PORT) \
+	  --n-gpu-layers 99 --ctx-size 16384 --jinja --reasoning-budget 0
+
 eval-corpus: ## Download the evaluation corpus into EVAL_CORPUS_DIR, checked against pinned hashes
 	$(EVALS) python -m harness.corpus "$(EVAL_CORPUS_DIR)"
 
@@ -56,6 +77,13 @@ eval: ## Retrieval evaluation on the corpus, compared with the baseline; needs m
 	@curl -fs http://127.0.0.1:$(QDRANT_PORT)/readyz >/dev/null || { \
 	  echo "Qdrant is not running on port $(QDRANT_PORT). Start it with: make qdrant"; exit 1; }
 	HF_HUB_OFFLINE=1 $(EVALS) python -m harness.run
+
+eval-answers: ## Answer evaluation against the local LLM, compared with its baseline; needs make llm, models, qdrant, eval-corpus
+	@curl -fs http://127.0.0.1:$(LLM_PORT)/health >/dev/null || { \
+	  echo "No model server on port $(LLM_PORT). Start it with: make llm"; exit 1; }
+	@curl -fs http://127.0.0.1:$(QDRANT_PORT)/readyz >/dev/null || { \
+	  echo "Qdrant is not running on port $(QDRANT_PORT). Start it with: make qdrant"; exit 1; }
+	HF_HUB_OFFLINE=1 $(EVALS) python -m harness.run --answers
 
 qdrant: ## Start Qdrant in Docker on QDRANT_PORT (data in ASSISTANT_DATA_DIR/qdrant, telemetry off)
 	@if [ -z "$(ASSISTANT_DATA_DIR)" ]; then \

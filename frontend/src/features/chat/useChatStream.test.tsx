@@ -139,4 +139,52 @@ describe('useChatStream', () => {
     expect(result.current.answer.text).toBe('Second answer.')
     expect(result.current.answer.citations).toEqual([])
   })
+
+  it('drops the text and citations of a discarded attempt', async () => {
+    serveAnswer([
+      { type: 'text', text: 'Wrong answer.' },
+      CITATION,
+      { type: 'discard', reason: 'the answer cites no passage' },
+      { type: 'text', text: 'Right answer.' },
+      CITATION,
+      { type: 'end', model_id: 'qwen3-8b', found: true, is_test_model: false, usage: null },
+    ])
+    const { result } = renderHook(() => useChatStream(), { wrapper })
+
+    act(() => {
+      result.current.ask('How long are logs kept?')
+    })
+
+    await waitFor(() => {
+      expect(result.current.answer.status).toBe('done')
+    })
+    expect(result.current.answer.text).toBe('Right answer.')
+    expect(result.current.answer.citations).toEqual([CITATION])
+  })
+
+  it('ends with the error of an error event, not as an unfinished stream', async () => {
+    serveAnswer([
+      { type: 'text', text: 'Partial' },
+      { type: 'discard', reason: 'not valid JSON' },
+      {
+        type: 'error',
+        code: 'invalid_answer',
+        message: 'The model gave no valid answer after 3 attempts.',
+      },
+      { type: 'end', model_id: 'qwen3-8b', found: true, is_test_model: false, usage: null },
+    ])
+    const { result } = renderHook(() => useChatStream(), { wrapper })
+
+    act(() => {
+      result.current.ask('Anything?')
+    })
+
+    await waitFor(() => {
+      expect(result.current.answer.status).toBe('error')
+    })
+    expect(result.current.answer.error).toBe(
+      'The model could not produce a valid answer. Try asking again.',
+    )
+    expect(result.current.answer.text).toBe('')
+  })
 })

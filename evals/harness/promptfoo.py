@@ -62,6 +62,19 @@ def environment(base: Mapping[str, str], api_url: str) -> dict[str, str]:
     return {**base, **OFFLINE, "EVAL_API_URL": api_url}
 
 
+def outputs_by_case(results: Mapping[str, Any]) -> dict[str, str]:
+    """The raw output per case id, from Promptfoo's JSON output of a single-provider suite."""
+    found: dict[str, str] = {}
+    for entry in results["results"]["results"]:
+        case_id = entry["vars"]["case_id"]
+        response = entry.get("response") or {}
+        if "output" not in response:
+            reason = response.get("error") or entry.get("error") or "no output"
+            raise PromptfooError(f"{case_id}: Promptfoo got no result ({reason})")
+        found[case_id] = str(response["output"])
+    return found
+
+
 def responses_by_mode(results: Mapping[str, Any]) -> dict[str, dict[str, Response]]:
     """Ranked hits and latency per mode and case id, from Promptfoo's JSON output."""
     found: dict[str, dict[str, Response]] = {}

@@ -161,4 +161,29 @@ describe('ChatView', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/answer failed/i)
   })
+
+  it.each([
+    ['invalid_answer', 'The model gave up.', /could not produce a valid answer/i],
+    [
+      'model_unreachable',
+      'No model server answers at http://127.0.0.1:8080.',
+      /not reachable.*127\.0\.0\.1:8080/i,
+    ],
+    ['model_timeout', 'The model server took over 60 s.', /took too long.*60 s/i],
+    [
+      'model_error',
+      'The model server at http://127.0.0.1:8080 answered 400: context size exceeded',
+      /model server failed.*400/i,
+    ],
+  ])('explains a %s error', async (code, message, shown) => {
+    serveAnswer([
+      { type: 'error', code, message },
+      { type: 'end', model_id: 'qwen3-8b', found: true, is_test_model: false, usage: null },
+    ])
+    renderWithQueryClient(<ChatView />)
+
+    await ask('Anything?')
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(shown)
+  })
 })

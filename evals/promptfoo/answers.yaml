@@ -1,0 +1,21 @@
+# Answer suite (F-06, ADR 0018). The harness (run_answers in harness/run.py) writes the tests file and
+# sets EVAL_API_URL; Promptfoo keeps the raw event stream, and Python scores it.
+description: Answers on the AI Act and the GDPR
+prompts:
+  - "{{question}}"
+providers:
+  - id: https
+    label: chat
+    config:
+      url: "{{ env.EVAL_API_URL }}/api/chat"
+      method: POST
+      headers:
+        Content-Type: application/json
+      body:
+        question: "{{question}}"
+      transformResponse: text
+defaultTest:
+  assert:
+    # Scoring happens in Python; every response passes here.
+    - type: javascript
+      value: "true"

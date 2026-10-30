@@ -32,5 +32,25 @@ status=$?
 set -e
 check "dev starts when ASSISTANT_DATA_DIR is set" "$([[ $status -eq 0 ]] && echo yes || echo no)"
 
+# llm_preflight <env(1) arguments>: checks the local LLM's file and port without starting it.
+llm_preflight() {
+  env "$@" make -C "$root" --no-print-directory llm-preflight \
+    ENV_FILE="$scratch/missing.env" LLM_PORT=59997 2>&1
+}
+
+set +e
+output="$(llm_preflight ASSISTANT_MODELS_DIR="$scratch/no-models")"
+status=$?
+set -e
+check "llm refuses to start without the pinned model file, naming make llm-models" \
+  "$([[ $status -ne 0 && "$output" == *"make llm-models"* ]] && echo yes || echo no)"
+
+set +e
+output="$(env make -C "$root" --no-print-directory eval-answers ENV_FILE="$scratch/missing.env" LLM_PORT=59996 2>&1)"
+status=$?
+set -e
+check "eval-answers refuses to run without the model server, naming make llm" \
+  "$([[ $status -ne 0 && "$output" == *"make llm"* ]] && echo yes || echo no)"
+
 [[ "$failures" -eq 0 ]] || { echo "$failures Makefile test(s) failed"; exit 1; }
 echo "All Makefile tests passed."

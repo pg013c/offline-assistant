@@ -435,6 +435,26 @@
         "title": "ChatCitationEvent",
         "description": "A passage the answer is based on, quoted verbatim."
       },
+      "ChatDiscardEvent": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "discard",
+            "title": "Type"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "reason"
+        ],
+        "title": "ChatDiscardEvent",
+        "description": "The text sent since the last discard (or the start) is void; the retry's text follows."
+      },
       "ChatEndEvent": {
         "properties": {
           "type": {
@@ -453,6 +473,16 @@
           "is_test_model": {
             "type": "boolean",
             "title": "Is Test Model"
+          },
+          "usage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChatUsage"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -460,15 +490,53 @@
           "type",
           "model_id",
           "found",
-          "is_test_model"
+          "is_test_model",
+          "usage"
         ],
         "title": "ChatEndEvent",
-        "description": "The last event of an answer."
+        "description": "The last event of an answer; `usage` is null when no model answered."
+      },
+      "ChatErrorEvent": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "error",
+            "title": "Type"
+          },
+          "code": {
+            "type": "string",
+            "enum": [
+              "invalid_answer",
+              "model_unreachable",
+              "model_timeout",
+              "model_error"
+            ],
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "code",
+          "message"
+        ],
+        "title": "ChatErrorEvent",
+        "description": "The model gave no valid answer; an end event still follows."
       },
       "ChatEvent": {
         "oneOf": [
           {
             "$ref": "#/components/schemas/ChatTextEvent"
+          },
+          {
+            "$ref": "#/components/schemas/ChatDiscardEvent"
+          },
+          {
+            "$ref": "#/components/schemas/ChatErrorEvent"
           },
           {
             "$ref": "#/components/schemas/ChatCitationEvent"
@@ -478,12 +546,14 @@
           }
         ],
         "title": "ChatEvent",
-        "description": "One event of a streamed answer: text, citation or end.",
+        "description": "One event of a streamed answer: text, discard, error, citation or end.",
         "discriminator": {
           "propertyName": "type",
           "mapping": {
             "citation": "#/components/schemas/ChatCitationEvent",
+            "discard": "#/components/schemas/ChatDiscardEvent",
             "end": "#/components/schemas/ChatEndEvent",
+            "error": "#/components/schemas/ChatErrorEvent",
             "text": "#/components/schemas/ChatTextEvent"
           }
         }
@@ -522,6 +592,47 @@
         ],
         "title": "ChatTextEvent",
         "description": "A piece of the answer text, in order."
+      },
+      "ChatUsage": {
+        "properties": {
+          "prompt_tokens": {
+            "type": "integer",
+            "title": "Prompt Tokens"
+          },
+          "completion_tokens": {
+            "type": "integer",
+            "title": "Completion Tokens"
+          },
+          "first_token_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Token Ms"
+          },
+          "total_ms": {
+            "type": "number",
+            "title": "Total Ms"
+          },
+          "attempts": {
+            "type": "integer",
+            "title": "Attempts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "prompt_tokens",
+          "completion_tokens",
+          "first_token_ms",
+          "total_ms",
+          "attempts"
+        ],
+        "title": "ChatUsage",
+        "description": "What the answer cost: tokens over every attempt, and its timings in milliseconds."
       },
       "ChunkSummary": {
         "properties": {

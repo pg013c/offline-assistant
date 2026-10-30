@@ -1,7 +1,11 @@
 """What a streamed answer is made of."""
 
+import json
 import re
 from dataclasses import dataclass, field
+from typing import Any, Literal
+
+from pydantic import BaseModel, ConfigDict, ValidationError
 
 from assistant.domain.documents import ChunkLocation
 
@@ -30,13 +34,74 @@ class AnswerCitation:
 
 
 @dataclass(frozen=True, slots=True)
+class AnswerDiscarded:
+    """The text sent since the last attempt began is void; the retry's text follows."""
+
+    reason: str
+
+
+@dataclass(frozen=True, slots=True)
+class AnswerFailed:
+    """The model gave no valid answer; the stream still ends."""
+
+    code: "ModelFailure"
+    message: str
+
+
+@dataclass(frozen=True, slots=True)
 class AnswerEnd:
     model_id: str
     found: bool
     is_test_model: bool
+    usage: "Usage | None" = None
 
 
-type AnswerEvent = AnswerText | AnswerCitation | AnswerEnd
+type AnswerEvent = AnswerText | AnswerDiscarded | AnswerFailed | AnswerCitation | AnswerEnd
+
+
+@dataclass(frozen=True, slots=True)
+class Usage:
+    """What one answer cost: tokens over every attempt, and its timings (AI-60)."""
+
+    prompt_tokens: int
+    completion_tokens: int
+    first_token_ms: float | None
+    total_ms: float
+    attempts: int
+
+
+@dataclass(frozen=True, slots=True)
+class TextDelta:
+    """A piece of the answer text, as the model writes it."""
+
+    text: str
+
+
+@dataclass(frozen=True, slots=True)
+class AttemptDiscarded:
+    """The text streamed since the last attempt began is void; a retry follows."""
+
+    reason: str
+
+
+@dataclass(frozen=True, slots=True)
+class Answered:
+    answer: "ModelAnswer"
+    usage: Usage
+
+
+type ModelFailure = Literal["invalid_answer", "model_unreachable", "model_timeout", "model_error"]
+
+
+@dataclass(frozen=True, slots=True)
+class ModelFailed:
+    code: ModelFailure
+    detail: str
+    # What the failed answer cost; not part of what the failure is.
+    usage: Usage | None = field(default=None, compare=False)
+
+
+type ModelEvent = TextDelta | AttemptDiscarded | Answered | ModelFailed
 
 
 def opening_sentences(text: str, count: int = QUOTE_SENTENCES) -> str:
@@ -51,3 +116,137 @@ def opening_sentences(text: str, count: int = QUOTE_SENTENCES) -> str:
 def quote_from(text: str) -> str:
     """The quote shown for a cited chunk, copied verbatim (AI-03)."""
     return opening_sentences(text)
+
+
+class _StructuredAnswer(BaseModel):
+    """The structured answer a language model is asked for (FR-13, AI-20): the answer first,
+    so it can stream, then the numbers of the passages it rests on, counted from 1."""
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    answer: str
+    citations: list[int]
+
+
+ANSWER_SCHEMA: dict[str, Any] = _StructuredAnswer.model_json_schema()
+
+
+class InvalidAnswer(Exception):
+    """The model's output is not a valid answer; the reason is fed back to it (AI-21)."""
+
+
+@dataclass(frozen=True, slots=True)
+class ModelAnswer:
+    text: str
+    cited: tuple[int, ...]
+
+
+def parse_answer(raw: str, passage_count: int) -> ModelAnswer:
+    """The validated answer, or `InvalidAnswer` saying what to correct."""
+    try:
+        decoded = json.loads(raw)
+    except json.JSONDecodeError as error:
+        raise InvalidAnswer(f"the output is not valid JSON ({error.msg})") from error
+    try:
+        answer = _StructuredAnswer.model_validate(decoded)
+    except ValidationError as error:
+        raise InvalidAnswer(
+            "the output is not a JSON object with answer and citations "
+            "(a string and a list of passage numbers)"
+        ) from error
+    if not answer.answer.strip():
+        raise InvalidAnswer("the answer is empty")
+    if not answer.citations:
+        raise InvalidAnswer("the answer cites no passage")
+    for number in answer.citations:
+        if not 1 <= number <= passage_count:
+            raise InvalidAnswer(
+                f"passage {number} does not exist; cite passages 1 to {passage_count}"
+            )
+    return ModelAnswer(text=answer.answer, cited=tuple(dict.fromkeys(answer.citations)))
+
+
+_HIGH_SURROGATES = 0xD800
+_LOW_SURROGATES = 0xDC00
+_ANSWER_START = re.compile(r'\{\s*"answer"\s*:\s*"')
+_ESCAPES = {'"': '"', "\\": "\\", "/": "/", "b": "\b", "f": "\f", "n": "\n", "r": "\r", "t": "\t"}
+
+
+def _hex(digits: str) -> int | None:
+    try:
+        return int(digits, 16)
+    except ValueError:
+        return None
+
+
+class AnswerTextExtractor:
+    """Pulls the answer text out of the structured answer while it is being written.
+
+    The schema puts `answer` first, so its string starts the object. Escapes and surrogate
+    pairs split between chunks wait for the rest.
+    """
+
+    def __init__(self) -> None:
+        self._before = ""
+        self._pending = ""
+        self._started = False
+        self._done = False
+
+    def feed(self, chunk: str) -> str:
+        """The answer text decoded from this chunk; empty before and after the answer."""
+        if self._done:
+            return ""
+        if not self._started:
+            self._before += chunk
+            match = _ANSWER_START.search(self._before)
+            if not match:
+                return ""
+            self._started = True
+            chunk = self._before[match.end() :]
+            self._before = ""
+        return self._decode(self._pending + chunk)
+
+    def _decode(self, text: str) -> str:
+        out: list[str] = []
+        position = 0
+        while position < len(text):
+            char = text[position]
+            if char == '"':
+                self._done = True
+                self._pending = ""
+                return "".join(out)
+            if char != "\\":
+                out.append(char)
+                position += 1
+                continue
+            if position + 1 >= len(text):
+                break
+            code = text[position + 1]
+            if code != "u":
+                out.append(_ESCAPES.get(code, code))
+                position += 2
+                continue
+            if position + 6 > len(text):
+                break
+            unit = _hex(text[position + 2 : position + 6])
+            if unit is None:
+                # Not JSON any more; parse_answer will say so. Stop streaming this attempt.
+                self._done = True
+                break
+            if _HIGH_SURROGATES <= unit < _LOW_SURROGATES:
+                # A high surrogate needs the low one that follows it.
+                if position + 12 > len(text):
+                    break
+                low = _hex(text[position + 8 : position + 12])
+                if text[position + 6 : position + 8] != "\\u" or low is None:
+                    self._done = True
+                    break
+                out.append(
+                    chr(0x10000 + ((unit - _HIGH_SURROGATES) << 10) + (low - _LOW_SURROGATES))
+                )
+                position += 12
+                continue
+            out.append(chr(unit))
+            position += 6
+        self._pending = text[position:]
+        return "".join(out)

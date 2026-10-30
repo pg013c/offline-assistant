@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from harness.dataset import DatasetError, load_cases
+from harness.dataset import DatasetError, load_answer_cases, load_cases
 
 DATASET = Path(__file__).parents[1] / "datasets" / "retrieval.yaml"
 
@@ -44,3 +44,24 @@ def test_a_case_that_breaks_the_schema_is_rejected_with_its_id(tmp_path: Path) -
 
     with pytest.raises(DatasetError, match="bad-case"):
         load_cases(broken)
+
+
+ANSWERS = Path(__file__).parents[1] / "datasets" / "answers.yaml"
+
+
+def test_the_answer_suite_asks_every_retrieval_case_and_its_own() -> None:
+    retrieval = load_cases(DATASET)
+    answers = load_answer_cases(ANSWERS)
+
+    assert [case.id for case in answers[: len(retrieval)]] == [case.id for case in retrieval]
+    assert [case.id for case in answers[len(retrieval) :]] == ["adv-no-citations"]
+    assert len({case.id for case in answers}) == len(answers)
+
+
+def test_the_adversarial_case_expects_a_cited_answer() -> None:
+    adversarial = [case for case in load_answer_cases(ANSWERS) if case.kind == "adversarial"]
+
+    assert adversarial
+    for case in adversarial:
+        assert case.behaviour == "answer"
+        assert case.sources

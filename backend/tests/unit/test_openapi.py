@@ -24,3 +24,16 @@ def test_searches_can_choose_reranking_and_hits_carry_its_score() -> None:
     assert "rerank" in schemas["SearchRequest"]["properties"]
     assert "rerank" not in schemas["SearchRequest"].get("required", [])
     assert "rerank_score" in schemas["SearchHit"]["properties"]
+
+
+def test_the_chat_stream_documents_discard_and_error_events_and_usage() -> None:
+    schemas = json.loads(openapi_json())["components"]["schemas"]
+
+    assert {"ChatDiscardEvent", "ChatErrorEvent", "ChatUsage"} <= set(schemas)
+    assert schemas["ChatErrorEvent"]["properties"]["code"]["enum"] == [
+        "invalid_answer",
+        "model_unreachable",
+        "model_timeout",
+        "model_error",
+    ]
+    assert "usage" in schemas["ChatEndEvent"]["properties"]

@@ -42,6 +42,8 @@ export default defineConfig({
         // The journeys check the UI; reranking is covered by its tests and by `make eval`. On
         // CI's CPU it costs seconds per question (F-05 record), more than the journeys wait.
         ASSISTANT_RERANKER: 'off',
+        // The journeys are deterministic with the test model (F-06 decision 5), whatever .env says.
+        ASSISTANT_CHAT_MODEL: 'fake-extractive',
       },
       reuseExistingServer: false,
     },

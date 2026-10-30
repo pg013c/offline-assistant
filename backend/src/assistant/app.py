@@ -12,6 +12,7 @@ from fastapi.routing import APIRoute
 
 from assistant import __version__
 from assistant.adapters.bge_reranker import BgeReranker
+from assistant.adapters.chat_models import chat_model_for
 from assistant.adapters.docling_parser import DoclingDocumentParser
 from assistant.adapters.fakes.chat_model import FakeExtractiveChatModel
 from assistant.adapters.fakes.chunk_index import InMemoryChunkIndex
@@ -37,9 +38,6 @@ from assistant.services.questions import QuestionService
 from assistant.settings import Settings, load_settings
 
 API_PREFIX = "/api"
-
-# Chat model adapters by `ASSISTANT_CHAT_MODEL`; F-06 adds the OpenAI-compatible ones.
-CHAT_MODELS: dict[str, type[ChatModel]] = {"fake-extractive": FakeExtractiveChatModel}
 
 
 def document_parser_for(settings: Settings) -> DocumentParser:
@@ -91,7 +89,7 @@ def build_adapters(settings: Settings) -> Adapters:
         index=index,
         parser=parser,
         queue=ThreadIngestionQueue(),
-        chat_model=CHAT_MODELS[settings.chat_model](),
+        chat_model=chat_model_for(settings),
         reranker=reranker,
     )
 

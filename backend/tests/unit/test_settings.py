@@ -18,6 +18,10 @@ def clean_environment(monkeypatch: pytest.MonkeyPatch) -> None:
         "ASSISTANT_QDRANT_COLLECTION_PREFIX",
         "ASSISTANT_MIN_SIMILARITY",
         "ASSISTANT_RERANKER",
+        "ASSISTANT_CHAT_MODEL",
+        "ASSISTANT_LLM_URL",
+        "ASSISTANT_LLM_TIMEOUT",
+        "ASSISTANT_MAX_RETRIES",
     ):
         monkeypatch.delenv(name, raising=False)
     # main() sets these; recording them here restores them after each test.
@@ -211,3 +215,41 @@ def test_with_reranking_on_a_missing_reranker_stops_startup(tmp_path: Path) -> N
 
     with pytest.raises(ModelsNotReady, match=r"BAAI/bge-reranker-v2-m3.*make models"):
         reranker_for(settings)
+
+
+def test_the_chat_model_is_the_test_model_unless_configured(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("ASSISTANT_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("ASSISTANT_MODELS_DIR", str(tmp_path / "models"))
+
+    settings = load_settings()
+
+    assert settings.chat_model == "fake-extractive"
+    assert settings.llm_url == "http://127.0.0.1:8080"
+    assert settings.llm_timeout == 60
+    assert settings.max_retries == 2
+
+
+def test_a_local_model_is_chosen_by_configuration(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("ASSISTANT_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("ASSISTANT_MODELS_DIR", str(tmp_path / "models"))
+    monkeypatch.setenv("ASSISTANT_CHAT_MODEL", "qwen3-8b")
+    monkeypatch.setenv("ASSISTANT_LLM_URL", "http://127.0.0.1:8090")
+
+    settings = load_settings()
+
+    assert (settings.chat_model, settings.llm_url) == ("qwen3-8b", "http://127.0.0.1:8090")
+
+
+def test_an_unknown_chat_model_names_the_variable(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("ASSISTANT_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("ASSISTANT_MODELS_DIR", str(tmp_path / "models"))
+    monkeypatch.setenv("ASSISTANT_CHAT_MODEL", "gpt-latest")
+
+    with pytest.raises(SettingsError, match="ASSISTANT_CHAT_MODEL"):
+        load_settings()

@@ -6,8 +6,23 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
+from assistant.adapters.fakes.chat_model import ScriptedChatModel
+from assistant.adapters.fakes.chunk_index import InMemoryChunkIndex
+from assistant.adapters.fakes.document_store import FakeDocumentStore
+from assistant.adapters.fakes.ingestion_queue import InlineIngestionQueue
 from assistant.adapters.text_document_parser import TextDocumentParser
+from assistant.app import Adapters, create_app
+from assistant.domain.answers import (
+    Answered,
+    AttemptDiscarded,
+    ModelAnswer,
+    ModelEvent,
+    ModelFailed,
+    TextDelta,
+    Usage,
+)
 from assistant.domain.documents import chunk_document, document_id_for
+from assistant.settings import Settings
 
 # Fixtures from tests/conftest.py.
 type ClientFor = Callable[[Path], TestClient]
@@ -62,6 +77,13 @@ def test_answer_is_a_stream_of_text_then_citation_then_end(
         "model_id": "fake-extractive",
         "found": True,
         "is_test_model": True,
+        "usage": {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "first_token_ms": 0.0,
+            "total_ms": 0.0,
+            "attempts": 1,
+        },
     }
 
 
@@ -130,3 +152,74 @@ def test_an_empty_question_returns_the_standard_error(client: TestClient) -> Non
     body = response.json()
     assert body["code"] == "invalid_request"
     assert [detail["field"] for detail in body["details"]] == ["body.question"]
+
+
+def scripted_client(tmp_path: Path, events: list[ModelEvent]) -> TestClient:
+    adapters = Adapters(
+        store=FakeDocumentStore(),
+        index=InMemoryChunkIndex(),
+        parser=TextDocumentParser(),
+        queue=InlineIngestionQueue(),
+        chat_model=ScriptedChatModel(events, model_id="qwen3-8b"),
+    )
+    settings = Settings(data_dir=tmp_path, models_dir=tmp_path / "models", min_similarity=0)
+    return TestClient(create_app(settings, adapters))
+
+
+USAGE = Usage(
+    prompt_tokens=210, completion_tokens=35, first_token_ms=450.0, total_ms=1800.0, attempts=2
+)
+
+
+def test_a_rejected_attempt_is_announced_with_a_discard_event(
+    tmp_path: Path, upload: Upload
+) -> None:
+    script: list[ModelEvent] = [
+        TextDelta("Wrong."),
+        AttemptDiscarded("the answer cites no passage"),
+        TextDelta("Six months."),
+        Answered(ModelAnswer(text="Six months.", cited=(1,)), USAGE),
+    ]
+    with scripted_client(tmp_path, script) as client:
+        upload(client)
+        _, events = ask(client)
+
+    assert events[:3] == [
+        {"type": "text", "text": "Wrong."},
+        {"type": "discard", "reason": "the answer cites no passage"},
+        {"type": "text", "text": "Six months."},
+    ]
+    assert events[-1]["usage"] == {
+        "prompt_tokens": 210,
+        "completion_tokens": 35,
+        "first_token_ms": 450.0,
+        "total_ms": 1800.0,
+        "attempts": 2,
+    }
+    assert events[-1]["is_test_model"] is False
+
+
+def test_a_model_failure_is_an_error_event_and_the_stream_still_ends(
+    tmp_path: Path, upload: Upload
+) -> None:
+    script: list[ModelEvent] = [
+        ModelFailed("model_timeout", "The model server at http://127.0.0.1:8080 took over 60 s.")
+    ]
+    with scripted_client(tmp_path, script) as client:
+        upload(client)
+        _, events = ask(client)
+
+    assert events == [
+        {
+            "type": "error",
+            "code": "model_timeout",
+            "message": "The model server at http://127.0.0.1:8080 took over 60 s.",
+        },
+        {
+            "type": "end",
+            "model_id": "qwen3-8b",
+            "found": True,
+            "is_test_model": False,
+            "usage": None,
+        },
+    ]
