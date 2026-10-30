@@ -1,5 +1,6 @@
 """The agent: it looks passages up with tools, then answers from them (F-07, FR-10)."""
 
+import asyncio
 import re
 import time
 from collections.abc import AsyncIterator, Callable
@@ -86,7 +87,7 @@ class AgentService:
         result = await self._run(gate, ledger, 0, calls)
         yield _announced(gate)
         messages = [
-            Message(role="system", content=self._system_prompt()),
+            Message(role="system", content=await self._system_prompt()),
             Message(role="user", content=question),
             Message(role="assistant", content="", tool_calls=(gate,)),
             Message(role="tool", content=result, tool_call_id=gate.id),
@@ -170,8 +171,9 @@ class AgentService:
         )
         return result
 
-    def _system_prompt(self) -> str:
-        titles = sorted(document.title for document in self._store.list_documents())
+    async def _system_prompt(self) -> str:
+        documents = await asyncio.to_thread(self._store.list_documents)
+        titles = sorted(document.title for document in documents)
         return AGENT_PROMPT.substitute(documents=", ".join(f'"{title}"' for title in titles))
 
 

@@ -87,9 +87,12 @@ class PassageLedger:
         self._numbers: dict[str, int] = {}
         self._passages: list[Chunk] = []
 
-    def number(self, chunk: Chunk) -> int:
-        """The chunk's number, given the next one the first time it is seen."""
+    def number(self, chunk: Chunk) -> int | None:
+        """The chunk's number, given the next one the first time it is seen; None when the
+        ledger is full and the chunk is new."""
         if chunk.id not in self._numbers:
+            if len(self._passages) >= self.limit:
+                return None
             self._passages.append(chunk)
             self._numbers[chunk.id] = len(self._passages)
         return self._numbers[chunk.id]
