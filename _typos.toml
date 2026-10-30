@@ -8,3 +8,7 @@ personel = "personel"
 # Polish words in test data and in recorded model answers ("yes", "the EU").
 tak = "tak"
 ue = "ue"
+
+[files]
+# Baselines record the model's answers as given, in Polish too; they are output, not prose.
+extend-exclude = ["docs/evals/*-baseline.json"]
