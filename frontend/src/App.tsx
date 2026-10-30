@@ -1,5 +1,5 @@
 import { ChatView } from './features/chat/ChatView'
-import { DocumentPanel } from './features/documents/DocumentPanel'
+import { LibraryPanel } from './features/library/LibraryPanel'
 import { ApiStatus } from './features/status/ApiStatus'
 import { NetworkBadge } from './features/status/NetworkBadge'
 
@@ -14,7 +14,7 @@ export function App() {
         </div>
       </header>
       <main className="mx-auto grid max-w-5xl gap-8 p-6 md:grid-cols-[1fr_2fr]">
-        <DocumentPanel />
+        <LibraryPanel />
         <ChatView />
       </main>
     </div>

@@ -123,7 +123,7 @@ No ADR (spec decision 5).
 - Change: `features/notes/` (`useNotes.ts`, `NotesPanel.tsx`), `features/library/LibraryPanel.tsx`, `App.tsx`.
 - Done when: `make check` is green.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 8. The browser journey
 

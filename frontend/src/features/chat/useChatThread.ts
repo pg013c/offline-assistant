@@ -1,4 +1,7 @@
+import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useReducer, useRef } from 'react'
+
+import { NOTES_KEY } from '../notes/useNotes'
 
 import {
   reduceAnswer,
@@ -55,22 +58,31 @@ export function useChatThread(): ChatThread {
 
   useEffect(() => () => current.current?.abort(), [])
 
-  const ask = useCallback((question: string, model?: string) => {
-    current.current?.abort()
-    const controller = new AbortController()
-    current.current = controller
-    const turn = count.current
-    count.current += 1
-    dispatch({ type: 'asked', question, model })
-    streamAnswer(question, model, controller.signal, (event) => {
-      dispatch({ type: 'answer', turn, action: { type: 'event', event } })
-    }).catch((error: unknown) => {
-      if (!controller.signal.aborted) {
-        const message = error instanceof Error ? error.message : String(error)
-        dispatch({ type: 'answer', turn, action: { type: 'failed', message } })
-      }
-    })
-  }, [])
+  const queryClient = useQueryClient()
+
+  const ask = useCallback(
+    (question: string, model?: string) => {
+      current.current?.abort()
+      const controller = new AbortController()
+      current.current = controller
+      const turn = count.current
+      count.current += 1
+      dispatch({ type: 'asked', question, model })
+      streamAnswer(question, model, controller.signal, (event) => {
+        dispatch({ type: 'answer', turn, action: { type: 'event', event } })
+        if (event.type === 'note') {
+          // The library lists the new note without a reload.
+          void queryClient.invalidateQueries({ queryKey: NOTES_KEY })
+        }
+      }).catch((error: unknown) => {
+        if (!controller.signal.aborted) {
+          const message = error instanceof Error ? error.message : String(error)
+          dispatch({ type: 'answer', turn, action: { type: 'failed', message } })
+        }
+      })
+    },
+    [queryClient],
+  )
 
   return { turns, ask }
 }
