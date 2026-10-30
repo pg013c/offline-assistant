@@ -5,6 +5,7 @@ extend-ignore-re = ["`[0-9a-f]{7,40}`"]
 [default.extend-words]
 # Polish words in evaluation questions.
 personel = "personel"
+charakter = "charakter"
 # Polish words in test data and in recorded model answers ("yes", "the EU").
 tak = "tak"
 ue = "ue"
