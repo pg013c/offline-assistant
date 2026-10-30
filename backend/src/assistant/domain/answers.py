@@ -57,6 +57,14 @@ class ToolUsed:
 
 
 @dataclass(frozen=True, slots=True)
+class NoteSaved:
+    """The agent saved a note for the user (F-07a)."""
+
+    id: str
+    title: str
+
+
+@dataclass(frozen=True, slots=True)
 class AnswerEnd:
     model_id: str
     found: bool
@@ -65,7 +73,7 @@ class AnswerEnd:
 
 
 type AnswerEvent = (
-    ToolUsed | AnswerText | AnswerDiscarded | AnswerFailed | AnswerCitation | AnswerEnd
+    ToolUsed | NoteSaved | AnswerText | AnswerDiscarded | AnswerFailed | AnswerCitation | AnswerEnd
 )
 
 

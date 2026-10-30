@@ -57,8 +57,9 @@ class LlmServer:
     tools: bool = True
     # A cap on each answer, so a runaway generation ends (AI-22).
     max_tokens: int = 1024
-    # Tool turns hold calls or the word "ready", not an answer (F-07).
-    tool_max_tokens: int = 256
+    # Tool turns hold calls or the word "ready"; a save_note call carries a whole note
+    # (F-07a), so the cap is an answer's.
+    tool_max_tokens: int = 1024
     json_schema: bool = True
     streaming: bool = True
 
@@ -105,10 +106,12 @@ class OpenAICompatibleChat:
         self._server = server
         self._transport = transport
 
-    async def answer(self, question: str, passages: Sequence[Chunk]) -> AsyncIterator[ModelEvent]:
+    async def answer(
+        self, question: str, passages: Sequence[Chunk], notice: str | None = None
+    ) -> AsyncIterator[ModelEvent]:
         messages: list[dict[str, str]] = [
             {"role": "system", "content": ANSWER_PROMPT},
-            {"role": "user", "content": _user_message(question, passages)},
+            {"role": "user", "content": _user_message(question, passages, notice)},
         ]
         tally = _Tally()
         async with httpx.AsyncClient(
@@ -375,13 +378,18 @@ def _error_status(url: str, response: httpx.Response) -> ModelFailed:
     )
 
 
-def _user_message(question: str, passages: Sequence[Chunk]) -> str:
+def _user_message(question: str, passages: Sequence[Chunk], notice: str | None = None) -> str:
     # Passages are delimited data, each with its heading path for context (AI-10).
     blocks = [
         f'<passage number="{number}">\n{neutralised(indexed_text(chunk))}\n</passage>'
         for number, chunk in enumerate(passages, start=1)
     ]
-    return USER_PROMPT.substitute(passages="\n\n".join(blocks), question=question)
+    # A notice is the service's own word, e.g. whether a note was saved (F-07a); not data.
+    return USER_PROMPT.substitute(
+        passages="\n\n".join(blocks),
+        question=question,
+        notice=f"\n\n{notice}" if notice else "",
+    )
 
 
 def _chunk(line: str) -> dict[str, Any] | None:

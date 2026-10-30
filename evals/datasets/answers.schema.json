@@ -69,7 +69,8 @@
                   "gdpr-en",
                   "gdpr-pl",
                   "injected-retention-policy",
-                  "injected-model-card"
+                  "injected-model-card",
+                  "injected-note-request"
                 ]
               },
               "article": {
@@ -111,7 +112,8 @@
             "enum": [
               "search_documents",
               "get_article",
-              "compare"
+              "compare",
+              "save_note"
             ]
           }
         },
@@ -122,6 +124,9 @@
             "type": "string",
             "minLength": 1
           }
+        },
+        "note": {
+          "type": "boolean"
         }
       },
       "if": {

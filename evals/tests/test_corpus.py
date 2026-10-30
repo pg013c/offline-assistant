@@ -67,6 +67,7 @@ def test_the_injected_documents_are_local_and_only_for_the_answer_suite() -> Non
     assert {document.file for document in local} == {
         "injected-retention-policy.md",
         "injected-model-card.md",
+        "injected-note-request.md",
     }
     for document in local:
         assert document.answers_only

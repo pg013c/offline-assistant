@@ -1,10 +1,9 @@
 """The agent: it looks passages up with tools, then answers from them (F-07, FR-10)."""
 
-import asyncio
 import re
 import time
 from collections.abc import AsyncIterator, Callable
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from importlib.resources import files
 from string import Template
 
@@ -15,9 +14,11 @@ from assistant.domain.answers import (
     AnswerEvent,
     AnswerFailed,
     ModelFailed,
+    NoteSaved,
     ToolUsed,
     Usage,
 )
+from assistant.domain.notes import wants_note
 from assistant.domain.routing import needs_tools
 from assistant.domain.tools import (
     FinalText,
@@ -26,16 +27,19 @@ from assistant.domain.tools import (
     SearchDocumentsArguments,
     ToolCall,
     ToolCalls,
+    ToolSpec,
 )
 from assistant.ports.chat_model import ToolCallingModel
-from assistant.ports.document_store import DocumentStore
 from assistant.services.questions import QuestionService
-from assistant.services.tools import TOOLS, DocumentTools
+from assistant.services.tools import SAVE_NOTE, TOOLS, DocumentTools
 
 log = structlog.get_logger(__name__)
 
-AGENT_PROMPT = Template(
-    files("assistant").joinpath("prompts", "agent.md").read_text(encoding="utf-8")
+_PROMPTS = files("assistant").joinpath("prompts")
+AGENT_PROMPT = Template(_PROMPTS.joinpath("agent.md").read_text(encoding="utf-8"))
+NOTE_SAVED = Template(_PROMPTS.joinpath("note_saved.md").read_text(encoding="utf-8").strip())
+NOTE_NOT_SAVED = Template(
+    _PROMPTS.joinpath("note_not_saved.md").read_text(encoding="utf-8").strip()
 )
 # The search the service makes for the question itself, shown to the model as its first call.
 GATE_CALL_ID = "search-question"
@@ -55,14 +59,13 @@ class AgentService:
         self,
         questions: QuestionService,
         model: ToolCallingModel,
-        store: DocumentStore,
+        tools: DocumentTools,
         max_tool_turns: int,
         clock: Callable[[], float] = time.perf_counter,
     ) -> None:
         self._questions = questions
         self._model = model
-        self._store = store
-        self._tools = DocumentTools(questions, store)
+        self._tools = tools
         self._max_tool_turns = max_tool_turns
         self._clock = clock
 
@@ -72,7 +75,8 @@ class AgentService:
         Only a question about an article, or a comparison, uses the tools; any other
         takes the question service's search-then-answer path (spec decision 6).
         """
-        if not needs_tools(question):
+        note = wants_note(question)
+        if not (needs_tools(question) or note):
             async for event in self._questions.ask(question):
                 yield event
             return
@@ -92,35 +96,73 @@ class AgentService:
             Message(role="assistant", content="", tool_calls=(gate,)),
             Message(role="tool", content=result, tool_call_id=gate.id),
         ]
-        research = NO_USAGE
-        # At the limit the model is not asked again; the answer rests on what it found.
-        for turn in range(1, self._max_tool_turns + 1):
-            reply = await self._model.call_tools(messages, TOOLS)
-            if reply.usage is not None:
-                research = research.plus(reply.usage)
-            self._log_turn(turn, reply)
-            match reply:
-                case FinalText():
-                    break
-                case ToolCalls(calls=requested):
-                    research = research.plus(_ONE_TOOL_TURN)
-                    messages.append(Message(role="assistant", content="", tool_calls=requested))
-                    for call in requested:
-                        yield _announced(call)
-                        content = await self._run(call, ledger, turn, calls)
-                        messages.append(Message(role="tool", content=content, tool_call_id=call.id))
-                case _:
-                    yield AnswerFailed(code=reply.code, message=reply.detail)
-                    yield self._questions.end(found=True, usage=self._timed(research, started))
-                    return
+        # save_note writes a file, so only a question asking for a note gets it (F-07a, AI-11).
+        run = _Run(
+            ledger=ledger,
+            calls=calls,
+            messages=messages,
+            offered=(*TOOLS, SAVE_NOTE) if note else TOOLS,
+        )
+        async for event in self._research(run, note):
+            yield event
+        if run.failure is not None:
+            yield AnswerFailed(code=run.failure.code, message=run.failure.detail)
+            yield self._questions.end(found=True, usage=self._timed(run.research, started))
+            return
         if not ledger:
             # Nothing above the threshold and nothing the tools found: no answer (AI-02).
             for event in self._questions.refusal():
                 yield event
             return
-        research = self._timed(research, started)
-        async for event in self._questions.answer(question, ledger.passages, research):
+        research = self._timed(run.research, started)
+        notice = _notice(ledger, run.save_error) if note else None
+        async for event in self._questions.answer(question, ledger.passages, research, notice):
             yield event
+
+    async def _research(self, run: "_Run", note: bool) -> AsyncIterator[AnswerEvent]:
+        """The model's tool turns, up to the limit; a failure is left in `run.failure`.
+
+        At the limit the model is not asked again; the answer rests on what it found. A note
+        that failed to save in the last turn gets one more turn to be corrected (AI-21).
+        """
+        limit = self._max_tool_turns
+        turn = 0
+        while turn < limit:
+            turn += 1
+            reply = await self._model.call_tools(run.messages, run.offered)
+            if reply.usage is not None:
+                run.research = run.research.plus(reply.usage)
+            self._log_turn(turn, reply)
+            match reply:
+                case FinalText():
+                    return
+                case ToolCalls(calls=requested):
+                    run.research = run.research.plus(_ONE_TOOL_TURN)
+                    run.messages.append(Message(role="assistant", content="", tool_calls=requested))
+                    for call in requested:
+                        async for event in self._call(call, run, turn):
+                            yield event
+                    if note and turn == limit == self._max_tool_turns and run.save_failed:
+                        limit += 1
+                case _:
+                    run.failure = reply
+                    return
+
+    async def _call(self, call: ToolCall, run: "_Run", turn: int) -> AsyncIterator[AnswerEvent]:
+        """One tool call: announced, run if it was offered, and any saved note announced."""
+        yield _announced(call)
+        saved = len(run.ledger.saved_notes)
+        offered = {tool.name for tool in run.offered}
+        content = (
+            await self._run(call, run.ledger, turn, run.calls)
+            if call.name in offered
+            else f"Error: there is no tool {call.name}."
+        )
+        for written in run.ledger.saved_notes[saved:]:
+            yield NoteSaved(id=written.id, title=written.title)
+        if call.name == SAVE_NOTE.name and content.startswith("Error:"):
+            run.save_error = content.removeprefix("Error:").strip()
+        run.messages.append(Message(role="tool", content=content, tool_call_id=call.id))
 
     def _timed(self, research: Usage, started: float) -> Usage:
         """The research phase's usage with its whole time: searches, tools and model turns."""
@@ -172,9 +214,25 @@ class AgentService:
         return result
 
     async def _system_prompt(self) -> str:
-        documents = await asyncio.to_thread(self._store.list_documents)
-        titles = sorted(document.title for document in documents)
+        titles = await self._tools.document_titles()
         return AGENT_PROMPT.substitute(documents=", ".join(f'"{title}"' for title in titles))
+
+
+@dataclass
+class _Run:
+    """What one question's research has gathered and said so far."""
+
+    ledger: PassageLedger
+    calls: "_CallLog"
+    messages: list[Message]
+    offered: tuple[ToolSpec, ...]
+    research: Usage = NO_USAGE
+    save_error: str | None = None
+    failure: ModelFailed | None = None
+
+    @property
+    def save_failed(self) -> bool:
+        return self.save_error is not None and not self.ledger.saved_notes
 
 
 class _CallLog:
@@ -182,11 +240,19 @@ class _CallLog:
 
     def __init__(self) -> None:
         self._numbers: dict[str, list[str]] = {}
+        self._errors: dict[str, str] = {}
 
     def record(self, call: ToolCall, result: str) -> None:
-        self._numbers[_key(call)] = _PASSAGE_NUMBER.findall(result)
+        if result.startswith("Error:"):
+            self._errors[_key(call)] = result
+        else:
+            self._numbers[_key(call)] = _PASSAGE_NUMBER.findall(result)
 
     def repeat(self, call: ToolCall) -> str | None:
+        """What a call made before with the same arguments returned, in short; a failed call
+        gets its error again, so the model sees what to correct."""
+        if _key(call) in self._errors:
+            return self._errors[_key(call)]
         numbers = self._numbers.get(_key(call))
         if numbers is None:
             return None
@@ -211,6 +277,14 @@ _ONE_TOOL_TURN = Usage(
     attempts=0,
     tool_turns=1,
 )
+
+
+def _notice(ledger: PassageLedger, save_error: str | None) -> str:
+    """What the answer is told about the note the question asked for (F-07a review #1)."""
+    if ledger.saved_notes:
+        saved = ledger.saved_notes[0]
+        return NOTE_SAVED.substitute(title=saved.title, id=saved.id)
+    return NOTE_NOT_SAVED.substitute(reason=save_error or "save_note was not called")
 
 
 def _announced(call: ToolCall) -> ToolUsed:

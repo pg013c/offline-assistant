@@ -25,6 +25,7 @@ from assistant.domain.documents import Chunk, chunk_document, document_id_for
 from assistant.domain.tools import (
     FinalText,
     Message,
+    SaveNoteArguments,
     SearchDocumentsArguments,
     ToolCall,
     ToolCalls,
@@ -254,7 +255,9 @@ class ScriptedAgent:
     ) -> ToolCalls | FinalText | ModelFailed:
         return self._turns.pop(0)
 
-    async def answer(self, question: str, passages: Sequence[Chunk]) -> AsyncIterator[ModelEvent]:
+    async def answer(
+        self, question: str, passages: Sequence[Chunk], notice: str | None = None
+    ) -> AsyncIterator[ModelEvent]:
         for event in self._answer:
             yield event
 
@@ -330,3 +333,31 @@ def test_at_the_tool_turn_limit_the_answer_follows_without_an_error(
         _, events = ask(client, ARTICLE_QUESTION)
 
     assert [event["type"] for event in events] == ["tool", "tool", "text", "citation", "end"]
+
+
+def test_a_saved_note_is_a_note_event_after_its_tool_call(tmp_path: Path, upload: Upload) -> None:
+    save = ToolCall(
+        id="note-1",
+        name="save_note",
+        arguments=SaveNoteArguments(title="Log retention", content="Logs are kept six months [1]."),
+    )
+    agent = ScriptedAgent(
+        [ToolCalls((save,)), FinalText("ready")],
+        [TextDelta("Saved [1]."), Answered(ModelAnswer(text="Saved [1].", cited=(1,)), USAGE)],
+    )
+    with agent_client(tmp_path, agent) as client:
+        upload(client)
+        _, events = ask(client, {"question": "Save a note on how long providers keep logs."})
+
+    assert [event["type"] for event in events] == [
+        "tool",
+        "tool",
+        "note",
+        "text",
+        "citation",
+        "end",
+    ]
+    note = events[2]
+    assert note["title"] == "Log retention"
+    assert note["id"].endswith("-log-retention")
+    assert (tmp_path / "notes" / f"{note['id']}.md").exists()

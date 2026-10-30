@@ -5,10 +5,11 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Literal
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, Field, ValidationError, field_validator
 
 from assistant.domain.answers import Usage
 from assistant.domain.documents import Chunk
+from assistant.domain.notes import CONTENT_LIMIT, TITLE_LIMIT, Note
 
 
 @dataclass(frozen=True, slots=True)
@@ -65,6 +66,25 @@ class GetArticleArguments(ArticleRef):
     pass
 
 
+class SaveNoteArguments(BaseModel):
+    """A note to keep: its title and its content, every line citing passages like [1]."""
+
+    title: str = Field(min_length=1, max_length=TITLE_LIMIT)
+    content: str
+
+    @field_validator("content")
+    @classmethod
+    def _bounded(cls, content: str) -> str:
+        # Checked here, not in the JSON schema the model gets: llama-server turns the schema
+        # into a grammar, which takes neither unanchored patterns nor a 20,000-character
+        # length bound.
+        if not content.strip():
+            raise ValueError("the content is empty")
+        if len(content) > CONTENT_LIMIT:
+            raise ValueError(f"the content is over {CONTENT_LIMIT} characters")
+        return content
+
+
 class CompareArguments(BaseModel):
     a: ArticleRef
     b: ArticleRef
@@ -86,6 +106,7 @@ class PassageLedger:
         self.limit = limit
         self._numbers: dict[str, int] = {}
         self._passages: list[Chunk] = []
+        self._notes: list[Note] = []
 
     def number(self, chunk: Chunk) -> int | None:
         """The chunk's number, given the next one the first time it is seen; None when the
@@ -96,6 +117,14 @@ class PassageLedger:
             self._passages.append(chunk)
             self._numbers[chunk.id] = len(self._passages)
         return self._numbers[chunk.id]
+
+    def saved(self, note: Note) -> None:
+        """Record a note this run saved, so the agent can announce it."""
+        self._notes.append(note)
+
+    @property
+    def saved_notes(self) -> tuple[Note, ...]:
+        return tuple(self._notes)
 
     @property
     def passages(self) -> tuple[Chunk, ...]:

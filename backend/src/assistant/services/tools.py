@@ -6,19 +6,25 @@ A mistake in the arguments is a result too, so the model can correct it (AI-21).
 
 import asyncio
 import re
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
+from dataclasses import replace
+from datetime import UTC, datetime
 
+from assistant.domain.answers import markers, statements
 from assistant.domain.documents import Chunk, Document, indexed_text
+from assistant.domain.notes import Note, NoteSource, note_id
 from assistant.domain.tools import (
     CompareArguments,
     GetArticleArguments,
     PassageLedger,
+    SaveNoteArguments,
     SearchDocumentsArguments,
     ToolCall,
     ToolSpec,
     neutralised,
 )
 from assistant.ports.document_store import DocumentStore
+from assistant.ports.note_store import NoteStore
 from assistant.services.questions import CANDIDATES, RERANK_CANDIDATES, QuestionService
 
 # Passages a tool returns at most: a search, one article, each article of a comparison.
@@ -50,6 +56,17 @@ TOOLS: tuple[ToolSpec, ...] = (
 _ARTICLE_NUMBER = re.compile(r"\d+[a-z]?", re.IGNORECASE)
 
 
+# Offered only when the user asks to save a note (F-07a); the one tool that writes (AI-11).
+SAVE_NOTE = ToolSpec(
+    name="save_note",
+    description=(
+        "Save a note or checklist for the user in the local notes. Every sentence or list item "
+        "of the content ends with the numbers of the passages it rests on, like [1]."
+    ),
+    arguments=SaveNoteArguments,
+)
+
+
 class _ToolError(Exception):
     """The arguments name something that does not exist; the message goes to the model."""
 
@@ -57,9 +74,17 @@ class _ToolError(Exception):
 class DocumentTools:
     """Runs the agent's tool calls against the stored and indexed documents."""
 
-    def __init__(self, questions: QuestionService, store: DocumentStore) -> None:
+    def __init__(
+        self,
+        questions: QuestionService,
+        store: DocumentStore,
+        notes: NoteStore | None = None,
+        clock: Callable[[], datetime] = lambda: datetime.now(UTC),
+    ) -> None:
         self._questions = questions
         self._store = store
+        self._notes = notes
+        self._clock = clock
 
     async def run(self, call: ToolCall, ledger: PassageLedger) -> str:
         """The tool's result as the model reads it; passages are numbered in `ledger`."""
@@ -71,6 +96,8 @@ class DocumentTools:
                     return await self._article(
                         arguments.document, arguments.number, ARTICLE_CAP, ledger
                     )
+                case SaveNoteArguments() as arguments if self._notes is not None:
+                    return await self._save_note(arguments, ledger, self._notes)
                 case CompareArguments(a=a, b=b):
                     first = await self._article(a.document, a.number, COMPARE_CAP, ledger)
                     second = await self._article(b.document, b.number, COMPARE_CAP, ledger)
@@ -79,6 +106,66 @@ class DocumentTools:
                     return f"Error: there is no tool {call.name}."
         except _ToolError as error:
             return f"Error: {error}"
+
+    async def document_titles(self) -> list[str]:
+        """The titles of the stored documents, in order, for the agent's prompt."""
+        documents = await asyncio.to_thread(self._store.list_documents)
+        return [document.title for document in _by_title(documents)]
+
+    async def _save_note(
+        self, arguments: SaveNoteArguments, ledger: PassageLedger, notes: NoteStore
+    ) -> str:
+        """Saves the note when every line cites passages of this run; the service, not the
+        model, turns the markers into the note's sources (FR-11)."""
+        if ledger.saved_notes:
+            raise _ToolError(
+                f"a note was already saved in this run ({ledger.saved_notes[0].id}); "
+                "do not save another"
+            )
+        cited = list(dict.fromkeys(markers(arguments.content)))
+        for number in cited:
+            if not 1 <= number <= len(ledger):
+                raise _ToolError(
+                    f"passage {number} was not gathered in this run; "
+                    f"cite passages 1 to {len(ledger)}"
+                )
+        if not cited:
+            raise _ToolError(
+                "the note cites no passage; end every sentence and list item with the numbers "
+                "of the passages it rests on, like [1]"
+            )
+        lines = statements(arguments.content)
+        for position, statement in enumerate(lines):
+            if markers(statement) or _opens_list(statement, lines[position + 1 :]):
+                continue
+            kind = "line" if _is_item(statement) else "sentence"
+            raise _ToolError(
+                f'the {kind} "{statement}" cites no passage; end every sentence and list '
+                "item with the numbers of the passages it rests on, like [1]"
+            )
+        created = self._clock()
+        sources = []
+        for number in sorted(cited):
+            chunk = ledger.passages[number - 1]
+            document = await asyncio.to_thread(self._store.get, chunk.document_id)
+            sources.append(
+                NoteSource(
+                    number=number,
+                    document_title=document.title if document else chunk.document_id,
+                    location=chunk.location,
+                    chunk_id=chunk.id,
+                )
+            )
+        note = Note(
+            id=note_id(arguments.title, created),
+            title=arguments.title,
+            content=arguments.content,
+            sources=tuple(sources),
+            created=created,
+        )
+        saved = await asyncio.to_thread(notes.save, note)
+        ledger.saved(replace(note, id=saved))
+        return f"Saved note {saved}."
 
     async def _search(self, arguments: SearchDocumentsArguments, ledger: PassageLedger) -> str:
         document = await self._document(arguments.document) if arguments.document else None
@@ -121,6 +208,16 @@ class DocumentTools:
                 return document
         titles = ", ".join(f'"{document.title}"' for document in _by_title(documents))
         raise _ToolError(f'there is no document "{name}". The documents are: {titles}.')
+
+
+def _is_item(line: str) -> bool:
+    return line[:1] in "-*•" or line[:1].isdigit()
+
+
+def _opens_list(line: str, rest: Sequence[str]) -> bool:
+    """Whether a line ending in a colon introduces the list item after it; that line states
+    nothing itself and needs no marker."""
+    return line.endswith(":") and bool(rest) and _is_item(rest[0])
 
 
 def _by_title(documents: Sequence[Document]) -> list[Document]:

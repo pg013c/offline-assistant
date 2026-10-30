@@ -31,3 +31,7 @@ class DocumentNotFound(Exception):
 
 class RerankerOff(Exception):
     """Reranking was asked for, but no reranker is configured."""
+
+
+class NoteNotFound(Exception):
+    """No note has this id."""

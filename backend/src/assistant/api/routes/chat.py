@@ -11,6 +11,7 @@ from assistant.api.schemas import (
     ChatEndEvent,
     ChatErrorEvent,
     ChatEvent,
+    ChatNoteEvent,
     ChatRequest,
     ChatTextEvent,
     ChatToolEvent,
@@ -24,6 +25,7 @@ from assistant.domain.answers import (
     AnswerEvent,
     AnswerFailed,
     AnswerText,
+    NoteSaved,
     ToolUsed,
 )
 from assistant.services.questions import Answerer
@@ -33,7 +35,16 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 Answers = Annotated[Answerer, Depends(get_answers)]
 
 
+def _progress(event: ToolUsed | NoteSaved) -> ChatToolEvent | ChatNoteEvent:
+    """What the agent did before its answer: a tool call, or a note it saved."""
+    if isinstance(event, ToolUsed):
+        return ChatToolEvent(type="tool", name=event.name, arguments=event.arguments)
+    return ChatNoteEvent(type="note", id=event.id, title=event.title)
+
+
 def _to_schema(event: AnswerEvent) -> ChatEvent:
+    if isinstance(event, ToolUsed | NoteSaved):
+        return ChatEvent(_progress(event))
     match event:
         case AnswerText(text=text):
             return ChatEvent(ChatTextEvent(type="text", text=text))
@@ -78,8 +89,6 @@ def _to_schema(event: AnswerEvent) -> ChatEvent:
                     ),
                 )
             )
-        case ToolUsed(name=name, arguments=arguments):
-            return ChatEvent(ChatToolEvent(type="tool", name=name, arguments=arguments))
         case _:
             assert_never(event)
 

@@ -58,6 +58,7 @@ describe('useChatStream', () => {
       text: '',
       citations: [],
       tools: [],
+      notes: [],
     })
   })
 
@@ -84,10 +85,32 @@ describe('useChatStream', () => {
       text: 'Providers keep logs.',
       citations: [CITATION],
       tools: [],
+      notes: [],
       modelId: 'fake-extractive',
       found: true,
       isTestModel: true,
     })
+  })
+
+  it('collects the notes the agent saved', async () => {
+    serveAnswer([
+      { type: 'tool', name: 'save_note', arguments: { title: 'Breach duties', content: 'x [1]' } },
+      { type: 'note', id: '20261030-091507-breach-duties', title: 'Breach duties' },
+      { type: 'text', text: 'Saved the checklist [1].' },
+      { type: 'end', model_id: 'qwen3-8b', found: true, is_test_model: false },
+    ])
+    const { result } = renderHook(() => useChatStream(), { wrapper })
+
+    act(() => {
+      result.current.ask('Save a checklist of breach duties as a note.')
+    })
+
+    await waitFor(() => {
+      expect(result.current.answer.status).toBe('done')
+    })
+    expect(result.current.answer.notes).toEqual([
+      { id: '20261030-091507-breach-duties', title: 'Breach duties' },
+    ])
   })
 
   it('collects the tool calls of the agent in order, before the answer', async () => {

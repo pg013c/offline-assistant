@@ -9,12 +9,21 @@ import pytest
 from assistant.adapters.fakes.chunk_index import InMemoryChunkIndex
 from assistant.adapters.fakes.document_store import FakeDocumentStore
 from assistant.adapters.fakes.ingestion_queue import InlineIngestionQueue
+from assistant.adapters.fakes.note_store import InMemoryNoteStore
 from assistant.adapters.openai_compatible_chat import LlmServer, OpenAICompatibleChat
 from assistant.adapters.text_document_parser import TextDocumentParser
-from assistant.domain.answers import AnswerCitation, AnswerEnd, AnswerEvent, AnswerText, ToolUsed
+from assistant.domain.answers import (
+    AnswerCitation,
+    AnswerEnd,
+    AnswerEvent,
+    AnswerText,
+    NoteSaved,
+    ToolUsed,
+)
 from assistant.services.agent import AgentService
 from assistant.services.documents import DocumentService
 from assistant.services.questions import QuestionService
+from assistant.services.tools import DocumentTools
 
 pytestmark = pytest.mark.integration
 
@@ -59,7 +68,9 @@ def server_is_up() -> bool:
         return False
 
 
-def ask(question: str) -> tuple[list[AnswerEvent], FakeDocumentStore]:
+def ask(
+    question: str, notes: InMemoryNoteStore | None = None
+) -> tuple[list[AnswerEvent], FakeDocumentStore]:
     store = FakeDocumentStore()
     index = InMemoryChunkIndex()
     documents = DocumentService(store, index, TextDocumentParser(), InlineIngestionQueue())
@@ -71,7 +82,8 @@ def ask(question: str) -> tuple[list[AnswerEvent], FakeDocumentStore]:
     )
     # The in-memory index only finds passages that share a word with the query.
     questions = QuestionService(index, model, store, min_similarity=0)
-    agent = AgentService(questions, model, store, max_tool_turns=4)
+    tools = DocumentTools(questions, store, notes=notes or InMemoryNoteStore())
+    agent = AgentService(questions, model, tools, max_tool_turns=4)
 
     async def gather() -> list[AnswerEvent]:
         return [event async for event in agent.ask(question)]
@@ -104,3 +116,18 @@ def test_a_polish_question_is_answered_in_polish_with_markers() -> None:
     assert "[1]" in text or "[2]" in text
     assert any(letter in text.lower() for letter in "ąćęłńóśźż")
     assert any(isinstance(event, AnswerCitation) for event in events)
+
+
+@pytest.mark.skipif(not server_is_up(), reason="no local model server (make llm)")
+def test_a_checklist_request_saves_a_note_citing_the_article() -> None:
+    notes = InMemoryNoteStore()
+
+    events, _ = ask(
+        "Save a checklist of the controller's duties under Article 33 of the GDPR as a note.",
+        notes,
+    )
+
+    [note] = notes.list_notes()
+    assert NoteSaved(id=note.id, title=note.title) in events
+    assert note.sources
+    assert {source.location.article for source in note.sources} == {"33"}

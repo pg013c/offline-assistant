@@ -5,6 +5,7 @@ from typing import cast
 from fastapi import Request
 
 from assistant.services.documents import DocumentService
+from assistant.services.notes import NoteService
 from assistant.services.questions import Answerer, QuestionService
 
 
@@ -18,3 +19,7 @@ def get_question_service(request: Request) -> QuestionService:
 
 def get_answers(request: Request) -> Answerer:
     return cast(Answerer, request.app.state.answers)
+
+
+def get_note_service(request: Request) -> NoteService:
+    return cast(NoteService, request.app.state.note_service)

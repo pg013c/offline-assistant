@@ -19,6 +19,7 @@ from assistant.adapters.fakes.chunk_index import InMemoryChunkIndex
 from assistant.adapters.fakes.document_store import FakeDocumentStore
 from assistant.adapters.fakes.ingestion_queue import InlineIngestionQueue
 from assistant.adapters.file_document_store import LocalFileDocumentStore
+from assistant.adapters.file_note_store import FileNoteStore
 from assistant.adapters.qdrant_chunk_index import QdrantChunkIndex
 from assistant.adapters.routing_parser import RoutingDocumentParser
 from assistant.adapters.sentence_transformer_embedder import SentenceTransformerEmbedder
@@ -26,6 +27,7 @@ from assistant.adapters.text_document_parser import TextDocumentParser
 from assistant.adapters.thread_ingestion_queue import ThreadIngestionQueue
 from assistant.api.errors import register_error_handlers
 from assistant.api.routes import chat, documents, health, search
+from assistant.api.routes import notes as notes_routes
 from assistant.log import configure_logging
 from assistant.ports.chat_model import ChatModel, ToolCallingModel
 from assistant.ports.chunk_index import ChunkIndex
@@ -35,7 +37,9 @@ from assistant.ports.ingestion_queue import IngestionQueue
 from assistant.ports.reranker import Reranker
 from assistant.services.agent import AgentService
 from assistant.services.documents import DocumentService
+from assistant.services.notes import NoteService
 from assistant.services.questions import Answerer, QuestionService
+from assistant.services.tools import DocumentTools
 from assistant.settings import Settings, load_settings
 
 API_PREFIX = "/api"
@@ -128,8 +132,14 @@ def create_app(settings: Settings, adapters: Adapters | None = None) -> FastAPI:
         settings.min_similarity,
         adapters.reranker,
     )
+    notes = FileNoteStore(settings.notes_dir)
     answers: Answerer = (
-        AgentService(question_service, adapters.tool_model, adapters.store, settings.max_tool_turns)
+        AgentService(
+            question_service,
+            adapters.tool_model,
+            DocumentTools(question_service, adapters.store, notes=notes),
+            settings.max_tool_turns,
+        )
         if adapters.tool_model
         else question_service
     )
@@ -167,11 +177,13 @@ def create_app(settings: Settings, adapters: Adapters | None = None) -> FastAPI:
     app.state.document_service = document_service
     app.state.question_service = question_service
     app.state.answers = answers
+    app.state.note_service = NoteService(notes)
     register_error_handlers(app)
     app.include_router(health.router, prefix=API_PREFIX)
     app.include_router(documents.router, prefix=API_PREFIX)
     app.include_router(chat.router, prefix=API_PREFIX)
     app.include_router(search.router, prefix=API_PREFIX)
+    app.include_router(notes_routes.router, prefix=API_PREFIX)
     return app
 
 

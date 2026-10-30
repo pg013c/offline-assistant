@@ -96,6 +96,7 @@ The diagram above is the target. The question flow runs end to end today; each p
 | Port | Adapter now | Replaced by |
 |---|---|---|
 | `DocumentParser` | `RoutingDocumentParser`: `TextDocumentParser` for `.txt` and `.md`, `DoclingDocumentParser` for PDF, DOCX, PNG and JPG (pdfium text, Tesseract OCR `eng+pol`, models from `make models`, ADR 0015); `FakeDocumentParser` for tests | stays |
+| `NoteStore` | `FileNoteStore`: `notes_dir/<id>.md` for the user and `<id>.json` to read back, each written whole through a temporary link, never overwriting a note; ids are `YYYYMMDD-HHMMSS-<slug>`, so no path can be named (AI-11); `InMemoryNoteStore` for tests | stays |
 | `DocumentStore` | `LocalFileDocumentStore`: `data_dir/documents/<id><ext>` (original), `<id>.json` (metadata, status), `<id>.chunks.json`; `FakeDocumentStore` for tests | stays |
 | `IngestionQueue` | `ThreadIngestionQueue`: one worker thread, so one parse holds model memory at a time; `FakeIngestionQueue` and `InlineIngestionQueue` for tests | stays |
 | `Embedder` | `SentenceTransformerEmbedder`: BGE-M3, 1,024 dimensions, Polish and English, MPS on the Mac, pinned and verified (ADR 0017); `FakeEmbedder` for tests | stays; F-09 compares models |
@@ -135,6 +136,14 @@ The diagram above is the target. The question flow runs end to end today; each p
 - **Stream and logs:** each tool call is a `tool` event before the answer text, which the UI shows as a step ("Reading: GDPR (EN), Art. 33"). Each tool call and tool turn is logged with ids, counts, tokens and times, never arguments or text.
 - **Timing:** the time to first token counts the whole research phase.
 
+**Notes** (F-07a). A question that asks to save a note or checklist (`domain.wants_note`: "save … note", "zapisz … notatkę") goes through the agent, and only such a question is offered `save_note(title, content)`.
+
+- **Validation:** every sentence or list item of the content cites gathered passages with `[n]` markers; a colon line that opens a list is exempt. A note must cite at least once.
+- **Saving:** the service writes the note's `Sources` from the markers and saves it in `ASSISTANT_NOTES_DIR` (default `<data dir>/notes`).
+- **Limits:** one note per run. A failed save is an error the model can correct, with one more turn if it failed in the last.
+- **Answer and stream:** the answer is told whether the note was saved (`prompts/note_saved.md`, `note_not_saved.md`). The stream sends a `note` event, which the UI shows as a step.
+- **Reading back:** `GET /api/notes` and `GET /api/notes/{id}`.
+
 **Evaluation** (`evals/`, ADR 0018). `make eval` starts its own API with:
 
 - data directory `data/eval`;
@@ -144,7 +153,8 @@ The diagram above is the target. The question flow runs end to end today; each p
 It uploads the pinned corpus (AI Act and GDPR, English and Polish) and resolves each case's expected sources, written as document and article, to chunk ids through `GET /api/documents/{id}/chunks`. After one unmeasured warm-up search per mode, Promptfoo queries `POST /api/search` for every case twice, with and without the reranker, one request at a time. Python computes recall@k, MRR, answerable@3 (an expected chunk among the first three hits at or above the threshold), the refusal shares at the similarity threshold, the search latency (median and 95th percentile) and the top out-of-scope similarity for each mode, writes a report with the run metadata, and fails when a metric of the API's default mode is more than 5 points worse than `docs/evals/retrieval-baseline.json` or below its floor (ADR 0020, TEST-24). `make eval-answers` runs the answer suite (`answers.yaml`) through `POST /api/chat` against the local model. The answer suite also indexes two invented documents with planted instructions (`evals/corpus/`, pinned in `corpus.json`), which only it uses. It scores:
 
 - citations of expected passages, the answer language, first-try validity, failures and refusals;
-- the agent's metrics: expected tools used, sentences with markers, cited chunks that are stored, followed injections and not-covered answers.
+- the agent's metrics: expected tools used, sentences with markers, cited chunks that are stored, followed injections and not-covered answers;
+- notes: saved when asked, saved when not asked, and whether a note's sources include an expected chunk. Each note is read back through the API, and its content is checked for planted text.
 
 It reports time to first token, tokens per second and each case's tools, and compares the run with `docs/evals/answer-baseline.json`. The API it started is stopped at the end.
 

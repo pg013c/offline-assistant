@@ -4,12 +4,14 @@ import asyncio
 import re
 import time
 from collections.abc import AsyncIterator, Callable, Sequence
+from datetime import UTC, datetime
 
 from structlog.testing import capture_logs
 
 from assistant.adapters.fakes.chunk_index import InMemoryChunkIndex
 from assistant.adapters.fakes.document_store import FakeDocumentStore
 from assistant.adapters.fakes.ingestion_queue import InlineIngestionQueue
+from assistant.adapters.fakes.note_store import InMemoryNoteStore
 from assistant.adapters.text_document_parser import TextDocumentParser
 from assistant.domain.answers import (
     NO_RELEVANT_PASSAGE,
@@ -22,6 +24,7 @@ from assistant.domain.answers import (
     ModelAnswer,
     ModelEvent,
     ModelFailed,
+    NoteSaved,
     TextDelta,
     ToolUsed,
     Usage,
@@ -31,6 +34,7 @@ from assistant.domain.tools import (
     FinalText,
     GetArticleArguments,
     Message,
+    SaveNoteArguments,
     ToolCall,
     ToolCalls,
     ToolSpec,
@@ -38,6 +42,7 @@ from assistant.domain.tools import (
 from assistant.services.agent import AgentService
 from assistant.services.documents import DocumentService
 from assistant.services.questions import QuestionService
+from assistant.services.tools import DocumentTools
 
 GDPR = b"""# GDPR (EN)
 
@@ -58,6 +63,8 @@ Notification of a personal data breach
 
 # Only questions about an article or a comparison go through the tools (spec decision 6).
 QUESTION = "When must a breach be notified under Article 33?"
+NOTE_REQUEST = "Save a checklist of the breach duties under Article 33 as a note."
+NOW = datetime(2026, 10, 30, 9, 15, 7, tzinfo=UTC)
 
 
 def usage(
@@ -91,6 +98,7 @@ class ScriptedAgent:
         self.seen: list[list[Message]] = []
         self.tools: list[str] = []
         self.answered_with: list[Chunk] | None = None
+        self.notice: str | None = None
 
     async def call_tools(
         self, messages: Sequence[Message], tools: Sequence[ToolSpec]
@@ -99,8 +107,11 @@ class ScriptedAgent:
         self.tools = [tool.name for tool in tools]
         return self._turns.pop(0)
 
-    async def answer(self, question: str, passages: Sequence[Chunk]) -> AsyncIterator[ModelEvent]:
+    async def answer(
+        self, question: str, passages: Sequence[Chunk], notice: str | None = None
+    ) -> AsyncIterator[ModelEvent]:
         self.answered_with = list(passages)
+        self.notice = notice
         for event in self._answer:
             yield event
 
@@ -110,6 +121,7 @@ def service(
     max_tool_turns: int = 4,
     min_similarity: float = 0,
     clock: Callable[[], float] = time.perf_counter,
+    notes: InMemoryNoteStore | None = None,
 ) -> tuple[AgentService, FakeDocumentStore, str]:
     store = FakeDocumentStore()
     index = InMemoryChunkIndex()
@@ -117,7 +129,8 @@ def service(
     document_id = documents.upload("GDPR (EN).md", GDPR).id
     # The in-memory index only finds passages that share a word with the question.
     questions = QuestionService(index, agent, store, min_similarity=min_similarity)
-    return AgentService(questions, agent, store, max_tool_turns, clock), store, document_id
+    tools = DocumentTools(questions, store, notes=notes or InMemoryNoteStore(), clock=lambda: NOW)
+    return AgentService(questions, agent, tools, max_tool_turns, clock), store, document_id
 
 
 def ask(questions: AgentService | QuestionService, question: str = QUESTION) -> list[AnswerEvent]:
@@ -422,3 +435,133 @@ def test_every_tool_turn_is_logged_with_its_model_tokens_and_time_but_no_text() 
     ]
     assert all(e["completion_tokens"] in (15, 2) for e in turns)
     assert not any("ready" in str(e.get("text", "")) or QUESTION in str(e) for e in turns)
+
+
+def saving(content: str, call_id: str = "note-1") -> ToolCalls:
+    arguments = SaveNoteArguments(title="Breach duties", content=content)
+    return ToolCalls((ToolCall(id=call_id, name="save_note", arguments=arguments),))
+
+
+def test_a_note_request_is_offered_save_note_and_a_saved_note_is_announced() -> None:
+    notes = InMemoryNoteStore()
+    agent = ScriptedAgent(
+        [saving("- Notify the authority within 72 hours [1]"), FinalText("ready")],
+        answered("Saved the checklist [1].", (1,)),
+    )
+    questions, _, _ = service(agent, notes=notes)
+
+    events = ask(questions, NOTE_REQUEST)
+
+    assert agent.tools == ["search_documents", "get_article", "compare", "save_note"]
+    [note] = notes.list_notes()
+    saved = [event for event in events if isinstance(event, NoteSaved)]
+    assert saved == [NoteSaved(id=note.id, title="Breach duties")]
+    first_text = next(i for i, event in enumerate(events) if isinstance(event, AnswerText))
+    assert events.index(saved[0]) < first_text
+
+
+def test_a_note_request_without_an_article_still_goes_through_the_tools() -> None:
+    agent = ScriptedAgent([FinalText("ready")], answered("A breach is notified [1].", (1,)))
+    questions, _, _ = service(agent)
+
+    ask(questions, "Save a note on breach notification.")
+
+    assert len(agent.seen) == 1
+    assert "save_note" in agent.tools
+
+
+def test_a_question_without_a_note_request_is_not_offered_save_note() -> None:
+    agent = ScriptedAgent([FinalText("ready")], answered("Within 72 hours [1].", (1,)))
+    questions, _, _ = service(agent)
+
+    ask(questions)
+
+    assert agent.tools == ["search_documents", "get_article", "compare"]
+
+
+def test_a_save_note_call_that_was_not_offered_writes_nothing() -> None:
+    notes = InMemoryNoteStore()
+    agent = ScriptedAgent(
+        [saving("Notify within 72 hours [1]."), FinalText("ready")],
+        answered("Within 72 hours [1].", (1,)),
+    )
+    questions, _, _ = service(agent, notes=notes)
+
+    events = ask(questions)
+
+    assert agent.seen[1][-1].content == "Error: there is no tool save_note."
+    assert notes.list_notes() == []
+    assert not any(isinstance(event, NoteSaved) for event in events)
+
+
+def test_a_repeated_call_that_failed_gets_its_error_again() -> None:
+    notes = InMemoryNoteStore()
+    agent = ScriptedAgent(
+        [saving("No marker here.", "n1"), saving("No marker here.", "n2"), FinalText("ready")],
+        answered("A breach is notified [1].", (1,)),
+    )
+    questions, _, _ = service(agent, notes=notes)
+
+    ask(questions, NOTE_REQUEST)
+
+    first, repeated = agent.seen[1][-1], agent.seen[2][-1]
+    assert first.content.startswith("Error:")
+    assert repeated.content == first.content
+    assert notes.list_notes() == []
+
+
+def test_the_answer_is_told_which_note_was_saved() -> None:
+    notes = InMemoryNoteStore()
+    agent = ScriptedAgent(
+        [saving("- Notify the authority within 72 hours [1]"), FinalText("ready")],
+        answered("Saved the checklist [1].", (1,)),
+    )
+    questions, _, _ = service(agent, notes=notes)
+
+    ask(questions, NOTE_REQUEST)
+
+    [note] = notes.list_notes()
+    assert agent.notice is not None
+    assert '"Breach duties"' in agent.notice
+    assert note.id in agent.notice
+
+
+def test_the_answer_is_told_when_no_note_was_saved_and_why() -> None:
+    agent = ScriptedAgent(
+        [saving("No marker here.", "n1"), FinalText("ready")],
+        answered("I could not save the note [1].", (1,)),
+    )
+    questions, _, _ = service(agent)
+
+    ask(questions, NOTE_REQUEST)
+
+    assert agent.notice is not None
+    assert agent.notice.startswith("No note was saved")
+    assert "cites no passage" in agent.notice
+
+
+def test_a_question_without_a_note_request_gets_no_notice() -> None:
+    agent = ScriptedAgent([FinalText("ready")], answered("Within 72 hours [1].", (1,)))
+    questions, _, _ = service(agent)
+
+    ask(questions)
+
+    assert agent.notice is None
+
+
+def test_a_save_that_fails_in_the_last_turn_gets_one_more_turn_to_be_corrected() -> None:
+    notes = InMemoryNoteStore()
+    agent = ScriptedAgent(
+        [
+            reading("33"),
+            saving("No marker here.", "n1"),
+            saving("Notify within 72 hours [1].", "n2"),
+        ],
+        answered("Saved [1].", (1,)),
+    )
+    questions, _, _ = service(agent, max_tool_turns=2, notes=notes)
+
+    ask(questions, NOTE_REQUEST)
+
+    assert len(agent.seen) == 3
+    assert len(notes.list_notes()) == 1

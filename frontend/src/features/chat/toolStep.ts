@@ -12,6 +12,8 @@ export function toolStep(tool: ChatTool): string {
       return `Reading: ${article(args)}`
     case 'compare':
       return `Comparing: ${article(args.a)} with ${article(args.b)}`
+    case 'save_note':
+      return `Saving note: ${text(args.title)}`
     default:
       return `Using ${tool.name}`
   }

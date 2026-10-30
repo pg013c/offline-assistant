@@ -21,7 +21,9 @@ class FakeExtractiveChatModel:
     model_id = "fake-extractive"
     is_test_model = True
 
-    async def answer(self, question: str, passages: Sequence[Chunk]) -> AsyncIterator[ModelEvent]:
+    async def answer(
+        self, question: str, passages: Sequence[Chunk], notice: str | None = None
+    ) -> AsyncIterator[ModelEvent]:
         if not passages:
             return
         words = [*opening_sentences(passages[0].text).split(), "[1]"]
@@ -45,7 +47,9 @@ class ScriptedChatModel:
         self._events = list(events)
         self.calls = 0
 
-    async def answer(self, question: str, passages: Sequence[Chunk]) -> AsyncIterator[ModelEvent]:
+    async def answer(
+        self, question: str, passages: Sequence[Chunk], notice: str | None = None
+    ) -> AsyncIterator[ModelEvent]:
         self.calls += 1
         for event in self._events:
             yield event

@@ -1,0 +1,1 @@
+No note was saved: $reason. Do not say that a note was saved. Say in one sentence at the end of the answer that the note could not be saved, ending that sentence with the numbers of the passages it concerns, like every other sentence.

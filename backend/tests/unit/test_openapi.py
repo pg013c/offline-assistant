@@ -45,3 +45,10 @@ def test_the_chat_stream_documents_tool_events_and_tool_turns() -> None:
     tool = schemas["ChatToolEvent"]
     assert set(tool["required"]) == {"type", "name", "arguments"}
     assert "tool_turns" in schemas["ChatUsage"]["required"]
+
+
+def test_notes_and_the_note_event_are_documented() -> None:
+    schema = json.loads(openapi_json())
+
+    assert {"/api/notes", "/api/notes/{note_id}"} <= set(schema["paths"])
+    assert {"NoteSummary", "NoteDetail", "ChatNoteEvent"} <= set(schema["components"]["schemas"])

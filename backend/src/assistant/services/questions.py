@@ -139,17 +139,22 @@ class QuestionService:
         )
 
     async def answer(
-        self, question: str, passages: Sequence[Chunk], research: Usage | None = None
+        self,
+        question: str,
+        passages: Sequence[Chunk],
+        research: Usage | None = None,
+        notice: str | None = None,
     ) -> AsyncIterator[AnswerEvent]:
         """The model's answer from these passages, numbered from 1 in this order.
 
         `research` is what the agent's tool turns cost before it (F-07); the end event
-        reports the whole run.
+        reports the whole run. `notice` tells the model what the service did, such as saving a
+        note (F-07a).
         """
         usage: Usage | None = None
         outcome = "no_outcome"
         covered = True
-        async for event in self._model.answer(question, passages):
+        async for event in self._model.answer(question, passages, notice):
             match event:
                 case TextDelta(text=text):
                     yield AnswerText(text=text)

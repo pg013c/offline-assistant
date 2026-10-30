@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, ValidationError
+from pydantic import Field, ValidationError, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ENV_PREFIX = "ASSISTANT_"
@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     max_retries: int = Field(default=2, ge=0, le=5)
     # Model turns that may call tools before the answer (AI-22, F-07).
     max_tool_turns: int = Field(default=2, ge=1, le=10)
+    # Where the agent saves notes (F-07a, AI-11); `<data_dir>/notes` unless set.
+    notes_dir: Path = Path()
     # `docling` reads every supported format; `text-only` reads .txt and .md without models.
     document_parser: Literal["docling", "text-only"] = "docling"
     # Where `make models` put the parsing and embedding models (ADR 0004).
@@ -33,6 +35,12 @@ class Settings(BaseSettings):
     # Reorder search candidates with the cross-encoder (F-05, ADR 0019); `auto` uses it with
     # an Apple GPU only, since on a CPU it costs seconds per question.
     reranker: Literal["on", "off", "auto"] = "auto"
+
+    @model_validator(mode="after")
+    def _notes_under_the_data_dir(self) -> "Settings":
+        if "notes_dir" not in self.model_fields_set:
+            self.notes_dir = self.data_dir / "notes"
+        return self
 
 
 class SettingsError(Exception):

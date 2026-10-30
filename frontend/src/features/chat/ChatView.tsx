@@ -51,10 +51,13 @@ export function ChatView(): JSX.Element {
 
       {answer.status !== 'idle' && answer.status !== 'error' && (
         <article aria-live="polite" className="flex flex-col gap-3">
-          {answer.tools.length > 0 && (
+          {answer.tools.length + answer.notes.length > 0 && (
             <ol aria-label="Steps" className="flex flex-col gap-1 text-xs text-gray-500">
               {answer.tools.map((tool, position) => (
                 <li key={position}>{toolStep(tool)}</li>
+              ))}
+              {answer.notes.map((note) => (
+                <li key={note.id}>Saved note: {note.title}</li>
               ))}
             </ol>
           )}
