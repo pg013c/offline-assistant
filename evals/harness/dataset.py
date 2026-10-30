@@ -69,6 +69,7 @@ def _case(entry: dict[str, Any]) -> Case:
         sources=tuple(ExpectedSource(**source) for source in expected["sources"]),
         tools=tuple(expected.get("tools", ())),
         forbidden=tuple(expected.get("forbidden", ())),
+        note=bool(expected.get("note", False)),
     )
 
 

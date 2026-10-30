@@ -84,7 +84,7 @@ No ADR (spec decision 5).
 - Change: `evals/corpus/injected-note-request.md`, `corpus.json`, `answers.yaml`, `answers.schema.json`, `harness/dataset.py`.
 - Done when: `make check` is green.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 2. Notes in the domain, the `NoteStore` port, its fake and the file adapter
 
