@@ -69,9 +69,13 @@ check "judge serves on JUDGE_PORT as qwen3-30b-a3b" \
   "$(make -C "$root" --no-print-directory -n judge JUDGE_PORT=59994 ASSISTANT_MODELS_DIR="$scratch" 2>/dev/null \
     | grep -q -- "--port 59994.*--alias qwen3-30b-a3b\|--alias qwen3-30b-a3b.*--port 59994" && echo yes || echo no)"
 
+judge_recipe="$(make -C "$root" --no-print-directory -n judge ASSISTANT_MODELS_DIR="$scratch" 2>/dev/null)"
 check "judge thinks before it rules (ADR 0023)" \
-  "$(make -C "$root" --no-print-directory -n judge ASSISTANT_MODELS_DIR="$scratch" 2>/dev/null \
-    | grep -q -- "--reasoning-budget 0" && echo no || echo yes)"
+  "$([[ "$judge_recipe" == *"--alias qwen3-30b-a3b"* && "$judge_recipe" != *"--reasoning-budget 0"* ]] && echo yes || echo no)"
+
+llm_recipe="$(make -C "$root" --no-print-directory -n llm ASSISTANT_MODELS_DIR="$scratch" 2>/dev/null)"
+check "llm serves qwen3-8b with thinking off (ADR 0021)" \
+  "$([[ "$llm_recipe" == *"--alias qwen3-8b"* && "$llm_recipe" == *"--reasoning-budget 0"* ]] && echo yes || echo no)"
 
 [[ "$failures" -eq 0 ]] || { echo "$failures Makefile test(s) failed"; exit 1; }
 echo "All Makefile tests passed."
