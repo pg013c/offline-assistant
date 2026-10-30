@@ -132,7 +132,7 @@ No ADR (spec decision 5).
   - the OpenAPI test, for the schemas.
 - Change: `api/routes/notes.py`, `api/schemas.py`, `api/routes/chat.py`, `api/errors.py`, `app.py`; `make api-client`.
 - Done when: `make check` is green.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 6. UI: the saved note as a step
