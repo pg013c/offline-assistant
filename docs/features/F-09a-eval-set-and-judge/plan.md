@@ -82,7 +82,7 @@
   - `tests/unit/api/test_documents_api.py`: chunks are listed with their text;
   - the OpenAPI test.
 - Change: `api/schemas.py`, `api/routes/documents.py`; `make api-client`.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 3. Failed tool turns
