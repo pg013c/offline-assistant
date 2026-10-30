@@ -105,12 +105,13 @@ def test_the_tools_are_sent_as_function_schemas() -> None:
     ]
 
 
-def test_a_tool_turn_is_capped_far_below_an_answer() -> None:
+def test_a_tool_turn_is_capped_like_an_answer_so_a_note_fits() -> None:
     server = StubServer(calling("search_documents", '{"query": "logs"}'))
 
     turn(model(server))
 
-    assert server.requests[0]["max_tokens"] == 256
+    # A save_note call carries the whole note; 256 tokens cut a Polish checklist (F-07a).
+    assert server.requests[0]["max_tokens"] == 1024
 
 
 def test_a_tool_call_comes_back_with_validated_arguments() -> None:

@@ -173,6 +173,16 @@ Added during step 7: the integration test against Qwen3 8B found three problems.
 - [x] red
 - [x] green
 
+### Step 7c. Room for a note in a tool turn
+
+Added after the first measurement: the Polish checklist overran the 256-token cap of a tool turn. Its `save_note` arguments were cut, and the server answered 500.
+
+- Kind: code
+- Tests first: `test_openai_tool_calls.py`, where a tool turn is capped at 1024 tokens, like an answer.
+- Change: `adapters/openai_compatible_chat.py`.
+- [x] red
+- [ ] green
+
 ### Step 8. Measure and record
 
 - Kind: eval
