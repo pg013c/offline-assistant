@@ -13,7 +13,7 @@ export interface paths {
         };
         /**
          * Get Health
-         * @description Report that the API is up and which version is running.
+         * @description Report that the API is up, which version is running and whether network mode is on.
          */
         get: operations["get_health"];
         put?: never;
@@ -450,6 +450,8 @@ export interface components {
             status: "ok";
             /** Version */
             version: string;
+            /** Network */
+            network: boolean;
         };
         /**
          * ModelChoiceResponse

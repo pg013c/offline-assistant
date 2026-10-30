@@ -9,6 +9,8 @@ from pydantic import BaseModel, Field, RootModel
 class HealthResponse(BaseModel):
     status: Literal["ok"]
     version: str
+    # True in comparison mode, which may use the network (ADR 0004); the UI shows it.
+    network: bool
 
 
 class DocumentResponse(BaseModel):

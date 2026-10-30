@@ -77,7 +77,7 @@ No ADR (spec decision 5).
 - Change: `settings.py`, `api/schemas.py`, `api/routes/health.py`, `.env.example`; `make api-client`.
 - Done when: `make check` is green.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 4. The chat thread
 
