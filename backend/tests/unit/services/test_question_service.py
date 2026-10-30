@@ -485,6 +485,22 @@ def test_citations_follow_the_passages_the_model_cites_in_its_order() -> None:
     ]
 
 
+def test_each_citation_carries_the_number_its_passage_has_in_the_answer() -> None:
+    questions, _ = scripted(
+        TextDelta("Kept six months [2]. Providers keep them [1]."),
+        Answered(
+            ModelAnswer(text="Kept six months [2]. Providers keep them [1].", cited=(2, 1)), USAGE
+        ),
+    )
+
+    events = ask(questions, "How long are logs kept?")
+
+    assert [(e.number, e.citation.chunk_id) for e in events if isinstance(e, AnswerCitation)] == [
+        (2, "doc:1"),
+        (1, "doc:0"),
+    ]
+
+
 def test_a_discarded_attempt_is_passed_on_before_the_retry() -> None:
     questions, _ = scripted(
         TextDelta("Wrong."),

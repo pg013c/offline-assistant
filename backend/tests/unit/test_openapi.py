@@ -52,3 +52,9 @@ def test_notes_and_the_note_event_are_documented() -> None:
 
     assert {"/api/notes", "/api/notes/{note_id}"} <= set(schema["paths"])
     assert {"NoteSummary", "NoteDetail", "ChatNoteEvent"} <= set(schema["components"]["schemas"])
+
+
+def test_a_citation_event_carries_the_number_its_marker_uses() -> None:
+    schemas = json.loads(openapi_json())["components"]["schemas"]
+
+    assert "number" in schemas["ChatCitationEvent"]["required"]

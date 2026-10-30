@@ -53,7 +53,7 @@ No ADR (spec decision 5).
   - the OpenAPI test.
 - Change: `domain/answers.py`, `services/questions.py`, `api/schemas.py`, `api/routes/chat.py`; `make api-client`.
 - Done when: `make check` is green.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 2. Models: list them and choose one per question
