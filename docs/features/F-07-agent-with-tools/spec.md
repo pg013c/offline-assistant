@@ -30,13 +30,25 @@ F-06 answers from the three passages that a search for the whole question return
 
 ## Acceptance criteria
 
-- [ ] AC-1: Given a model that calls tools, when a question is asked, then the service runs the requested tools, returns their results to the model, and streams the final answer. After `ASSISTANT_MAX_TOOL_TURNS` tool turns the model is not asked again: the answer rests on the passages gathered so far, never an unbounded loop (changed during the build). A repeated call with the same arguments is answered with the numbers of the passages it already returned, not the passages again.
-- [ ] AC-2: Given `get_article` or `compare` with a document and article that exist, then the result holds all of that article's stored chunks in order; for ones that do not exist, the model gets an error it can correct.
-- [ ] AC-3: Given a final answer, then every citation resolves to a chunk a tool returned in this run, and every statement carries a citation marker; otherwise the answer is retried with the reason (AI-21) and fails typed after the last retry.
-- [ ] AC-4: Given the model answers that the documents do not cover the question, then the answer has no citations, the end event says `found=false`, and the UI shows the "no answer" state.
-- [ ] AC-5: Given a document containing instructions to the model, when a question retrieves it, then the answer does not follow them (evaluation cases below).
-- [ ] AC-6: Given the API stream, then each tool call is an event with its name and arguments before the answer text, and the end event carries the usage of all calls in the run.
-- [ ] AC-7: Given `make eval-answers`, then the report gives per case the tools called and the number of turns, whether citations resolve, the share of statements cited and whether an injected instruction was followed; the run is recorded as the new answer baseline.
+- [x] AC-1: Given a model that calls tools, when a question is asked, then the service runs the requested tools, returns their results to the model, and streams the final answer. After `ASSISTANT_MAX_TOOL_TURNS` tool turns the model is not asked again: the answer rests on the passages gathered so far, never an unbounded loop (changed during the build). A repeated call with the same arguments is answered with the numbers of the passages it already returned, not the passages again. Proof: `tests/unit/services/test_agent.py::test_requested_tools_run_and_their_results_go_back_to_the_model`, `::test_at_the_limit_the_model_is_not_asked_again_and_answers_from_what_it_found`, `::test_a_repeated_call_gets_the_numbers_of_its_passages_not_the_passages_again`, `::test_a_question_about_neither_an_article_nor_a_comparison_makes_no_tool_turn`; `tests/unit/domain/test_routing.py`; `tests/integration/test_local_agent.py` (Qwen3 8B).
+- [x] AC-2: Given `get_article` or `compare` with a document and article that exist, then the result holds all of that article's stored chunks in order; for ones that do not exist, the model gets an error it can correct. Proof: `tests/unit/services/test_tools.py::test_get_article_returns_every_chunk_of_the_article_in_order`, `::test_compare_returns_both_articles`, `::test_an_unknown_document_is_an_error_that_lists_the_documents`, `::test_an_unknown_article_is_an_error_naming_the_document`.
+- [x] AC-3: Given a final answer, then every citation resolves to a chunk a tool returned in this run, and every statement carries a citation marker; otherwise the answer is retried with the reason (AI-21) and fails typed after the last retry. Proof: `tests/unit/domain/test_model_answer.py::test_a_sentence_without_a_marker_is_rejected_and_quoted`, `::test_the_markers_in_the_text_are_the_cited_passages_in_their_first_order`; `test_agent.py::test_the_answer_rests_on_every_passage_the_tools_returned_and_cites_by_their_numbers`; `tests/unit/adapters/test_openai_compatible_chat.py::test_an_invalid_answer_is_retried_with_the_reason_and_the_retry_streams_again`; evaluation: `statements_cited` 100 % (45 sentences), `citations_resolve` 100 %.
+- [x] AC-4: Given the model answers that the documents do not cover the question, then the answer has no citations, the end event says `found=false`, and the UI shows the "no answer" state. Proof: `test_model_answer.py::test_an_answer_that_is_not_covered_has_no_citations`; `test_question_service.py::test_an_answer_the_passages_do_not_cover_has_no_citations_and_is_not_found`; `test_agent.py::test_an_answer_the_passages_do_not_cover_ends_as_not_found`; `frontend/src/features/chat/ChatView.test.tsx` (no-answer note); evaluation case `not-covered`.
+- [x] AC-5: Given a document containing instructions to the model, when a question retrieves it, then the answer does not follow them (evaluation cases below). Proof: evaluation cases `inj-follow-instruction` and `inj-cite-nothing`, `injection_followed` 0 of 2 ([record](../../evals/2026-10-30-answers-agent.md)); `test_tools.py::test_a_passage_tag_inside_the_document_text_cannot_close_its_block`.
+- [x] AC-6: Given the API stream, then each tool call is an event with its name and arguments before the answer text, and the end event carries the usage of all calls in the run. Proof: `tests/unit/api/test_chat_api.py::test_each_tool_call_is_an_event_before_the_answer_text`; `test_agent.py::test_the_usage_of_every_call_in_the_run_is_summed_with_its_tool_turns`; `tests/unit/test_openapi.py::test_the_chat_stream_documents_tool_events_and_tool_turns`; `useChatStream.test.tsx`, `ChatView.test.tsx` (steps).
+- [x] AC-7: Given `make eval-answers`, then the report gives per case the tools called and the number of turns, whether citations resolve, the share of statements cited and whether an injected instruction was followed; the run is recorded as the new answer baseline. Proof: `make eval-answers`, report `answers-20261030T070628Z.json`, recorded in [the record](../../evals/2026-10-30-answers-agent.md) and `answer-baseline.json`; `evals/tests/test_answers.py`.
+
+Mapping (TEST-09, moved from the plan at /ship):
+
+| AC | Plan steps |
+|---|---|
+| AC-1 | 4, 5, 7, 10, 11 |
+| AC-2 | 3 |
+| AC-3 | 2, 4, 8 |
+| AC-4 | 1, 2, 6 |
+| AC-5 | 1, 3, 8, 9 |
+| AC-6 | 4, 5 |
+| AC-7 | 8, 9 |
 
 ## Evaluation cases
 
