@@ -11,6 +11,7 @@ from harness.answers import (
     ChatResult,
     SavedNote,
     answers_markdown,
+    cited_numbers,
     judge_input,
     language_of,
     parse_chat_stream,
@@ -513,3 +514,7 @@ def test_each_case_reports_its_judged_measures() -> None:
     assert next(line for line in text.splitlines() if line.startswith("| b |")).endswith(
         "| partial | 1/2 | 0/1 |"
     )
+
+
+def test_cited_numbers_are_read_once_each_in_order() -> None:
+    assert cited_numbers("Kept [2, 1]. Inspected [2][3].") == (2, 1, 3)

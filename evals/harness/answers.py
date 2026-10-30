@@ -201,6 +201,11 @@ def judge_input(
     )
 
 
+def cited_numbers(text: str) -> tuple[int, ...]:
+    """The passage numbers a text's citation markers name, each once, in order."""
+    raise NotImplementedError
+
+
 def _marker_numbers(text: str) -> list[int]:
     return [
         int(number) for marker in _MARKER.findall(text) for number in re.findall(r"\d+", marker)
