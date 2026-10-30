@@ -1,5 +1,5 @@
 import json
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Callable, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -21,7 +21,15 @@ from assistant.domain.answers import (
     TextDelta,
     Usage,
 )
-from assistant.domain.documents import chunk_document, document_id_for
+from assistant.domain.documents import Chunk, chunk_document, document_id_for
+from assistant.domain.tools import (
+    FinalText,
+    Message,
+    SearchDocumentsArguments,
+    ToolCall,
+    ToolCalls,
+    ToolSpec,
+)
 from assistant.settings import Settings
 
 # Fixtures from tests/conftest.py.
@@ -83,6 +91,7 @@ def test_answer_is_a_stream_of_text_then_citation_then_end(
             "first_token_ms": 0.0,
             "total_ms": 0.0,
             "attempts": 1,
+            "tool_turns": 0,
         },
     }
 
@@ -195,6 +204,7 @@ def test_a_rejected_attempt_is_announced_with_a_discard_event(
         "first_token_ms": 450.0,
         "total_ms": 1800.0,
         "attempts": 2,
+        "tool_turns": 0,
     }
     assert events[-1]["is_test_model"] is False
 
@@ -223,3 +233,92 @@ def test_a_model_failure_is_an_error_event_and_the_stream_still_ends(
             "usage": None,
         },
     ]
+
+
+class ScriptedAgent:
+    """A model that calls tools from a script, then answers from a script (F-07)."""
+
+    model_id = "qwen3-8b"
+    is_test_model = False
+
+    def __init__(
+        self, turns: list[ToolCalls | FinalText | ModelFailed], answer: list[ModelEvent]
+    ) -> None:
+        self._turns = turns
+        self._answer = answer
+
+    async def call_tools(
+        self, messages: Sequence[Message], tools: Sequence[ToolSpec]
+    ) -> ToolCalls | FinalText | ModelFailed:
+        return self._turns.pop(0)
+
+    async def answer(self, question: str, passages: Sequence[Chunk]) -> AsyncIterator[ModelEvent]:
+        for event in self._answer:
+            yield event
+
+
+def agent_client(tmp_path: Path, agent: ScriptedAgent, max_tool_turns: int = 4) -> TestClient:
+    adapters = Adapters(
+        store=FakeDocumentStore(),
+        index=InMemoryChunkIndex(),
+        parser=TextDocumentParser(),
+        queue=InlineIngestionQueue(),
+        chat_model=agent,
+        tool_model=agent,
+    )
+    settings = Settings(
+        data_dir=tmp_path,
+        models_dir=tmp_path / "models",
+        min_similarity=0,
+        max_tool_turns=max_tool_turns,
+    )
+    return TestClient(create_app(settings, adapters))
+
+
+def searching(query: str, call_id: str = "call-1") -> ToolCalls:
+    call = ToolCall(
+        id=call_id, name="search_documents", arguments=SearchDocumentsArguments(query=query)
+    )
+    return ToolCalls(
+        (call,),
+        usage=Usage(
+            prompt_tokens=100, completion_tokens=10, first_token_ms=None, total_ms=200.0, attempts=1
+        ),
+    )
+
+
+def test_each_tool_call_is_an_event_before_the_answer_text(tmp_path: Path, upload: Upload) -> None:
+    agent = ScriptedAgent(
+        [searching("log retention"), FinalText("ready")],
+        [
+            TextDelta("Six months [1]."),
+            Answered(ModelAnswer(text="Six months [1].", cited=(1,)), USAGE),
+        ],
+    )
+    with agent_client(tmp_path, agent) as client:
+        upload(client)
+        _, events = ask(client)
+
+    assert [event["type"] for event in events] == ["tool", "tool", "text", "citation", "end"]
+    assert events[:2] == [
+        {"type": "tool", "name": "search_documents", "arguments": QUESTION_ARGUMENTS},
+        {"type": "tool", "name": "search_documents", "arguments": {"query": "log retention"}},
+    ]
+    assert events[-1]["usage"]["tool_turns"] == 1
+    assert events[-1]["usage"]["prompt_tokens"] == 100 + 210
+
+
+QUESTION_ARGUMENTS = {"query": QUESTION["question"]}
+
+
+def test_too_many_tool_turns_is_an_error_event_and_the_stream_still_ends(
+    tmp_path: Path, upload: Upload
+) -> None:
+    agent = ScriptedAgent([searching("logs", "c1"), searching("retention", "c2")], [])
+    with agent_client(tmp_path, agent, max_tool_turns=1) as client:
+        upload(client)
+        _, events = ask(client)
+
+    assert [event["type"] for event in events] == ["tool", "tool", "error", "end"]
+    assert events[2]["code"] == "too_many_tool_turns"
+    assert events[-1]["found"] is True

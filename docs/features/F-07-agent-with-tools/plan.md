@@ -181,7 +181,7 @@ No ADR: no new dependency, model or standard.
   Also the OpenAPI contract snapshot.
 - Change: `api/schemas.py`, `api/routes/chat.py`; `make api-client`.
 - Done when: `make check` is green, including the API contract.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 6. UI: "no answer" state and tool progress
