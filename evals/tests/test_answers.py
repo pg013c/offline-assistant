@@ -206,6 +206,7 @@ def test_each_case_is_reported_with_its_own_result() -> None:
         "error": None,
         "tools": [],
         "tool_turns": 0,
+        "failed_tool_turns": 0,
     }
     assert metrics.per_case["pl-b"]["cites_expected"] is False
     text = answers_markdown(metrics, {})
