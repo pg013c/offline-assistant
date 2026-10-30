@@ -16,7 +16,7 @@ Status: `planned` → `spec` → `building` → `review` → `done`.
 | F-06 | OpenAI-compatible chat adapter with tool calling, JSON schema output, validation and retries | FR-13, FR-40 | 2 | done |
 | F-07 | Agent with tools, resolvable citations, refusal, prompt-injection defence | FR-10–FR-12, FR-14 | 2 | done |
 | F-07a | `save_note` tool: notes and checklists written to the local notes directory | FR-10, AI-11 | 2 | done |
-| F-08 | Chat UI with clickable citations, document library, model selector, offline indicator | FR-60–FR-62 | 2 | spec |
+| F-08 | Chat UI with clickable citations, document library, model selector, offline indicator | FR-60–FR-62 | 2 | building |
 | F-09 | Full evaluation set, comparison of 3–4 local models and Claude, performance measurements, published report | FR-41–FR-45 | 3 | planned |
 | F-10 | Docker Compose profiles and `make offline-check` in CI | FR-50, FR-51, NFR-01, NFR-02 | 4 | planned |
 | F-11 | Langfuse tracing (optional profile) | FR-53 | 4 | planned |
