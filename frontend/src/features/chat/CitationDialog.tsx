@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, type JSX } from 'react'
 
 import { citationLabel } from './citationLabel'
-import type { ChatCitation } from './useChatStream'
+import type { ChatCitation } from './chatStream'
 
 interface CitationDialogProps {
   citation: ChatCitation

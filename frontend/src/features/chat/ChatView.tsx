@@ -1,18 +1,20 @@
 import { useState, type JSX, type SubmitEvent } from 'react'
 
+import type { ChatCitation } from './chatStream'
 import { CitationDialog } from './CitationDialog'
-import { citationLabel } from './citationLabel'
-import { toolStep } from './toolStep'
-import { useChatStream, type ChatCitation } from './useChatStream'
+import { Turn } from './Turn'
+import { useChatThread } from './useChatThread'
 
 export function ChatView(): JSX.Element {
-  const { answer, ask } = useChatStream()
+  const { turns, ask } = useChatThread()
   const [question, setQuestion] = useState('')
   const [openCitation, setOpenCitation] = useState<ChatCitation | null>(null)
+  const streaming = turns.at(-1)?.answer.status === 'streaming'
 
   function onSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
     ask(question.trim())
+    setQuestion('')
   }
 
   return (
@@ -20,6 +22,10 @@ export function ChatView(): JSX.Element {
       <h2 id="chat-heading" className="text-base font-semibold">
         Ask a question
       </h2>
+
+      {turns.map((turn, position) => (
+        <Turn key={position} turn={turn} onOpenCitation={setOpenCitation} />
+      ))}
 
       <form onSubmit={onSubmit} className="flex gap-2">
         <label htmlFor="question" className="sr-only">
@@ -36,64 +42,12 @@ export function ChatView(): JSX.Element {
         />
         <button
           type="submit"
-          disabled={question.trim() === '' || answer.status === 'streaming'}
+          disabled={question.trim() === '' || streaming}
           className="rounded bg-gray-900 px-4 py-2 text-sm text-white disabled:opacity-40"
         >
           Ask
         </button>
       </form>
-
-      {answer.status === 'error' && (
-        <p role="alert" className="text-sm text-red-700">
-          {answer.error ?? 'The answer failed.'}
-        </p>
-      )}
-
-      {answer.status !== 'idle' && answer.status !== 'error' && (
-        <article aria-live="polite" className="flex flex-col gap-3">
-          {answer.tools.length + answer.notes.length > 0 && (
-            <ol aria-label="Steps" className="flex flex-col gap-1 text-xs text-gray-500">
-              {answer.tools.map((tool, position) => (
-                <li key={position}>{toolStep(tool)}</li>
-              ))}
-              {answer.notes.map((note) => (
-                <li key={note.id}>Saved note: {note.title}</li>
-              ))}
-            </ol>
-          )}
-          {answer.status === 'done' && answer.found === false && (
-            <p role="note" className="rounded bg-gray-100 px-3 py-2 text-sm text-gray-700">
-              No answer in the uploaded documents.
-            </p>
-          )}
-          <p className="text-sm whitespace-pre-line">{answer.text}</p>
-          {answer.modelId && (
-            <p className="text-xs text-gray-500">
-              Answered by {answer.modelId}
-              {answer.isTestModel && ' (test model, not AI: it quotes the best match)'}
-            </p>
-          )}
-          {answer.citations.length > 0 && (
-            <ul aria-label="Sources" className="flex flex-wrap gap-2">
-              {answer.citations.map((citation) => (
-                <li key={citation.chunk_id}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setOpenCitation(citation)
-                    }}
-                    className="rounded border border-gray-300 px-2 py-1 text-xs"
-                  >
-                    {[citation.document_title, citationLabel(citation.location)]
-                      .filter(Boolean)
-                      .join(' · ')}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </article>
-      )}
 
       {openCitation && (
         <CitationDialog

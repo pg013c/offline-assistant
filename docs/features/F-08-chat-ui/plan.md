@@ -85,10 +85,10 @@ No ADR (spec decision 5).
 - Tests first:
   - `useChatThread.test.tsx`: two asks give two turns in order; a new ask aborts the running stream; each turn keeps its own steps, citations, notes and model; the request names the chosen model;
   - `ChatView.test.tsx`: both questions and answers stay on screen; the input is empty after asking.
-- Change: `useChatStream.ts` becomes `useChatThread.ts`; `ChatView.tsx`; `Turn.tsx`.
+- Change: `useChatStream.ts` becomes `chatStream.ts` (stream and answer reducer) and `useChatThread.ts`; `ChatView.tsx`; `Turn.tsx`. An answer cut short by a newer question is `stopped`.
 - Done when: `make check` is green.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 5. Clickable markers
 

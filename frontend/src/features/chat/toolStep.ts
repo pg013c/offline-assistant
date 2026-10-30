@@ -1,4 +1,4 @@
-import type { ChatTool } from './useChatStream'
+import type { ChatTool } from './chatStream'
 
 /** One line of progress for a tool call of the agent, e.g. "Reading: GDPR (EN), Art. 33". */
 export function toolStep(tool: ChatTool): string {
