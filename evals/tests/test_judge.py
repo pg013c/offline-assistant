@@ -155,3 +155,19 @@ def test_a_request_that_times_out_is_retried_then_not_judged() -> None:
 
     assert judge.judge(INPUT) is None
     assert len(attempts) == 3
+
+
+def test_the_client_tells_whether_the_judge_thought() -> None:
+    def thinking(request: httpx.Request) -> httpx.Response:
+        message = {"role": "assistant", "content": json.dumps(VALID), "reasoning_content": "Hm."}
+        return httpx.Response(200, json={"choices": [{"index": 0, "message": message}]})
+
+    plain = client(StubJudge(json.dumps(VALID)))
+    thoughtful = JudgeClient(
+        "http://127.0.0.1:8081", http=httpx.Client(transport=httpx.MockTransport(thinking))
+    )
+    plain.judge(INPUT)
+    thoughtful.judge(INPUT)
+
+    assert plain.thought is False
+    assert thoughtful.thought is True

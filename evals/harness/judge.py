@@ -85,6 +85,8 @@ class JudgeClient:
         self._url = url
         self._http = http or httpx.Client(timeout=TIMEOUT_SECONDS)
         self._max_retries = max_retries
+        # Whether any reply carried the judge's reasoning (ADR 0023).
+        self.thought = False
 
     def judge(self, judged: JudgeInput) -> Verdict | None:
         body = {

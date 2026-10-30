@@ -499,3 +499,16 @@ def test_a_failed_answer_counts_as_wrong_and_only_a_judge_failure_as_not_judged(
     assert metrics.performance["not_judged"] == 1
     assert metrics.per_case["e"]["correctness"] == "wrong"
     assert metrics.per_case["e"]["judge_reason"] == "the answer failed: invalid_answer"
+
+
+def test_each_case_reports_its_judged_measures() -> None:
+    metrics = score_answers(JUDGED_CASES, JUDGED_RESULTS, verdicts=VERDICTS)
+
+    row = metrics.per_case["b"]
+    assert (row["supported_sentences"], row["cited_sentences"]) == (1, 2)
+    assert (row["tool_turns"], row["failed_tool_turns"]) == (1, 1)
+    text = answers_markdown(metrics, {})
+    assert "| Correctness | Supported | Valid tool turns |" in text
+    assert next(line for line in text.splitlines() if line.startswith("| b |")).endswith(
+        "| partial | 1/2 | 0/1 |"
+    )

@@ -1,5 +1,6 @@
 """How a run uses the judge (ADR 0022): the health check, the verdicts and a judge that stops."""
 
+import hashlib
 from pathlib import Path
 
 import httpx
@@ -8,7 +9,7 @@ import pytest
 from harness import run
 from harness.answers import AnswerCase, ChatResult
 from harness.calibration import Agreement
-from harness.judge import JudgeInput, JudgeUnavailable, Verdict
+from harness.judge import JUDGE_PROMPT, JudgeInput, JudgeUnavailable, Verdict
 
 CASES = [
     AnswerCase("a", "en", "answer", frozenset({"d:1"}), key_points=("x",)),
@@ -32,6 +33,7 @@ class FakeJudge:
     def __init__(self, verdicts: int) -> None:
         self.left = verdicts
         self.judged: list[JudgeInput] = []
+        self.thought = True
 
     def __call__(self, url: str) -> "FakeJudge":
         return self
@@ -57,10 +59,10 @@ def test_a_judge_that_stops_answering_mid_run_skips_the_judged_metrics(
 ) -> None:
     monkeypatch.setattr(run, "JudgeClient", FakeJudge(verdicts=1))
 
-    verdicts, note = run.judge_answers(CASES, QUESTIONS, RESULTS, {}, "http://judge")
+    verdicts, judge = run.judge_answers(CASES, QUESTIONS, RESULTS, {}, "http://judge")
 
     assert verdicts is None
-    assert "make judge" in note
+    assert "make judge" in judge["skipped"]
 
 
 def test_without_a_judge_the_note_says_how_to_start_it(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -69,10 +71,10 @@ def test_without_a_judge_the_note_says_how_to_start_it(monkeypatch: pytest.Monke
 
     monkeypatch.setattr(httpx, "get", down)
 
-    verdicts, note = run.judge_answers(CASES, QUESTIONS, RESULTS, {}, "http://judge")
+    verdicts, judge = run.judge_answers(CASES, QUESTIONS, RESULTS, {}, "http://judge")
 
     assert verdicts is None
-    assert note == "skipped: no judge answers at http://judge; start it with make judge"
+    assert judge == {"skipped": "no judge answers at http://judge; start it with make judge"}
 
 
 @pytest.mark.usefixtures("healthy")
@@ -81,13 +83,19 @@ def test_the_judge_rules_on_each_completed_answer_only(monkeypatch: pytest.Monke
     monkeypatch.setattr(run, "JudgeClient", judge)
     failed = ChatResult(answer="", cited=(), usage=None, error="x", found=False, complete=False)
 
-    verdicts, note = run.judge_answers(
+    verdicts, identity = run.judge_answers(
         CASES, QUESTIONS, {**RESULTS, "b": failed}, {"d:1": "Text."}, "http://judge"
     )
 
     assert verdicts == {"a": VERDICT}
     assert [judged.question for judged in judge.judged] == ["A?"]
-    assert note == "qwen3-30b-a3b at http://judge"
+    assert identity == {
+        "model": "qwen3-30b-a3b",
+        "server": {"url": "http://judge"},
+        "prompt_sha256": hashlib.sha256(JUDGE_PROMPT.encode()).hexdigest(),
+        "max_tokens": 8192,
+        "thinking": True,
+    }
 
 
 def test_without_its_calibration_set_the_judge_is_not_calibrated(tmp_path: Path) -> None:
