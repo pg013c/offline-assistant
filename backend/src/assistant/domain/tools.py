@@ -5,7 +5,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Literal
 
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, ValidationError, field_validator
 
 from assistant.domain.answers import Usage
 from assistant.domain.documents import Chunk
@@ -70,7 +70,19 @@ class SaveNoteArguments(BaseModel):
     """A note to keep: its title and its content, every line citing passages like [1]."""
 
     title: str = Field(min_length=1, max_length=TITLE_LIMIT)
-    content: str = Field(min_length=1, max_length=CONTENT_LIMIT, pattern=r"\S")
+    content: str
+
+    @field_validator("content")
+    @classmethod
+    def _bounded(cls, content: str) -> str:
+        # Checked here, not in the JSON schema the model gets: llama-server turns the schema
+        # into a grammar, which takes neither unanchored patterns nor a 20,000-character
+        # length bound.
+        if not content.strip():
+            raise ValueError("the content is empty")
+        if len(content) > CONTENT_LIMIT:
+            raise ValueError(f"the content is over {CONTENT_LIMIT} characters")
+        return content
 
 
 class CompareArguments(BaseModel):

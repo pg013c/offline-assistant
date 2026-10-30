@@ -182,6 +182,7 @@ def run_answers(config: RunConfig) -> Outcome:
                 tools=case.tools,
                 forbidden=case.forbidden,
                 injection=case.kind == "injection",
+                note=case.note,
             )
             for case in cases
         ],
@@ -207,6 +208,7 @@ def run_answers(config: RunConfig) -> Outcome:
                 "answer": result.answer,
                 "cited": list(result.cited),
                 "tools": list(result.tools),
+                "notes": list(result.notes),
                 "error": result.error,
                 "usage": result.usage,
             }

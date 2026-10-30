@@ -56,6 +56,7 @@ def parse_chat_stream(text: str) -> ChatResult:
     answer: list[str] = []
     cited: list[str] = []
     tools: list[str] = []
+    notes: list[str] = []
     error = None
     usage = None
     found = False
@@ -67,6 +68,8 @@ def parse_chat_stream(text: str) -> ChatResult:
         match event.get("type"):
             case "tool":
                 tools.append(event["name"])
+            case "note":
+                notes.append(event["id"])
             case "text":
                 answer.append(event["text"])
             case "discard":
@@ -81,7 +84,14 @@ def parse_chat_stream(text: str) -> ChatResult:
                 found = bool(event.get("found"))
                 complete = True
     return ChatResult(
-        "".join(answer), tuple(cited), error, usage, found, complete, tools=tuple(tools)
+        "".join(answer),
+        tuple(cited),
+        error,
+        usage,
+        found,
+        complete,
+        tools=tuple(tools),
+        notes=tuple(notes),
     )
 
 
@@ -273,7 +283,22 @@ def _agent_scores(
             uncovered += 1
         else:
             missed[case.id] = "answered a question the documents do not cover"
+    asked = [case for case in cases if case.note]
+    saved_when_asked = 0
+    for case in asked:
+        if results[case.id].notes:
+            saved_when_asked += 1
+        else:
+            missed[case.id] = "saved no note, though asked to"
+    unasked = [case for case in cases if not case.note]
+    saved_unasked = 0
+    for case in unasked:
+        if results[case.id].notes:
+            saved_unasked += 1
+            missed[case.id] = "saved a note it was not asked for"
     return {
+        "notes_saved_when_asked": (saved_when_asked, len(asked)),
+        "notes_saved_unasked": (saved_unasked, len(unasked)),
         "expected_tools_used": (used, len(tooled)),
         "statements_cited": (sum(bool(_MARKER.search(s)) for s in sentences), len(sentences)),
         "citations_resolve": (resolving, len(cited) if stored is not None else 0),
