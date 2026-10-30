@@ -378,6 +378,85 @@
           }
         }
       }
+    },
+    "/api/notes": {
+      "get": {
+        "tags": [
+          "notes"
+        ],
+        "summary": "List Notes",
+        "description": "The notes the agent saved, newest first.",
+        "operationId": "list_notes",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/NoteSummary"
+                  },
+                  "type": "array",
+                  "title": "Response List Notes"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/notes/{note_id}": {
+      "get": {
+        "tags": [
+          "notes"
+        ],
+        "summary": "Get Note",
+        "description": "One note: its content, the passages it cites and the Markdown file's text.",
+        "operationId": "get_note",
+        "parameters": [
+          {
+            "name": "note_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Note Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoteDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -533,6 +612,9 @@
             "$ref": "#/components/schemas/ChatToolEvent"
           },
           {
+            "$ref": "#/components/schemas/ChatNoteEvent"
+          },
+          {
             "$ref": "#/components/schemas/ChatTextEvent"
           },
           {
@@ -549,7 +631,7 @@
           }
         ],
         "title": "ChatEvent",
-        "description": "One event of a streamed answer: tool, text, discard, error, citation or end.",
+        "description": "One event of a streamed answer: tool, note, text, discard, error, citation or end.",
         "discriminator": {
           "propertyName": "type",
           "mapping": {
@@ -557,10 +639,36 @@
             "discard": "#/components/schemas/ChatDiscardEvent",
             "end": "#/components/schemas/ChatEndEvent",
             "error": "#/components/schemas/ChatErrorEvent",
+            "note": "#/components/schemas/ChatNoteEvent",
             "text": "#/components/schemas/ChatTextEvent",
             "tool": "#/components/schemas/ChatToolEvent"
           }
         }
+      },
+      "ChatNoteEvent": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "note",
+            "title": "Type"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "id",
+          "title"
+        ],
+        "title": "ChatNoteEvent",
+        "description": "The agent saved a note for the user (F-07a)."
       },
       "ChatRequest": {
         "properties": {
@@ -890,6 +998,102 @@
           "version"
         ],
         "title": "HealthResponse"
+      },
+      "NoteDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "created": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/NoteSourceResponse"
+            },
+            "type": "array",
+            "title": "Sources"
+          },
+          "markdown": {
+            "type": "string",
+            "title": "Markdown"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "created",
+          "content",
+          "sources",
+          "markdown"
+        ],
+        "title": "NoteDetail",
+        "description": "A note with its content, its sources and the Markdown file's text."
+      },
+      "NoteSourceResponse": {
+        "properties": {
+          "number": {
+            "type": "integer",
+            "title": "Number"
+          },
+          "document_title": {
+            "type": "string",
+            "title": "Document Title"
+          },
+          "chunk_id": {
+            "type": "string",
+            "title": "Chunk Id"
+          },
+          "location": {
+            "$ref": "#/components/schemas/CitationLocation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "number",
+          "document_title",
+          "chunk_id",
+          "location"
+        ],
+        "title": "NoteSourceResponse",
+        "description": "A passage a note cites, by the number its markers use."
+      },
+      "NoteSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "created": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "created"
+        ],
+        "title": "NoteSummary",
+        "description": "A note the agent saved, as listed."
       },
       "SearchHit": {
         "properties": {

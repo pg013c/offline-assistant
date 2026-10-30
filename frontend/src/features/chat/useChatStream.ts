@@ -38,6 +38,9 @@ function reduce(answer: ChatAnswer, action: Action): ChatAnswer {
       return { ...answer, status: 'error', error: action.message }
     case 'event':
       switch (action.event.type) {
+        case 'note':
+          // Shown as a step from F-07a step 6; until then the answer ignores it.
+          return answer
         case 'tool':
           return {
             ...answer,

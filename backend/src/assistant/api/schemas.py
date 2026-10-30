@@ -1,5 +1,6 @@
 """Request and response models of the HTTP API. Services never return these (PY-12)."""
 
+from datetime import datetime
 from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field, RootModel
@@ -79,6 +80,14 @@ class ChatToolEvent(BaseModel):
     arguments: dict[str, Any]
 
 
+class ChatNoteEvent(BaseModel):
+    """The agent saved a note for the user (F-07a)."""
+
+    type: Literal["note"]
+    id: str
+    title: str
+
+
 class ChatTextEvent(BaseModel):
     """A piece of the answer text, in order."""
 
@@ -147,6 +156,7 @@ class ChatEvent(
     RootModel[
         Annotated[
             ChatToolEvent
+            | ChatNoteEvent
             | ChatTextEvent
             | ChatDiscardEvent
             | ChatErrorEvent
@@ -156,4 +166,29 @@ class ChatEvent(
         ]
     ]
 ):
-    """One event of a streamed answer: tool, text, discard, error, citation or end."""
+    """One event of a streamed answer: tool, note, text, discard, error, citation or end."""
+
+
+class NoteSummary(BaseModel):
+    """A note the agent saved, as listed."""
+
+    id: str
+    title: str
+    created: datetime
+
+
+class NoteSourceResponse(BaseModel):
+    """A passage a note cites, by the number its markers use."""
+
+    number: int
+    document_title: str
+    chunk_id: str
+    location: CitationLocation
+
+
+class NoteDetail(NoteSummary):
+    """A note with its content, its sources and the Markdown file's text."""
+
+    content: str
+    sources: list[NoteSourceResponse]
+    markdown: str

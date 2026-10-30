@@ -154,6 +154,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Notes
+         * @description The notes the agent saved, newest first.
+         */
+        get: operations["list_notes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/notes/{note_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Note
+         * @description One note: its content, the passages it cites and the Markdown file's text.
+         */
+        get: operations["get_note"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -234,9 +274,24 @@ export interface components {
         };
         /**
          * ChatEvent
-         * @description One event of a streamed answer: tool, text, discard, error, citation or end.
+         * @description One event of a streamed answer: tool, note, text, discard, error, citation or end.
          */
-        ChatEvent: components["schemas"]["ChatToolEvent"] | components["schemas"]["ChatTextEvent"] | components["schemas"]["ChatDiscardEvent"] | components["schemas"]["ChatErrorEvent"] | components["schemas"]["ChatCitationEvent"] | components["schemas"]["ChatEndEvent"];
+        ChatEvent: components["schemas"]["ChatToolEvent"] | components["schemas"]["ChatNoteEvent"] | components["schemas"]["ChatTextEvent"] | components["schemas"]["ChatDiscardEvent"] | components["schemas"]["ChatErrorEvent"] | components["schemas"]["ChatCitationEvent"] | components["schemas"]["ChatEndEvent"];
+        /**
+         * ChatNoteEvent
+         * @description The agent saved a note for the user (F-07a).
+         */
+        ChatNoteEvent: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "note";
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+        };
         /** ChatRequest */
         ChatRequest: {
             /** Question */
@@ -371,6 +426,55 @@ export interface components {
             status: "ok";
             /** Version */
             version: string;
+        };
+        /**
+         * NoteDetail
+         * @description A note with its content, its sources and the Markdown file's text.
+         */
+        NoteDetail: {
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+            /**
+             * Created
+             * Format: date-time
+             */
+            created: string;
+            /** Content */
+            content: string;
+            /** Sources */
+            sources: components["schemas"]["NoteSourceResponse"][];
+            /** Markdown */
+            markdown: string;
+        };
+        /**
+         * NoteSourceResponse
+         * @description A passage a note cites, by the number its markers use.
+         */
+        NoteSourceResponse: {
+            /** Number */
+            number: number;
+            /** Document Title */
+            document_title: string;
+            /** Chunk Id */
+            chunk_id: string;
+            location: components["schemas"]["CitationLocation"];
+        };
+        /**
+         * NoteSummary
+         * @description A note the agent saved, as listed.
+         */
+        NoteSummary: {
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+            /**
+             * Created
+             * Format: date-time
+             */
+            created: string;
         };
         /**
          * SearchHit
@@ -689,6 +793,66 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SearchHit"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_notes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoteSummary"][];
+                };
+            };
+        };
+    };
+    get_note: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                note_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoteDetail"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
             /** @description Validation Error */
