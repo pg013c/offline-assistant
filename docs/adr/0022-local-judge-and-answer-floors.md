@@ -1,6 +1,6 @@
 # 0022. Judge answers with a local Qwen3 30B-A3B, and floor citation support and tool-call validity
 
-- Status: accepted
+- Status: accepted, amended by 0023
 - Date: 2026-10-30
 - Related: FR-42, FR-43, PRD §9, AI-12, AI-31, AI-40, AI-61, TEST-24, F-09a, ADR 0004, ADR 0006, ADR 0018, ADR 0020, ADR 0021
 
