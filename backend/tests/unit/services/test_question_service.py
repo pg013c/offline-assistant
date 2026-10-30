@@ -84,7 +84,7 @@ def test_answer_text_comes_from_the_model(
     events = ask(questions, "How long do providers keep logs?")
 
     text = "".join(event.text for event in events if isinstance(event, AnswerText))
-    assert text == "Providers keep logs for six months. Logs record every access."
+    assert text == "Providers keep logs for six months. Logs record every access. [1]"
 
 
 def test_citations_quote_their_chunk_verbatim(
@@ -519,6 +519,22 @@ def test_a_failed_model_ends_the_answer_with_a_typed_failure_and_no_citation() -
     end = events[-1]
     assert isinstance(end, AnswerEnd)
     assert end.usage is None
+
+
+def test_an_answer_the_passages_do_not_cover_has_no_citations_and_is_not_found() -> None:
+    text = "The documents do not say how long logs are kept."
+    questions, _ = scripted(
+        TextDelta(text), Answered(ModelAnswer(text=text, cited=(), covered=False), USAGE)
+    )
+
+    events = ask(questions, "How long are logs kept?")
+
+    assert AnswerText(text=text) in events
+    assert not any(isinstance(event, AnswerCitation) for event in events)
+    end = events[-1]
+    assert isinstance(end, AnswerEnd)
+    assert end.found is False
+    assert end.usage == USAGE
 
 
 def test_the_end_event_carries_the_models_usage() -> None:

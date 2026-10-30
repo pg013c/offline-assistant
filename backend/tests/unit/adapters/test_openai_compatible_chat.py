@@ -35,7 +35,7 @@ PASSAGES = [
     ),
     Chunk(id="ai:8", document_id="ai", position=8, text="Member States designate authorities."),
 ]
-VALID = json.dumps({"answer": "At least six months.", "citations": [1]})
+VALID = json.dumps({"answer": "At least six months [1].", "covered": True})
 
 
 def sse(content: str, usage: tuple[int, int] = (100, 20), pieces: int = 4) -> bytes:
@@ -98,10 +98,10 @@ def answer(
 def test_the_answer_text_streams_and_the_outcome_carries_answer_usage_and_attempts() -> None:
     events = answer(model(StubServer(VALID)))
 
-    assert "".join(e.text for e in events if isinstance(e, TextDelta)) == "At least six months."
+    assert "".join(e.text for e in events if isinstance(e, TextDelta)) == "At least six months [1]."
     outcome = events[-1]
     assert isinstance(outcome, Answered)
-    assert outcome.answer == ModelAnswer(text="At least six months.", cited=(1,))
+    assert outcome.answer == ModelAnswer(text="At least six months [1].", cited=(1,), covered=True)
     assert (outcome.usage.prompt_tokens, outcome.usage.completion_tokens) == (100, 20)
     assert outcome.usage.attempts == 1
     assert outcome.usage.first_token_ms is not None
@@ -132,7 +132,7 @@ def test_the_request_asks_for_the_answer_schema_with_the_prompt_and_delimited_pa
 
 
 def test_an_invalid_answer_is_retried_with_the_reason_and_the_retry_streams_again() -> None:
-    server = StubServer(json.dumps({"answer": "Six months.", "citations": [5]}), VALID)
+    server = StubServer(json.dumps({"answer": "Six months [5].", "covered": True}), VALID)
 
     events = answer(model(server))
 
@@ -206,12 +206,12 @@ def test_a_stream_line_that_is_not_json_is_a_model_error_and_ends_the_answer() -
 
 
 def test_an_answer_written_after_its_citations_still_reaches_the_user() -> None:
-    events = answer(model(StubServer(json.dumps({"citations": [1], "answer": "Six months."}))))
+    events = answer(model(StubServer(json.dumps({"covered": True, "answer": "Six months [1]."}))))
 
     streamed = "".join(event.text for event in events if isinstance(event, TextDelta))
     outcome = events[-1]
     assert isinstance(outcome, Answered)
-    assert streamed == outcome.answer.text == "Six months."
+    assert streamed == outcome.answer.text == "Six months [1]."
 
 
 def test_the_request_caps_the_answer_length() -> None:
@@ -298,14 +298,14 @@ def test_a_model_without_streaming_answers_in_one_piece() -> None:
     events = answer(chat)
 
     assert requests[0]["stream"] is False
-    assert events[0] == TextDelta("At least six months.")
+    assert events[0] == TextDelta("At least six months [1].")
     outcome = events[-1]
     assert isinstance(outcome, Answered)
     assert outcome.usage.prompt_tokens == 90
 
 
 def test_the_user_message_and_the_retry_come_from_prompt_files() -> None:
-    server = StubServer(json.dumps({"answer": "Six months.", "citations": [5]}), VALID)
+    server = StubServer(json.dumps({"answer": "Six months [5].", "covered": True}), VALID)
 
     answer(model(server), question="How long?")
 

@@ -139,6 +139,8 @@ class InvalidAnswer(Exception):
 class ModelAnswer:
     text: str
     cited: tuple[int, ...]
+    # False when the model says the passages do not answer the question; then nothing is cited.
+    covered: bool = True
 
 
 def parse_answer(raw: str, passage_count: int) -> ModelAnswer:

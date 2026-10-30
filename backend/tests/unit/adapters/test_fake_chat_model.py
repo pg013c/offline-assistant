@@ -32,7 +32,7 @@ def test_identifies_itself_as_fake() -> None:
     assert model.is_test_model is True
 
 
-def test_answers_with_the_first_two_sentences_of_the_first_passage_and_cites_it() -> None:
+def test_answers_with_the_first_two_sentences_of_the_first_passage_and_marks_its_citation() -> None:
     events = answer(
         FakeExtractiveChatModel(),
         [chunk(0, "First sentence. Second sentence! Third sentence."), chunk(1, "Other.")],
@@ -40,7 +40,9 @@ def test_answers_with_the_first_two_sentences_of_the_first_passage_and_cites_it(
 
     outcome = events[-1]
     assert isinstance(outcome, Answered)
-    assert outcome.answer == ModelAnswer(text="First sentence. Second sentence!", cited=(1,))
+    assert outcome.answer == ModelAnswer(
+        text="First sentence. Second sentence! [1]", cited=(1,), covered=True
+    )
 
 
 def test_streams_word_by_word() -> None:
@@ -49,7 +51,8 @@ def test_streams_word_by_word() -> None:
     assert [event for event in events if isinstance(event, TextDelta)] == [
         TextDelta("One "),
         TextDelta("two "),
-        TextDelta("three."),
+        TextDelta("three. "),
+        TextDelta("[1]"),
     ]
 
 
