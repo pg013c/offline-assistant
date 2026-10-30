@@ -36,3 +36,4 @@ Use the `/adr` skill or copy [template.md](template.md).
 | [0019](0019-bge-reranker-v2-m3-for-reranking.md) | Rerank with BGE reranker v2 M3, pinned and loaded offline | accepted |
 | [0020](0020-retrieval-targets.md) | Retrieval targets: floors that `make eval` enforces | accepted |
 | [0021](0021-llama-server-and-qwen3-8b.md) | Serve the local LLM with llama.cpp's llama-server, starting with Qwen3 8B | accepted |
+| [0022](0022-local-judge-and-answer-floors.md) | Judge answers with a local Qwen3 30B-A3B, and floor citation support and tool-call validity | accepted |

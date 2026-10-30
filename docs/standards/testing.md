@@ -41,3 +41,5 @@ How each part of the system is verified ([ADR 0006](../adr/0006-tdd-for-code-eva
   - out-of-scope refused ≥ 90 %, in-scope unanswered ≤ 5 %.
 
   Search latency is reported, not gated.
+
+  `make eval-answers` fails the same way on its own baseline, and below the floors of ADR 0022: citation support ≥ 90 %, tool-call validity ≥ 95 %. Judged correctness is held to the 5-point rule only. A judged run whose judge agrees with the hand-labelled calibration set less than 85 % fails.
