@@ -49,13 +49,13 @@ This feature finishes the UI for the demo. It does not change what the model doe
 
 ## Acceptance criteria
 
-- [ ] AC-1: Given two questions asked in a row, then both questions and their answers stay on screen in order, each with its own steps, sources and model; the input is empty after each ask.
-- [ ] AC-2: Given an answer with `[1]` and `[2]` markers, when the user activates a marker by mouse or keyboard, then the dialog opens on the passage cited with that number; a marker without a citation is plain text.
-- [ ] AC-3: Given saved notes, when the user opens the Notes tab, then the notes are listed newest first, and choosing one shows its title, text and sources; a note saved in the chat appears in the list without a reload.
-- [ ] AC-4: Given the API, then `GET /api/models` lists the models it can answer with now (id, whether it is a test model, which is the default); a chat request may name one of them, an unknown one is a 422 in the standard error shape, and none means the default.
-- [ ] AC-5: Given the selector, when the user picks a model and asks, then the request names that model and the answer shows it.
-- [ ] AC-6: Given `GET /api/health`, then it reports whether network mode is on; the header shows "Offline" when it is off and a visible warning when it is on.
-- [ ] AC-7: Given `make e2e`, then the journey covers a two-question thread, a marker that opens its source, and the Notes tab, with `fake-extractive`.
+- [x] AC-1: Given two questions asked in a row, then both questions and their answers stay on screen in order, each with its own steps, sources and model; the input is empty after each ask. Proof: `frontend/src/features/chat/useChatThread.test.tsx` (turns in order, each with its own steps, sources and model; a new ask stops the running answer); `ChatView.test.tsx::keeps every question and its answer on screen, in order, and clears the input`, `::names the model a failed turn asked`; `e2e/ask-question.spec.ts` (two-question thread).
+- [x] AC-2: Given an answer with `[1]` and `[2]` markers, when the user activates a marker by mouse or keyboard, then the dialog opens on the passage cited with that number; a marker without a citation is plain text. Proof: `answerParts.test.ts`; `ChatView.test.tsx::opens the passage a marker cites, by click and from the keyboard`, `::leaves a marker without a citation as text`; `tests/unit/services/test_question_service.py::test_each_citation_carries_the_number_its_passage_has_in_the_answer`; journey (Source 1).
+- [x] AC-3: Given saved notes, when the user opens the Notes tab, then the notes are listed newest first, and choosing one shows its title, text and sources; a note saved in the chat appears in the list without a reload. Proof: `NotesPanel.test.tsx`; `LibraryPanel.test.tsx`; `useChatThread.test.tsx::refreshes the notes list when the agent saves a note`; journey (Notes tab).
+- [x] AC-4: Given the API, then `GET /api/models` lists the models it can answer with now (id, whether it is a test model, which is the default); a chat request may name one of them, an unknown one is a 422 in the standard error shape, and none means the default. Proof: `tests/unit/api/test_models_api.py`; `tests/unit/services/test_models.py`; `tests/unit/test_openapi.py::test_models_are_listed_and_a_chat_request_may_name_one`.
+- [x] AC-5: Given the selector, when the user picks a model and asks, then the request names that model and the answer shows it. Proof: `ModelSelect.test.tsx`; `ChatView.test.tsx::asks with the model the user chose`; `useChatThread.test.tsx::names the chosen model in the request and on the turn`.
+- [x] AC-6: Given `GET /api/health`, then it reports whether network mode is on; the header shows "Offline" when it is off and a visible warning when it is on. Proof: `tests/unit/api/test_health.py`; `tests/unit/test_settings.py::test_network_mode_is_switched_on_by_its_variable`; `NetworkBadge.test.tsx`; journey ("Offline").
+- [x] AC-7: Given `make e2e`, then the journey covers a two-question thread, a marker that opens its source, and the Notes tab, with `fake-extractive`. Proof: `make e2e`, 3 journeys including `a thread of two questions, a marker that opens its source, and the notes tab`.
 
 ## Decisions
 
@@ -68,6 +68,18 @@ Confirmed by the human on 2026-10-30.
 3. **The thread:** in memory only; a reload starts empty.
 4. **Notes:** shown as preformatted text with their sources, without a Markdown renderer.
 5. **No ADR:** `ASSISTANT_ALLOW_NETWORK` is defined by ADR 0004, and a model chosen per request changes no model behaviour of its own.
+
+## Acceptance criteria mapping (TEST-09)
+
+| AC | Plan steps |
+|---|---|
+| AC-1 | 4, 8 |
+| AC-2 | 1, 5, 8 |
+| AC-3 | 7, 8 |
+| AC-4 | 2 |
+| AC-5 | 2, 4, 6 |
+| AC-6 | 3, 6 |
+| AC-7 | 8 |
 
 ## Open questions
 

@@ -16,7 +16,7 @@ Status: `planned` → `spec` → `building` → `review` → `done`.
 | F-06 | OpenAI-compatible chat adapter with tool calling, JSON schema output, validation and retries | FR-13, FR-40 | 2 | done |
 | F-07 | Agent with tools, resolvable citations, refusal, prompt-injection defence | FR-10–FR-12, FR-14 | 2 | done |
 | F-07a | `save_note` tool: notes and checklists written to the local notes directory | FR-10, AI-11 | 2 | done |
-| F-08 | Chat UI with clickable citations, document library, model selector, offline indicator | FR-60–FR-62 | 2 | review |
+| F-08 | Chat UI with clickable citations, document library, model selector, offline indicator | FR-60–FR-62 | 2 | done |
 | F-09 | Full evaluation set, comparison of 3–4 local models and Claude, performance measurements, published report | FR-41–FR-45 | 3 | planned |
 | F-10 | Docker Compose profiles and `make offline-check` in CI | FR-50, FR-51, NFR-01, NFR-02 | 4 | planned |
 | F-11 | Langfuse tracing (optional profile) | FR-53 | 4 | planned |
@@ -40,4 +40,5 @@ Small changes found during reviews, done as chores outside the feature that foun
 | Record the highest out-of-scope similarity in the evaluation report, so the threshold margin is a measured figure | F-04a review #7 | done in F-05 |
 | Let an answer say the passages do not cover the question without citing unrelated passages (the schema requires a citation today) | F-06 answer baseline (`ref-article-83`) | done in F-07 |
 | Let the agent read an annex (e.g. Annex III) like an article, and route annex questions to the tools again | F-07 review #4 | planned for F-09 |
+| List the local model only while its server answers, not only at startup | F-08 review #10 | planned for F-09 |
 | Decide whether paragraph-level cases accept a sibling paragraph that answers too (dataset-only commit; cross-language cases done in dataset version 2) | F-04 baseline | planned after the indexing change |
