@@ -218,7 +218,7 @@
           "documents"
         ],
         "summary": "List Document Chunks",
-        "description": "The passages of a document with their locations, in order.",
+        "description": "The passages of a document with their locations and text, in order.",
         "operationId": "list_document_chunks",
         "parameters": [
           {
@@ -832,16 +832,21 @@
           },
           "location": {
             "$ref": "#/components/schemas/CitationLocation"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
           }
         },
         "type": "object",
         "required": [
           "chunk_id",
           "position",
-          "location"
+          "location",
+          "text"
         ],
         "title": "ChunkSummary",
-        "description": "A passage of a document: its id and where it is, without its text."
+        "description": "A passage of a document: its id, where it is, and its own text (F-09a)."
       },
       "CitationLocation": {
         "properties": {

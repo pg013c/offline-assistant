@@ -84,7 +84,7 @@ async def reindex_document(document_id: str, documents: Documents) -> DocumentRe
     responses={status.HTTP_404_NOT_FOUND: {"model": ErrorResponse}},
 )
 def list_document_chunks(document_id: str, documents: Documents) -> list[ChunkSummary]:
-    """The passages of a document with their locations, in order."""
+    """The passages of a document with their locations and text, in order."""
     return [
         ChunkSummary(
             chunk_id=chunk.id,
@@ -95,6 +95,7 @@ def list_document_chunks(document_id: str, documents: Documents) -> list[ChunkSu
                 paragraph=chunk.location.paragraph,
                 page=chunk.location.page,
             ),
+            text=chunk.text,
         )
         for chunk in documents.chunks(document_id)
     ]

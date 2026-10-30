@@ -83,7 +83,7 @@
   - the OpenAPI test.
 - Change: `api/schemas.py`, `api/routes/documents.py`; `make api-client`.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 3. Failed tool turns
 

@@ -55,11 +55,12 @@ class ModelChoiceResponse(BaseModel):
 
 
 class ChunkSummary(BaseModel):
-    """A passage of a document: its id and where it is, without its text."""
+    """A passage of a document: its id, where it is, and its own text (F-09a)."""
 
     chunk_id: str
     position: int
     location: "CitationLocation"
+    text: str
 
 
 class SearchRequest(BaseModel):
