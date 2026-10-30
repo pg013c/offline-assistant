@@ -144,7 +144,7 @@ No ADR (spec decision 5).
 - Change: `useChatStream.ts`, `toolStep.ts`, `ChatView.tsx`.
 - Done when: `make check` and `make e2e` pass.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 7. Note metrics and a local-model test
 

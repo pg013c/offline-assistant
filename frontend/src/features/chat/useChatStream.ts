@@ -49,8 +49,10 @@ function reduce(answer: ChatAnswer, action: Action): ChatAnswer {
     case 'event':
       switch (action.event.type) {
         case 'note':
-          // Shown as a step from F-07a step 6; until then the answer ignores it.
-          return answer
+          return {
+            ...answer,
+            notes: [...answer.notes, { id: action.event.id, title: action.event.title }],
+          }
         case 'tool':
           return {
             ...answer,
@@ -106,6 +108,7 @@ function isChatEvent(value: unknown): value is ChatEvent {
     value !== null &&
     'type' in value &&
     (value.type === 'tool' ||
+      value.type === 'note' ||
       value.type === 'text' ||
       value.type === 'discard' ||
       value.type === 'error' ||
