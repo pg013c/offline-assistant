@@ -1,7 +1,7 @@
 """Fetch the evaluation corpus and check it against its pinned hashes (ADR 0018).
 
 This is the only evaluation step that needs the network. Files already present with the
-right hash are not downloaded again.
+right hash are not downloaded again; files kept in the repository are copied (F-07).
 
 Usage: python -m harness.corpus <corpus-dir>
 """
@@ -53,18 +53,27 @@ def fetch(directory: Path, client: httpx.Client | None = None) -> None:
             if target.exists() and sha256(target) == document.sha256:
                 print(f"present    {document.file}")
                 continue
-            response = http.get(
-                SOURCE.format(celex=document.celex),
-                headers={"Accept": document.accept, "Accept-Language": document.language},
-            )
-            response.raise_for_status()
-            actual = hashlib.sha256(response.content).hexdigest()
+            if document.path is not None:
+                content = (EVALS_DIR / document.path).read_bytes()
+                action = "copied    "
+            else:
+                response = http.get(
+                    SOURCE.format(celex=document.celex),
+                    headers={
+                        "Accept": document.accept or "application/pdf",
+                        "Accept-Language": document.language,
+                    },
+                )
+                response.raise_for_status()
+                content = response.content
+                action = "downloaded"
+            actual = hashlib.sha256(content).hexdigest()
             if actual != document.sha256:
                 sys.exit(
                     f"{document.file}: SHA-256 {actual} differs from the pinned {document.sha256}"
                 )
-            target.write_bytes(response.content)
-            print(f"downloaded {document.file}")
+            target.write_bytes(content)
+            print(f"{action} {document.file}")
 
 
 if __name__ == "__main__":
