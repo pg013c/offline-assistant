@@ -168,7 +168,9 @@ class QuestionService:
                     covered = answer.covered
                     # The passages the model says the answer rests on, in its order (AI-01).
                     for number in dict.fromkeys(answer.cited):
-                        yield AnswerCitation(citation=self._citation(passages[number - 1]))
+                        yield AnswerCitation(
+                            citation=self._citation(passages[number - 1]), number=number
+                        )
         _log_model_call(self._model.model_id, outcome, len(passages), usage)
         if research is not None:
             usage = research.then(usage) if usage else research

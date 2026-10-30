@@ -482,6 +482,10 @@
             "const": "citation",
             "title": "Type"
           },
+          "number": {
+            "type": "integer",
+            "title": "Number"
+          },
           "chunk_id": {
             "type": "string",
             "title": "Chunk Id"
@@ -505,6 +509,7 @@
         "type": "object",
         "required": [
           "type",
+          "number",
           "chunk_id",
           "document_id",
           "document_title",

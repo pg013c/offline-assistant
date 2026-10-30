@@ -213,6 +213,8 @@ export interface components {
              * @enum {string}
              */
             type: "citation";
+            /** Number */
+            number: number;
             /** Chunk Id */
             chunk_id: string;
             /** Document Id */

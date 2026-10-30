@@ -48,10 +48,11 @@ def _to_schema(event: AnswerEvent) -> ChatEvent:
     match event:
         case AnswerText(text=text):
             return ChatEvent(ChatTextEvent(type="text", text=text))
-        case AnswerCitation(citation=citation):
+        case AnswerCitation(citation=citation, number=number):
             return ChatEvent(
                 ChatCitationEvent(
                     type="citation",
+                    number=number,
                     chunk_id=citation.chunk_id,
                     document_id=citation.document_id,
                     document_title=citation.document_title,

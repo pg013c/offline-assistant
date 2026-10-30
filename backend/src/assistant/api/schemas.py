@@ -108,6 +108,8 @@ class ChatCitationEvent(BaseModel):
     """A passage the answer is based on, quoted verbatim."""
 
     type: Literal["citation"]
+    # The passage number the answer's markers use for this citation, e.g. 2 for "[2]".
+    number: int
     chunk_id: str
     document_id: str
     document_title: str
