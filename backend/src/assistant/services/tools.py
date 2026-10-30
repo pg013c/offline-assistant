@@ -124,14 +124,20 @@ class DocumentTools:
                     f"passage {number} was not gathered in this run; "
                     f"cite passages 1 to {len(ledger)}"
                 )
-        for statement in statements(arguments.content):
-            # A line ending in a colon opens the list after it and states nothing itself.
-            if not markers(statement) and not statement.endswith(":"):
-                kind = "line" if statement[:1] in "-*•" or statement[:1].isdigit() else "sentence"
-                raise _ToolError(
-                    f'the {kind} "{statement}" cites no passage; end every sentence and list '
-                    "item with the numbers of the passages it rests on, like [1]"
-                )
+        if not cited:
+            raise _ToolError(
+                "the note cites no passage; end every sentence and list item with the numbers "
+                "of the passages it rests on, like [1]"
+            )
+        lines = statements(arguments.content)
+        for position, statement in enumerate(lines):
+            if markers(statement) or _opens_list(statement, lines[position + 1 :]):
+                continue
+            kind = "line" if _is_item(statement) else "sentence"
+            raise _ToolError(
+                f'the {kind} "{statement}" cites no passage; end every sentence and list '
+                "item with the numbers of the passages it rests on, like [1]"
+            )
         created = self._clock()
         sources = []
         for number in sorted(cited):
@@ -197,6 +203,16 @@ class DocumentTools:
                 return document
         titles = ", ".join(f'"{document.title}"' for document in _by_title(documents))
         raise _ToolError(f'there is no document "{name}". The documents are: {titles}.')
+
+
+def _is_item(line: str) -> bool:
+    return line[:1] in "-*•" or line[:1].isdigit()
+
+
+def _opens_list(line: str, rest: Sequence[str]) -> bool:
+    """Whether a line ending in a colon introduces the list item after it; that line states
+    nothing itself and needs no marker."""
+    return line.endswith(":") and bool(rest) and _is_item(rest[0])
 
 
 def _by_title(documents: Sequence[Document]) -> list[Document]:
