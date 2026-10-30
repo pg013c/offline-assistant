@@ -42,6 +42,34 @@ test('upload a PDF, ask in Polish and open the English source at its article and
   await expect(source).toContainText('Irrespective of whether an AI system')
 })
 
+test('a thread of two questions, a marker that opens its source, and the notes tab', async ({
+  page,
+}) => {
+  test.setTimeout(PARSING_TIMEOUT_MS + 30_000)
+  await uploadAiAct(page)
+  await expect(page.getByText('Offline', { exact: true })).toBeVisible()
+  const question = page.getByRole('textbox', { name: 'Question' })
+
+  await question.fill('When is an AI system a safety component considered high-risk?')
+  await page.getByRole('button', { name: 'Ask' }).click()
+  await expect(page.getByText(/Answered by fake-extractive/)).toBeVisible()
+  await expect(question).toHaveValue('')
+  await question.fill('Which systems referred to in Annex III are high-risk?')
+  await page.getByRole('button', { name: 'Ask' }).click()
+
+  const turns = page.getByRole('article')
+  await expect(turns).toHaveCount(2)
+  await expect(page.getByText(/Answered by fake-extractive/)).toHaveCount(2)
+  await turns.first().getByRole('button', { name: 'Source 1' }).click()
+  await expect(page.getByRole('dialog', { name: 'ai-act-art6-en' })).toContainText(
+    'Irrespective of whether an AI system',
+  )
+  await page.keyboard.press('Escape')
+
+  await page.getByRole('tab', { name: 'Notes' }).click()
+  await expect(page.getByText(/No notes yet/)).toBeVisible()
+})
+
 test('a deleted document is no longer used to answer', async ({ page }) => {
   test.setTimeout(PARSING_TIMEOUT_MS + 30_000)
   const document = await uploadAiAct(page)

@@ -134,8 +134,8 @@ No ADR (spec decision 5).
   - the Notes tab shows that there are no notes, since `fake-extractive` saves none.
 - Change: only what the journey shows is missing.
 - Done when: `make e2e` passes.
-- [ ] red
-- [ ] green
+- [x] red
+- [x] green: none needed, the journey passed on the code of steps 1 to 7
 
 ## Acceptance criteria mapping
 
