@@ -1,10 +1,10 @@
 from collections.abc import AsyncIterable
 from typing import Annotated, assert_never
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, status
 from fastapi.sse import EventSourceResponse
 
-from assistant.api.dependencies import get_answers
+from assistant.api.dependencies import ChatTurn, get_chat_turn
 from assistant.api.schemas import (
     ChatCitationEvent,
     ChatDiscardEvent,
@@ -12,11 +12,11 @@ from assistant.api.schemas import (
     ChatErrorEvent,
     ChatEvent,
     ChatNoteEvent,
-    ChatRequest,
     ChatTextEvent,
     ChatToolEvent,
     ChatUsage,
     CitationLocation,
+    ErrorResponse,
 )
 from assistant.domain.answers import (
     AnswerCitation,
@@ -28,11 +28,10 @@ from assistant.domain.answers import (
     NoteSaved,
     ToolUsed,
 )
-from assistant.services.questions import Answerer
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
-Answers = Annotated[Answerer, Depends(get_answers)]
+Turn = Annotated[ChatTurn, Depends(get_chat_turn)]
 
 
 def _progress(event: ToolUsed | NoteSaved) -> ChatToolEvent | ChatNoteEvent:
@@ -94,8 +93,12 @@ def _to_schema(event: AnswerEvent) -> ChatEvent:
             assert_never(event)
 
 
-@router.post("", response_class=EventSourceResponse)
-async def ask_question(request: ChatRequest, answers: Answers) -> AsyncIterable[ChatEvent]:
+@router.post(
+    "",
+    response_class=EventSourceResponse,
+    responses={status.HTTP_422_UNPROCESSABLE_CONTENT: {"model": ErrorResponse}},
+)
+async def ask_question(turn: Turn) -> AsyncIterable[ChatEvent]:
     """Answer a question from the uploaded documents as Server-Sent Events."""
-    async for event in answers.ask(request.question):
+    async for event in turn.answerer.ask(turn.question):
         yield _to_schema(event)

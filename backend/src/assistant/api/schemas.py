@@ -40,6 +40,16 @@ class ErrorResponse(BaseModel):
 
 class ChatRequest(BaseModel):
     question: str = Field(min_length=1, max_length=2000)
+    # A model from GET /api/models; the default when left out (F-08).
+    model: str | None = None
+
+
+class ModelChoiceResponse(BaseModel):
+    """A model the API can answer with now."""
+
+    id: str
+    is_test_model: bool
+    is_default: bool
 
 
 class ChunkSummary(BaseModel):

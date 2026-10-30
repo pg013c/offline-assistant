@@ -321,11 +321,11 @@
             }
           },
           "422": {
-            "description": "Validation Error",
+            "description": "Unprocessable Content",
             "content": {
-              "application/json": {
+              "text/event-stream": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -451,6 +451,32 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/models": {
+      "get": {
+        "tags": [
+          "models"
+        ],
+        "summary": "List Models",
+        "description": "The models a question can name now; the default answers when none is named.",
+        "operationId": "list_models",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ModelChoiceResponse"
+                  },
+                  "type": "array",
+                  "title": "Response List Models"
                 }
               }
             }
@@ -682,6 +708,17 @@
             "maxLength": 2000,
             "minLength": 1,
             "title": "Question"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
           }
         },
         "type": "object",
@@ -1003,6 +1040,30 @@
           "version"
         ],
         "title": "HealthResponse"
+      },
+      "ModelChoiceResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "is_test_model": {
+            "type": "boolean",
+            "title": "Is Test Model"
+          },
+          "is_default": {
+            "type": "boolean",
+            "title": "Is Default"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "is_test_model",
+          "is_default"
+        ],
+        "title": "ModelChoiceResponse",
+        "description": "A model the API can answer with now."
       },
       "NoteDetail": {
         "properties": {

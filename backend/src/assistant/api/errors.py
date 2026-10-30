@@ -12,6 +12,7 @@ from assistant.domain.errors import (
     NoteNotFound,
     NotUtf8Text,
     RerankerOff,
+    UnknownModel,
     UnsupportedFileType,
 )
 
@@ -49,6 +50,13 @@ async def _note_not_found(_: Request, error: Exception) -> JSONResponse:
     return JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content=body.model_dump())
 
 
+async def _unknown_model(_: Request, error: Exception) -> JSONResponse:
+    body = ErrorResponse(code="unknown_model", message=str(error))
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, content=body.model_dump()
+    )
+
+
 async def _reranker_off(_: Request, __: Exception) -> JSONResponse:
     body = ErrorResponse(
         code="reranker_off",
@@ -81,4 +89,5 @@ def register_error_handlers(app: FastAPI) -> None:
     app.add_exception_handler(DocumentNotFound, _document_not_found)
     app.add_exception_handler(NoteNotFound, _note_not_found)
     app.add_exception_handler(RerankerOff, _reranker_off)
+    app.add_exception_handler(UnknownModel, _unknown_model)
     app.add_exception_handler(RequestValidationError, _invalid_request)

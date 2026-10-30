@@ -66,7 +66,7 @@ No ADR (spec decision 5).
 - Change: `services/models.py`, `domain/errors.py`, `api/routes/models.py`, `api/routes/chat.py`, `api/schemas.py`, `api/errors.py`, `api/dependencies.py`, `app.py`; `make api-client`.
 - Done when: `make check` is green.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 3. Network mode in settings and health
 
