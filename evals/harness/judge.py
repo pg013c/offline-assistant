@@ -6,7 +6,7 @@ that `make judge` starts, with a JSON schema and at temperature 0.
 
 import json
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal, cast
 
@@ -64,6 +64,8 @@ class Verdict:
     reason: str
     # Sentence index -> whether its cited passages support it; cited sentences only.
     supported: Mapping[int, bool]
+    # Key point index (from 1) -> whether the answer makes it (F-09a calibration).
+    made: Mapping[int, bool] = field(default_factory=dict)
 
 
 class _Invalid(Exception):

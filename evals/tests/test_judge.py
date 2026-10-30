@@ -24,7 +24,7 @@ INPUT = JudgeInput(
     passages={1: "1. ... not later than 72 hours after having become aware of it ..."},
 )
 VALID = {
-    "correctness": "correct",
+    "key_points": [{"index": 1, "made": True}, {"index": 2, "made": True}],
     "reason": "Both key points are made.",
     "sentences": [{"index": 1, "supported": True}, {"index": 2, "supported": True}],
 }
@@ -59,12 +59,12 @@ def test_the_request_holds_the_prompt_the_schema_and_everything_the_judge_reads(
     assert request["temperature"] == 0
     assert request["response_format"]["type"] == "json_schema"
     schema = request["response_format"]["json_schema"]["schema"]
-    assert set(schema["properties"]) == {"correctness", "reason", "sentences"}
+    assert set(schema["properties"]) == {"key_points", "reason", "sentences"}
     system, user = request["messages"]
     assert system == {"role": "system", "content": JUDGE_PROMPT}
     for text in (
         INPUT.question,
-        "Within 72 hours where feasible.",
+        "1. Within 72 hours where feasible.",
         "2. Late notices give reasons [1].",
         "[1] 1. ... not later than 72 hours",
     ):
@@ -75,7 +75,10 @@ def test_a_valid_reply_is_a_verdict() -> None:
     verdict = client(StubJudge(json.dumps(VALID))).judge(INPUT)
 
     assert verdict == Verdict(
-        correctness="correct", reason="Both key points are made.", supported={1: True, 2: True}
+        correctness="correct",
+        reason="Both key points are made.",
+        supported={1: True, 2: True},
+        made={1: True, 2: True},
     )
 
 
@@ -83,7 +86,7 @@ def test_a_valid_reply_is_a_verdict() -> None:
     "invalid",
     [
         "not json",
-        json.dumps({**VALID, "correctness": "mostly"}),
+        json.dumps({**VALID, "key_points": [{"index": 1, "made": True}]}),
         json.dumps({**VALID, "sentences": [{"index": 1, "supported": True}]}),
     ],
 )
@@ -118,3 +121,21 @@ def test_a_judge_that_does_not_answer_is_unavailable() -> None:
 def test_the_prompt_comes_from_its_file() -> None:
     assert "key points" in JUDGE_PROMPT.lower()
     assert "supported" in JUDGE_PROMPT.lower()
+
+
+@pytest.mark.parametrize(
+    ("made", "correctness"),
+    [((True, True), "correct"), ((True, False), "partial"), ((False, False), "wrong")],
+)
+def test_correctness_follows_from_the_key_points_made(
+    made: tuple[bool, bool], correctness: str
+) -> None:
+    reply = {
+        **VALID,
+        "key_points": [{"index": index, "made": value} for index, value in enumerate(made, 1)],
+    }
+
+    verdict = client(StubJudge(json.dumps(reply))).judge(INPUT)
+
+    assert verdict is not None
+    assert verdict.correctness == correctness

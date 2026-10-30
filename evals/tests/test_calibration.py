@@ -40,9 +40,8 @@ def test_a_calibration_item_is_a_fixed_answer_with_its_hand_verdict(tmp_path: Pa
         JudgedSentence(index=2, text="Fines are high [1].", cites=(1,)),
     )
     assert item.judged.passages == {1: "... not later than 72 hours ..."}
-    assert item.expected == Verdict(
-        "partial", "The second sentence is not in the passage.", {1: True, 2: False}
-    )
+    assert item.expected.correctness == "partial"
+    assert item.expected.supported == {1: True, 2: False}
 
 
 def test_agreement_is_counted_for_correctness_and_for_each_cited_sentence(tmp_path: Path) -> None:
