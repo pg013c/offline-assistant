@@ -114,6 +114,11 @@ def test_only_the_cited_passages_become_sources(setup: Setup) -> None:
             "passage 7 was not gathered in this run; cite passages 1 to 2",
         ),
         ("Notify within 72 hours.", "cites no passage"),
+        ("Deployers must inform workers before use:", "the note cites no passage"),
+        (
+            "Every controller must report breaches:\nThis is done within 72 hours [1].",
+            'the sentence "Every controller must report breaches:" cites no passage',
+        ),
     ],
 )
 def test_content_with_an_uncited_line_or_an_unknown_passage_is_an_error_and_nothing_is_saved(
@@ -168,3 +173,10 @@ def test_a_line_that_introduces_a_list_with_a_colon_needs_no_marker(setup: Setup
 
     assert result.startswith("Saved note ")
     assert len(notes.list_notes()) == 1
+
+
+def test_the_schema_sent_to_the_model_has_no_bound_a_server_grammar_cannot_take() -> None:
+    content = SAVE_NOTE.arguments.model_json_schema()["properties"]["content"]
+
+    assert "pattern" not in content
+    assert "maxLength" not in content
