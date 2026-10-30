@@ -245,7 +245,7 @@ Added after the first measurement (spec decision 6).
 - Change: `domain/routing.py`, `services/agent.py`, `prompts/agent.md` (the search result may be empty).
 - Done when: `make check` is green.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 9. Measure and record the answer baseline
 

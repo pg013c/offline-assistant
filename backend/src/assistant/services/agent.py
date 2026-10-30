@@ -9,6 +9,7 @@ from string import Template
 import structlog
 
 from assistant.domain.answers import NO_USAGE, AnswerEvent, AnswerFailed, ToolUsed, Usage
+from assistant.domain.routing import needs_tools
 from assistant.domain.tools import (
     FinalText,
     Message,
@@ -34,9 +35,11 @@ GATE_CALL_ID = "search-question"
 class AgentService:
     """Answers a question in two phases: research with tools, then the streamed answer.
 
-    The question is searched first, as without an agent: nothing above the threshold means a
-    refusal with no model call (AI-02). Otherwise the model calls tools, up to
-    `max_tool_turns` turns (AI-22), and the answer rests on every passage they returned.
+    The question is searched first, and the result is the model's first tool result. The
+    model then calls tools, up to `max_tool_turns` turns (AI-22), and the answer rests on every
+    passage they returned. A question about an article is not refused at the threshold, since
+    a short reference can fall under it; with no passage after the tools, it is refused and no
+    answer is written (AI-02).
     """
 
     def __init__(
@@ -53,7 +56,15 @@ class AgentService:
         self._max_tool_turns = max_tool_turns
 
     async def ask(self, question: str) -> AsyncIterator[AnswerEvent]:
-        """Tool calls, then text pieces, citations and an end event; or a refusal."""
+        """Tool calls, then text pieces, citations and an end event; or a refusal.
+
+        Only a question about an article or annex, or a comparison, uses the tools; any other
+        takes the question service's search-then-answer path (spec decision 6).
+        """
+        if not needs_tools(question):
+            async for event in self._questions.ask(question):
+                yield event
+            return
         ledger = PassageLedger()
         gate = ToolCall(
             id=GATE_CALL_ID,
@@ -62,10 +73,6 @@ class AgentService:
         )
         calls = _CallLog()
         result = await self._run(gate, ledger, 0, calls)
-        if not ledger:
-            for event in self._questions.refusal():
-                yield event
-            return
         yield _announced(gate)
         messages = [
             Message(role="system", content=self._system_prompt()),
@@ -93,6 +100,11 @@ class AgentService:
                     yield AnswerFailed(code=reply.code, message=reply.detail)
                     yield self._questions.end(found=True, usage=research)
                     return
+        if not ledger:
+            # Nothing above the threshold and nothing the tools found: no answer (AI-02).
+            for event in self._questions.refusal():
+                yield event
+            return
         async for event in self._questions.answer(question, ledger.passages, research):
             yield event
 
