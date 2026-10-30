@@ -143,7 +143,7 @@ No ADR (spec decision 5).
   - `ChatView.test.tsx`: "Saving note: …" for the tool call and "Saved note: <title>" for the event.
 - Change: `useChatStream.ts`, `toolStep.ts`, `ChatView.tsx`.
 - Done when: `make check` and `make e2e` pass.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 7. Note metrics and a local-model test

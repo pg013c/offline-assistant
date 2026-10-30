@@ -7,6 +7,7 @@ import type { components } from '../../api/schema'
 type Schemas = components['schemas']
 export type ChatCitation = Schemas['ChatCitationEvent']
 export type ChatTool = Pick<Schemas['ChatToolEvent'], 'name' | 'arguments'>
+export type ChatNote = Pick<Schemas['ChatNoteEvent'], 'id' | 'title'>
 type ChatEvent = Schemas['ChatEvent']
 type ChatErrorCode = Schemas['ChatErrorEvent']['code']
 
@@ -17,6 +18,8 @@ export interface ChatAnswer {
   citations: ChatCitation[]
   // The agent's tool calls, in order, before the answer text (F-07).
   tools: ChatTool[]
+  // Notes the agent saved (F-07a).
+  notes: ChatNote[]
   modelId?: string
   found?: boolean
   isTestModel?: boolean
@@ -28,12 +31,19 @@ type Action =
   | { type: 'event'; event: ChatEvent }
   | { type: 'failed'; message: string }
 
-const IDLE: ChatAnswer = { status: 'idle', text: '', citations: [], tools: [] }
+const IDLE: ChatAnswer = { status: 'idle', text: '', citations: [], tools: [], notes: [] }
 
 function reduce(answer: ChatAnswer, action: Action): ChatAnswer {
   switch (action.type) {
     case 'asked':
-      return { status: 'streaming', question: action.question, text: '', citations: [], tools: [] }
+      return {
+        status: 'streaming',
+        question: action.question,
+        text: '',
+        citations: [],
+        tools: [],
+        notes: [],
+      }
     case 'failed':
       return { ...answer, status: 'error', error: action.message }
     case 'event':

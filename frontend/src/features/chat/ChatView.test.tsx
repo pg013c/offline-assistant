@@ -215,6 +215,33 @@ describe('ChatView', () => {
     ])
   })
 
+  it('shows saving a note and the saved note as steps', async () => {
+    serveAnswer([
+      { type: 'tool', name: 'search_documents', arguments: { query: 'breach duties' } },
+      {
+        type: 'tool',
+        name: 'save_note',
+        arguments: { title: 'Breach duties', content: '- Notify within 72 hours [1]' },
+      },
+      { type: 'note', id: '20261030-091507-breach-duties', title: 'Breach duties' },
+      ...FOUND,
+    ])
+    renderWithQueryClient(<ChatView />)
+
+    await ask('Save a checklist of breach duties as a note.')
+
+    const steps = await screen.findByRole('list', { name: 'Steps' })
+    expect(
+      within(steps)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual([
+      'Searching: breach duties',
+      'Saving note: Breach duties',
+      'Saved note: Breach duties',
+    ])
+  })
+
   it('tells the user when the answer failed', async () => {
     server.use(http.post('*/api/chat', () => new HttpResponse(null, { status: 500 })))
     renderWithQueryClient(<ChatView />)
