@@ -41,10 +41,10 @@ items:
   expected:
     correctness: partial
     reason: Says staff need AI competencies, but not that providers and deployers must ensure them, nor
-      what is taken into account; both sentences cite a passage on public spaces.
+      what is taken into account.
     supported:
-      1: false
-      2: false
+      1: true
+      2: true
 - id: cal-02
   source: span-providers-and-deployers
   question: What must providers and deployers of high-risk AI systems each do?
@@ -110,8 +110,8 @@ items:
     reason: Makes neither key point; the duties it names belong to deployers or to specific uses only.
     supported:
       1: false
-      2: false
-      3: false
+      2: true
+      3: true
 - id: cal-03
   source: ref-annex-iii
   question: What does Annex III of the AI Act list?
@@ -141,7 +141,7 @@ items:
     reason: Names some Annex III areas through a passage on market surveillance; misses biometrics, critical
       infrastructure, education, employment and essential services.
     supported:
-      1: false
+      1: true
       2: true
 - id: cal-04
   source: adv-no-citations
