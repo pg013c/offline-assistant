@@ -42,7 +42,7 @@ from harness.calibration import (
 from harness.corpus import CorpusDocument, documents, sha256
 from harness.dataset import load_answer_cases, load_cases
 from harness.gate import below_answer_floors, gate_failures
-from harness.judge import JUDGE_MODEL, JudgeClient, Verdict
+from harness.judge import JUDGE_MODEL, JudgeClient, JudgeUnavailable, Verdict
 from harness.metrics import CaseResult, compute, latency, top_out_of_scope_similarity
 from harness.promptfoo import (
     MODES,
@@ -476,11 +476,17 @@ def judge_answers(
         return None, f"skipped: no judge answers at {judge_url}; start it with make judge"
     client = JudgeClient(judge_url)
     verdicts: dict[str, Verdict | None] = {}
-    for case in cases:
-        result = results[case.id]
-        if case.behaviour != "answer" or result.error or not result.complete:
-            continue
-        verdicts[case.id] = client.judge(judge_input(case, result, questions[case.id], texts))
+    try:
+        for case in cases:
+            result = results[case.id]
+            if case.behaviour != "answer" or result.error or not result.complete:
+                continue
+            verdicts[case.id] = client.judge(judge_input(case, result, questions[case.id], texts))
+    except JudgeUnavailable:
+        return (
+            None,
+            f"skipped: the judge at {judge_url} stopped answering; start it with make judge",
+        )
     return verdicts, f"{JUDGE_MODEL} at {judge_url}"
 
 

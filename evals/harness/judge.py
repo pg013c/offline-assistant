@@ -79,7 +79,7 @@ class _Invalid(Exception):
 
 
 class JudgeClient:
-    """Asks the judge for a verdict; an unreadable reply is retried, then not judged."""
+    """Asks the judge for a verdict; an unreadable or late reply is retried, then not judged."""
 
     def __init__(self, url: str, http: httpx.Client | None = None, max_retries: int = 2) -> None:
         self._url = url
@@ -103,6 +103,8 @@ class JudgeClient:
         for _ in range(self._max_retries + 1):
             try:
                 response = self._http.post(f"{self._url}/v1/chat/completions", json=body)
+            except httpx.TimeoutException:
+                continue
             except httpx.TransportError as error:
                 raise JudgeUnavailable(
                     f"No judge answers at {self._url}. Start it with: make judge"

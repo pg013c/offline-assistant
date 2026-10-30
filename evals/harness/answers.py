@@ -261,7 +261,7 @@ def score_answers(
     first_token = latency(first_tokens)
     per_case = {case.id: _case_result(case, results[case.id]) for case in answering}
     agent = _agent_scores(cases, results, stored, notes or {}, missed)
-    judged = _judged_scores(answering, verdicts, per_case) if verdicts is not None else {}
+    judged = _judged_scores(answering, results, verdicts, per_case) if verdicts is not None else {}
     validity = _tool_call_validity(results.values())
     return AnswerMetrics(
         values={
@@ -290,7 +290,10 @@ def score_answers(
             "mean_attempts": statistics.fmean(attempts) if attempts else None,
             "mean_tool_turns": statistics.fmean(tool_turns) if tool_turns else None,
             "not_judged": (
-                sum(verdicts.get(case.id) is None for case in answering)
+                sum(
+                    verdicts.get(case.id) is None and _answered(results[case.id])
+                    for case in answering
+                )
                 if verdicts is not None
                 else None
             ),
@@ -381,19 +384,30 @@ def _agent_scores(
     }
 
 
+def _answered(result: ChatResult) -> bool:
+    return not result.error and result.complete
+
+
 def _judged_scores(
     answering: Sequence[AnswerCase],
+    results: Mapping[str, ChatResult],
     verdicts: Mapping[str, Verdict | None],
     per_case: dict[str, dict[str, Any]],
 ) -> dict[str, tuple[float, int]]:
-    """Judged correctness (partial counts half) and supported cited sentences (ADR 0022);
-    the verdict and its reason go into each case's row."""
+    """Judged correctness (partial counts half, a failed answer wrong) and supported cited
+    sentences (ADR 0022); the verdict and its reason go into each case's row."""
     weights = {"correct": 1.0, "partial": 0.5, "wrong": 0.0}
     correct = 0.0
     judged = supported = cited = 0
     for case in answering:
+        result = results[case.id]
         verdict = verdicts.get(case.id)
         row = per_case.setdefault(case.id, {})
+        if not _answered(result):
+            judged += 1
+            row["correctness"] = "wrong"
+            row["judge_reason"] = f"the answer failed: {result.error or 'the stream ended early'}"
+            continue
         row["correctness"] = verdict.correctness if verdict else None
         row["judge_reason"] = verdict.reason if verdict else None
         if verdict is None:
