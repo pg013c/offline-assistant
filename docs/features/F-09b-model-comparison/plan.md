@@ -70,7 +70,7 @@ No ADR is needed before step 1. ADR 0024 covers the pins, the server and the fla
   - `LLM_MODELS` holds the five pins.
 - Change: `pinned_models.py`, `chat_models.py`, `settings.py`, `.env.example`.
 - Done when: the tests pass and `make check` is green.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 2. `make llm` and `make llm-models` take a model name

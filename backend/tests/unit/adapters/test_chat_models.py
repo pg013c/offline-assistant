@@ -1,3 +1,5 @@
+from typing import get_args
+
 import httpx
 import pytest
 
@@ -35,10 +37,76 @@ def serving(*names: str) -> httpx.MockTransport:
     return httpx.MockTransport(handler)
 
 
-def test_the_catalogue_has_the_test_model_and_qwen3_8b() -> None:
-    assert set(CHAT_MODELS) == {"fake-extractive", "qwen3-8b"}
+# The comparison's candidates (F-09b), pinned as ADR 0024 says: name -> repository,
+# revision, file and SHA-256.
+CANDIDATES = {
+    "qwen3.5-9b": (
+        "unsloth/Qwen3.5-9B-GGUF",
+        "3885219b6810b007914f3a7950a8d1b469d598a5",
+        "Qwen3.5-9B-Q4_K_M.gguf",
+        "03b74727a860a56338e042c4420bb3f04b2fec5734175f4cb9fa853daf52b7e8",
+    ),
+    "qwen3.6-35b-a3b": (
+        "ggml-org/Qwen3.6-35B-A3B-GGUF",
+        "7878dc9a905c7c9379e5e8d6a1aa9affdd6839c5",
+        "Qwen3.6-35B-A3B-Q4_K_M.gguf",
+        "671e47e0ec53c665d048b98c3ecbfd5236b5ca9c3e02ed19fc8f81f7b85140c7",
+    ),
+    "gemma-4-26b-a4b": (
+        "google/gemma-4-26B-A4B-it-qat-q4_0-gguf",
+        "d1c082be9cf3c8a514acf63b8761f4b41935842e",
+        "gemma-4-26B_q4_0-it.gguf",
+        "3eca3b8f6d7baf218a7dd6bba5fb59a56ee25fe2d567b6f5f589b4f697eca51d",
+    ),
+    "ternary-bonsai-2-27b": (
+        "prism-ml/Ternary-Bonsai-2-27B-gguf",
+        "94dd51cdbbec5309ed8b76a12f3268bc4fdceb93",
+        "Ternary-Bonsai-2-27B-Q2_0.gguf",
+        "4f99aed01b8a877e153f9aa6569a4440fe17c59701cc0953e36d7f460549e70e",
+    ),
+}
+
+
+def test_the_catalogue_has_the_test_model_qwen3_8b_and_the_candidates() -> None:
+    assert set(CHAT_MODELS) == {"fake-extractive", "qwen3-8b", *CANDIDATES}
     assert CHAT_MODELS["qwen3-8b"].tools is True
     assert CHAT_MODELS["qwen3-8b"].pinned == QWEN3_8B
+
+
+@pytest.mark.parametrize("name", sorted(CANDIDATES))
+def test_each_candidate_is_pinned_as_adr_0024_says(name: str) -> None:
+    repository, revision, file, sha256 = CANDIDATES[name]
+    assert name in CHAT_MODELS
+    pinned = CHAT_MODELS[name].pinned
+
+    assert pinned is not None
+    assert (pinned.repository, pinned.revision, pinned.files) == (
+        repository,
+        revision,
+        {file: sha256},
+    )
+    assert pinned.directory == "llm/" + repository.replace("/", "--")
+    assert pinned in LLM_MODELS
+    assert pinned not in PINNED_MODELS
+
+
+@pytest.mark.parametrize("name", sorted(CANDIDATES))
+def test_each_candidate_is_served_under_its_name_with_every_capability(name: str) -> None:
+    assert name in CHAT_MODELS
+    spec = CHAT_MODELS[name]
+
+    assert spec.served_model == name
+    assert (spec.tools, spec.json_schema, spec.streaming) == (True, True, True)
+
+
+def test_the_settings_accept_exactly_the_catalogue_names() -> None:
+    assert set(get_args(Settings.model_fields["chat_model"].annotation)) == set(CHAT_MODELS)
+
+
+def test_the_llm_models_are_the_served_models_pins() -> None:
+    served = [spec.pinned.repository for spec in CHAT_MODELS.values() if spec.pinned is not None]
+
+    assert sorted(model.repository for model in LLM_MODELS) == sorted(served)
 
 
 def test_the_test_model_needs_no_server() -> None:
