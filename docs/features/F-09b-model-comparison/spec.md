@@ -16,8 +16,8 @@ ADR 0021 made Qwen3 8B the default so the pipeline could be built, not because m
   |---|---|---|
   | Qwen3 8B | dense, the baseline | Q4_K_M, 5.0 GB |
   | Qwen3.5 9B | dense, its successor at the same size | Q4_K_M, 5.7 GB |
-  | Qwen3.6 35B-A3B | mixture of experts, 3B active | Q4_K_M, 22.1 GB |
-  | Gemma 4 26B-A4B | mixture of experts, 4B active, another family | Q4_K_M, 16.9 GB |
+  | Qwen3.6 35B-A3B | mixture of experts, 3B active | Q4_K_M, 20.4 GB |
+  | Gemma 4 26B-A4B | mixture of experts, 4B active, another family | quantisation-aware Q4_0, 14.4 GB |
   | Ternary-Bonsai-2 27B | ternary Qwen3.8 27B | Q2_0, 7.6 GB |
 
 - **Server:** llama.cpp from Homebrew, upgraded to a build that serves all five. Qwen3 8B is measured again on that build, so all rows share one server.
@@ -63,7 +63,7 @@ There are no new cases. The comparison uses the F-09a answer suite unchanged: da
 
 Confirmed by the human on 2026-10-31.
 
-1. **Candidates:** the five models above, picked after a check of Hugging Face on 2026-10-31. The 52 GB of downloads start with the ADR that pins them.
+1. **Candidates:** the five models above, picked after a check of Hugging Face on 2026-10-31. About 48 GB of downloads, which start once the ADR that pins them is accepted. The files are in ADR 0024.
 2. **Server:** llama.cpp from Homebrew, upgraded. The build is recorded, as in ADR 0021, and no fork is used.
 3. **Choosing the default:** the rule above, fixed before the runs.
 4. **Memory:** the peak resident memory of the model server.

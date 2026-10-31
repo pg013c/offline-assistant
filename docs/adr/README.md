@@ -38,3 +38,4 @@ Use the `/adr` skill or copy [template.md](template.md).
 | [0021](0021-llama-server-and-qwen3-8b.md) | Serve the local LLM with llama.cpp's llama-server, starting with Qwen3 8B | accepted |
 | [0022](0022-local-judge-and-answer-floors.md) | Judge answers with a local Qwen3 30B-A3B, and floor citation support and tool-call validity | accepted, amended by 0023 |
 | [0023](0023-the-judge-thinks.md) | The judge thinks before it rules | accepted |
+| [0024](0024-candidate-models-and-llama-cpp-upgrade.md) | Pin four candidate models for the comparison, and upgrade llama.cpp to serve them | accepted |
