@@ -147,7 +147,53 @@ QWEN3_8B = PinnedModel(
         "Qwen3-8B-Q4_K_M.gguf": "d98cdcbd03e17ce47681435b5150e34c1417f50b5c0019dd560e4882c5745785"
     },
 )
-LLM_MODELS: tuple[PinnedModel, ...] = (QWEN3_8B,)
+
+# The comparison's candidates (F-09b, ADR 0024), each in the build its source publishes.
+QWEN3_5_9B = PinnedModel(
+    repository="unsloth/Qwen3.5-9B-GGUF",
+    revision="3885219b6810b007914f3a7950a8d1b469d598a5",
+    directory="llm/unsloth--Qwen3.5-9B-GGUF",
+    files={
+        "Qwen3.5-9B-Q4_K_M.gguf": "03b74727a860a56338e042c4420bb3f04b2fec5734175f4cb9fa853daf52b7e8"
+    },
+)
+QWEN3_6_35B_A3B = PinnedModel(
+    repository="ggml-org/Qwen3.6-35B-A3B-GGUF",
+    revision="7878dc9a905c7c9379e5e8d6a1aa9affdd6839c5",
+    directory="llm/ggml-org--Qwen3.6-35B-A3B-GGUF",
+    files={
+        "Qwen3.6-35B-A3B-Q4_K_M.gguf": (
+            "671e47e0ec53c665d048b98c3ecbfd5236b5ca9c3e02ed19fc8f81f7b85140c7"
+        )
+    },
+)
+GEMMA_4_26B_A4B = PinnedModel(
+    repository="google/gemma-4-26B-A4B-it-qat-q4_0-gguf",
+    revision="d1c082be9cf3c8a514acf63b8761f4b41935842e",
+    directory="llm/google--gemma-4-26B-A4B-it-qat-q4_0-gguf",
+    files={
+        "gemma-4-26B_q4_0-it.gguf": (
+            "3eca3b8f6d7baf218a7dd6bba5fb59a56ee25fe2d567b6f5f589b4f697eca51d"
+        )
+    },
+)
+TERNARY_BONSAI_2_27B = PinnedModel(
+    repository="prism-ml/Ternary-Bonsai-2-27B-gguf",
+    revision="94dd51cdbbec5309ed8b76a12f3268bc4fdceb93",
+    directory="llm/prism-ml--Ternary-Bonsai-2-27B-gguf",
+    files={
+        "Ternary-Bonsai-2-27B-Q2_0.gguf": (
+            "4f99aed01b8a877e153f9aa6569a4440fe17c59701cc0953e36d7f460549e70e"
+        )
+    },
+)
+LLM_MODELS: tuple[PinnedModel, ...] = (
+    QWEN3_8B,
+    QWEN3_5_9B,
+    QWEN3_6_35B_A3B,
+    GEMMA_4_26B_A4B,
+    TERNARY_BONSAI_2_27B,
+)
 
 # The evaluation's judge (ADR 0022), served by `make judge`, never loaded by the API.
 QWEN3_30B_A3B = PinnedModel(
