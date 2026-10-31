@@ -17,6 +17,8 @@ class ChunkRef:
     article: str | None
     paragraph: str | None
     heading_path: tuple[str, ...]
+    # The chunk's own text, for the judge (F-09a).
+    text: str = ""
 
 
 def resolve(cases: Sequence[Case], chunks: Sequence[ChunkRef]) -> dict[str, frozenset[str]]:

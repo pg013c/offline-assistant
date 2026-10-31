@@ -55,11 +55,12 @@ class ModelChoiceResponse(BaseModel):
 
 
 class ChunkSummary(BaseModel):
-    """A passage of a document: its id and where it is, without its text."""
+    """A passage of a document: its id, where it is, and its own text (F-09a)."""
 
     chunk_id: str
     position: int
     location: "CitationLocation"
+    text: str
 
 
 class SearchRequest(BaseModel):
@@ -140,7 +141,9 @@ class ChatErrorEvent(BaseModel):
     """The model gave no valid answer; an end event still follows."""
 
     type: Literal["error"]
-    code: Literal["invalid_answer", "model_unreachable", "model_timeout", "model_error"]
+    code: Literal[
+        "invalid_answer", "model_unreachable", "model_timeout", "model_error", "invalid_tool_call"
+    ]
     message: str
 
 
@@ -154,6 +157,8 @@ class ChatUsage(BaseModel):
     attempts: int
     # Model turns that called tools before the answer.
     tool_turns: int
+    # Model turns that made no valid tool call even after retries.
+    failed_tool_turns: int
 
 
 class ChatEndEvent(BaseModel):

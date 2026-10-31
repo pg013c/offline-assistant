@@ -218,7 +218,7 @@
           "documents"
         ],
         "summary": "List Document Chunks",
-        "description": "The passages of a document with their locations, in order.",
+        "description": "The passages of a document with their locations and text, in order.",
         "operationId": "list_document_chunks",
         "parameters": [
           {
@@ -619,7 +619,8 @@
               "invalid_answer",
               "model_unreachable",
               "model_timeout",
-              "model_error"
+              "model_error",
+              "invalid_tool_call"
             ],
             "title": "Code"
           },
@@ -806,6 +807,10 @@
           "tool_turns": {
             "type": "integer",
             "title": "Tool Turns"
+          },
+          "failed_tool_turns": {
+            "type": "integer",
+            "title": "Failed Tool Turns"
           }
         },
         "type": "object",
@@ -815,7 +820,8 @@
           "first_token_ms",
           "total_ms",
           "attempts",
-          "tool_turns"
+          "tool_turns",
+          "failed_tool_turns"
         ],
         "title": "ChatUsage",
         "description": "What the answer cost: tokens over every attempt, and its timings in milliseconds."
@@ -832,16 +838,21 @@
           },
           "location": {
             "$ref": "#/components/schemas/CitationLocation"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
           }
         },
         "type": "object",
         "required": [
           "chunk_id",
           "position",
-          "location"
+          "location",
+          "text"
         ],
         "title": "ChunkSummary",
-        "description": "A passage of a document: its id and where it is, without its text."
+        "description": "A passage of a document: its id, where it is, and its own text (F-09a)."
       },
       "CitationLocation": {
         "properties": {

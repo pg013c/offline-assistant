@@ -95,6 +95,7 @@ def test_answer_is_a_stream_of_text_then_citation_then_end(
             "total_ms": 0.0,
             "attempts": 1,
             "tool_turns": 0,
+            "failed_tool_turns": 0,
         },
     }
 
@@ -209,6 +210,7 @@ def test_a_rejected_attempt_is_announced_with_a_discard_event(
         "total_ms": 1800.0,
         "attempts": 2,
         "tool_turns": 0,
+        "failed_tool_turns": 0,
     }
     assert events[-1]["is_test_model"] is False
 

@@ -145,6 +145,11 @@ class AgentService:
                     if note and turn == limit == self._max_tool_turns and run.save_failed:
                         limit += 1
                 case _:
+                    # No valid tool call even after retries: a failure of its own, so the
+                    # evaluation can count tool-call validity (F-09a).
+                    if reply.code == "invalid_answer":
+                        run.research = run.research.plus(_ONE_FAILED_TOOL_TURN)
+                        reply = replace(reply, code="invalid_tool_call")
                     run.failure = reply
                     return
 
@@ -269,6 +274,14 @@ def _key(call: ToolCall) -> str:
     return f"{call.name}:{call.arguments.model_dump_json()}"
 
 
+_ONE_FAILED_TOOL_TURN = Usage(
+    prompt_tokens=0,
+    completion_tokens=0,
+    first_token_ms=None,
+    total_ms=0.0,
+    attempts=0,
+    failed_tool_turns=1,
+)
 _ONE_TOOL_TURN = Usage(
     prompt_tokens=0,
     completion_tokens=0,

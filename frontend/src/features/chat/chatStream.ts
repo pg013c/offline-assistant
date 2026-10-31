@@ -94,6 +94,8 @@ function errorMessage(code: ChatErrorCode, message: string): string {
       return `The language model took too long to answer. ${message}`
     case 'model_error':
       return `The model server failed to answer. ${message}`
+    case 'invalid_tool_call':
+      return `The model could not use its tools correctly. ${message}`
   }
 }
 

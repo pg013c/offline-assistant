@@ -1,4 +1,12 @@
-from harness.gate import CEILINGS, FLOORS, below_floors, check, gate_failures
+from harness.gate import (
+    ANSWER_FLOORS,
+    CEILINGS,
+    FLOORS,
+    below_answer_floors,
+    below_floors,
+    check,
+    gate_failures,
+)
 
 
 def test_a_drop_of_more_than_5_points_fails_and_names_the_metric() -> None:
@@ -111,3 +119,13 @@ def test_for_unasked_notes_a_rise_is_the_regression() -> None:
     failures = check(current={"notes_saved_unasked": 0.1}, baseline={"notes_saved_unasked": 0.0})
 
     assert failures == ["notes_saved_unasked rose from 0.0 to 10.0 (more than 5 points)"]
+
+
+def test_the_answer_floors_are_those_of_adr_0022() -> None:
+    assert ANSWER_FLOORS == {"citation_support": 0.90, "tool_call_validity": 0.95}
+
+
+def test_an_answer_metric_below_its_floor_fails_and_a_skipped_one_does_not() -> None:
+    failures = below_answer_floors({"citation_support": 0.85, "tool_call_validity": None})
+
+    assert failures == ["citation_support is 85.0, below its floor of 90.0 (ADR 0022)"]

@@ -25,14 +25,31 @@ import yaml
 
 from harness.answers import (
     AnswerCase,
+    ChatResult,
     SavedNote,
     answers_markdown,
+    judge_input,
     parse_chat_stream,
     score_answers,
 )
+from harness.calibration import (
+    CALIBRATION_FILE,
+    Agreement,
+    agreement,
+    calibration_failures,
+    load_calibration,
+)
 from harness.corpus import CorpusDocument, documents, sha256
 from harness.dataset import load_answer_cases, load_cases
-from harness.gate import gate_failures
+from harness.gate import below_answer_floors, gate_failures
+from harness.judge import (
+    JUDGE_MODEL,
+    JUDGE_PROMPT,
+    MAX_TOKENS,
+    JudgeClient,
+    JudgeUnavailable,
+    Verdict,
+)
 from harness.metrics import CaseResult, compute, latency, top_out_of_scope_similarity
 from harness.promptfoo import (
     MODES,
@@ -51,6 +68,8 @@ PROMPTFOO_CONFIG = ROOT / "evals" / "promptfoo" / "retrieval.yaml"
 GATED_MODE = "reranked"
 BASELINE = ROOT / "docs" / "evals" / "retrieval-baseline.json"
 ANSWER_BASELINE = ROOT / "docs" / "evals" / "answer-baseline.json"
+# The metrics that only the judge measures (ADR 0022).
+JUDGED = ("judged_correct", "citation_support")
 ANSWERS_CONFIG = ROOT / "evals" / "promptfoo" / "answers.yaml"
 STARTUP_SECONDS = 180
 INGESTION_SECONDS = 1800
@@ -87,6 +106,8 @@ class RunConfig:
     # The chat model the API answers with, and its server (F-06, ADR 0021).
     chat_model: str = "fake-extractive"
     llm_url: str = "http://127.0.0.1:8080"
+    # The judge `make judge` serves (ADR 0022); the answer suite judges when it answers.
+    judge_url: str = "http://127.0.0.1:8081"
 
 
 @dataclass(frozen=True)
@@ -181,29 +202,56 @@ def run_answers(config: RunConfig) -> Outcome:
         _stop(server)
         log.close()
 
+    answer_cases = [
+        AnswerCase(
+            case.id,
+            case.language,
+            case.behaviour,
+            expected[case.id],
+            tools=case.tools,
+            forbidden=case.forbidden,
+            injection=case.kind == "injection",
+            note=case.note,
+            key_points=case.key_points,
+        )
+        for case in cases
+    ]
+    verdicts, judge = judge_answers(
+        answer_cases,
+        {case.id: case.question for case in cases},
+        results,
+        {chunk.chunk_id: chunk.text for chunk in chunks},
+        config.judge_url,
+    )
+    calibration = calibrate(config.judge_url) if verdicts is not None else None
     metrics = score_answers(
-        [
-            AnswerCase(
-                case.id,
-                case.language,
-                case.behaviour,
-                expected[case.id],
-                tools=case.tools,
-                forbidden=case.forbidden,
-                injection=case.kind == "injection",
-                note=case.note,
-            )
-            for case in cases
-        ],
+        answer_cases,
         results,
         stored=frozenset(chunk.chunk_id for chunk in chunks),
         notes=notes,
+        verdicts=verdicts,
     )
+    trusted, untrusted = trusted_judged(metrics.values, calibration)
+    metrics = replace(metrics, values=trusted)
     metadata = {
         **_metadata(config, started_at),
         "corpus": corpus,
         "chat_model": config.chat_model,
         "llm_server": _llm_server(config.llm_url),
+        "judge": judge,
+        "calibration": (
+            {
+                "correctness": calibration.correctness,
+                "support": calibration.support,
+                "items": calibration.items,
+            }
+            if calibration
+            else "not run"
+        ),
+        "untrusted": {
+            name: {"value": value, "cases": metrics.cases[name]}
+            for name, value in untrusted.items()
+        },
     }
     report = {
         "metrics": {
@@ -236,10 +284,11 @@ def run_answers(config: RunConfig) -> Outcome:
         if config.baseline.exists()
         else {}
     )
-    failures = gate_failures(
-        dict(metrics.values),
+    failures = answer_failures(
+        metrics.values,
         {name: values["value"] for name, values in baseline.items()},
-        floors=False,
+        calibration,
+        judged=verdicts is not None,
     )
     stem = config.results_dir / f"answers-{started_at:%Y%m%dT%H%M%SZ}"
     report_json = stem.with_suffix(".json")
@@ -304,6 +353,7 @@ def default_answers_config(env: Mapping[str, str]) -> RunConfig:
         floors=False,
         chat_model="qwen3-8b",
         llm_url=f"http://127.0.0.1:{env.get('LLM_PORT', '8080')}",
+        judge_url=f"http://127.0.0.1:{env.get('JUDGE_PORT', '8081')}",
     )
 
 
@@ -425,6 +475,81 @@ def fetch_notes(api: httpx.Client, note_ids: Sequence[str]) -> dict[str, SavedNo
     return saved
 
 
+def judge_answers(
+    cases: Sequence[AnswerCase],
+    questions: Mapping[str, str],
+    results: Mapping[str, ChatResult],
+    texts: Mapping[str, str],
+    judge_url: str,
+) -> tuple[dict[str, Verdict | None] | None, dict[str, Any]]:
+    """Each complete answer judged (ADR 0022), and who judged it; without a judge, no
+    verdicts and a note that says how to start it."""
+    try:
+        httpx.get(f"{judge_url}/health", timeout=5).raise_for_status()
+    except httpx.HTTPError:
+        return None, {"skipped": f"no judge answers at {judge_url}; start it with make judge"}
+    client = JudgeClient(judge_url)
+    verdicts: dict[str, Verdict | None] = {}
+    try:
+        for case in cases:
+            result = results[case.id]
+            if case.behaviour != "answer" or result.error or not result.complete:
+                continue
+            verdicts[case.id] = client.judge(judge_input(case, result, questions[case.id], texts))
+    except JudgeUnavailable:
+        return None, {
+            "skipped": f"the judge at {judge_url} stopped answering; start it with make judge"
+        }
+    return verdicts, {
+        "model": JUDGE_MODEL,
+        "server": _llm_server(judge_url),
+        "prompt_sha256": hashlib.sha256(JUDGE_PROMPT.encode()).hexdigest(),
+        "max_tokens": MAX_TOKENS,
+        "thinking": client.thought,
+    }
+
+
+def calibrate(judge_url: str, path: Path = CALIBRATION_FILE) -> Agreement | None:
+    """The judge's agreement with the hand-labelled calibration set; None when the set is
+    missing or the judge stops answering, which fails a judged run."""
+    if not path.exists():
+        return None
+    client = JudgeClient(judge_url)
+    items = load_calibration(path)
+    try:
+        return agreement(items, {item.id: client.judge(item.judged) for item in items})
+    except JudgeUnavailable:
+        return None
+
+
+def answer_failures(
+    values: Mapping[str, float | None],
+    baseline: Mapping[str, float | None],
+    calibration: Agreement | None,
+    judged: bool,
+) -> list[str]:
+    """The answer gate's failures, the judge's calibration among them (ADR 0022)."""
+    failures = gate_failures(dict(values), dict(baseline), floors=False) + below_answer_floors(
+        values
+    )
+    if calibration is not None:
+        failures += calibration_failures(calibration)
+    elif judged:
+        failures.append("the judge was not calibrated: its calibration set did not run (ADR 0022)")
+    return failures
+
+
+def trusted_judged(
+    values: Mapping[str, float | None], calibration: Agreement | None
+) -> tuple[dict[str, float | None], dict[str, float | None]]:
+    """The metrics with the judge's set apart when the judge is below its bar or was not
+    calibrated, so that neither the gate nor a baseline takes them as measured."""
+    if calibration is not None and not calibration_failures(calibration):
+        return dict(values), {}
+    untrusted = {name: values[name] for name in JUDGED if values.get(name) is not None}
+    return {**values, **dict.fromkeys(untrusted)}, untrusted
+
+
 def media_type(path: Path) -> str:
     """The media type a corpus file is uploaded with."""
     return "text/markdown" if path.suffix == ".md" else "application/pdf"
@@ -467,6 +592,7 @@ def _chunk_refs(api: httpx.Client, document_ids: dict[str, str]) -> list[ChunkRe
                     article=location["article"],
                     paragraph=location["paragraph"],
                     heading_path=tuple(location["heading_path"]),
+                    text=chunk.get("text", ""),
                 )
             )
     return refs

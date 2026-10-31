@@ -79,3 +79,17 @@ def gate_failures(
 def _value(name: str, value: float) -> str:
     # MRR is a mean of reciprocal ranks, not a share.
     return f"{value:.3f}" if name == "mrr" else f"{value * 100:.1f}"
+
+
+# The answer floors of ADR 0022 (PRD §9).
+ANSWER_FLOORS: dict[str, float] = {"citation_support": 0.90, "tool_call_validity": 0.95}
+
+
+def below_answer_floors(current: Mapping[str, float | None]) -> list[str]:
+    """One message per answer metric below its floor. A metric without a value was not
+    measured, e.g. without the judge, and is reported as skipped, not failed."""
+    return [
+        f"{name} is {_value(name, now)}, below its floor of {_value(name, limit)} (ADR 0022)"
+        for name, limit in ANSWER_FLOORS.items()
+        if (now := current.get(name)) is not None and now < limit - 1e-9
+    ]

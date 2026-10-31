@@ -1,7 +1,7 @@
 """Evaluation cases, loaded from YAML and checked against their JSON schema (TEST-20)."""
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -38,6 +38,8 @@ class Case:
     forbidden: tuple[str, ...] = ()
     # Answer suite only: whether the answer must save a note (F-07a).
     note: bool = False
+    # Answer suite only: the key points a correct answer makes, for the judge (F-09a).
+    key_points: tuple[str, ...] = ()
 
 
 def load_cases(path: Path) -> list[Case]:
@@ -70,12 +72,18 @@ def _case(entry: dict[str, Any]) -> Case:
         tools=tuple(expected.get("tools", ())),
         forbidden=tuple(expected.get("forbidden", ())),
         note=bool(expected.get("note", False)),
+        key_points=tuple(expected.get("key_points", ())),
     )
 
 
 def load_answer_cases(path: Path) -> list[Case]:
-    """The answer suite: the reused retrieval cases, then the suite's own (F-06, F-07)."""
+    """The answer suite: the reused retrieval cases with their reference answers, then the
+    suite's own cases (F-06, F-07, F-09a)."""
     document = yaml.safe_load(path.read_text(encoding="utf-8"))
-    return load_cases(path.parent / document["reuse"]) + _validated(
-        document["cases"], ANSWER_SCHEMA
-    )
+    reused = load_cases(path.parent / document["reuse"])
+    references: dict[str, list[str]] = document.get("references") or {}
+    unknown = set(references) - {case.id for case in reused}
+    if unknown:
+        raise DatasetError(f"references name no reused case: {', '.join(sorted(unknown))}")
+    reused = [replace(case, key_points=tuple(references.get(case.id, ()))) for case in reused]
+    return reused + _validated(document["cases"], ANSWER_SCHEMA)

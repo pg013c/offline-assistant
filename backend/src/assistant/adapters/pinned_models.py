@@ -148,3 +148,16 @@ QWEN3_8B = PinnedModel(
     },
 )
 LLM_MODELS: tuple[PinnedModel, ...] = (QWEN3_8B,)
+
+# The evaluation's judge (ADR 0022), served by `make judge`, never loaded by the API.
+QWEN3_30B_A3B = PinnedModel(
+    repository="Qwen/Qwen3-30B-A3B-GGUF",
+    revision="e4d4bafdfb96a411a163846265362aceb0b9c63a",
+    directory="llm/Qwen--Qwen3-30B-A3B-GGUF",
+    files={
+        "Qwen3-30B-A3B-Q4_K_M.gguf": (
+            "0d003f6662faee786ed5da3e31b29c978de5ae5d275c8794c606a7f3c01aa8f5"
+        )
+    },
+)
+JUDGE_MODELS: tuple[PinnedModel, ...] = (QWEN3_30B_A3B,)

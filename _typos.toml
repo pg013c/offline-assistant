@@ -5,10 +5,12 @@ extend-ignore-re = ["`[0-9a-f]{7,40}`"]
 [default.extend-words]
 # Polish words in evaluation questions.
 personel = "personel"
+charakter = "charakter"
 # Polish words in test data and in recorded model answers ("yes", "the EU").
 tak = "tak"
 ue = "ue"
 
 [files]
-# Baselines record the model's answers as given, in Polish too; they are output, not prose.
-extend-exclude = ["docs/evals/*-baseline.json"]
+# Baselines and the calibration set record answers and passages as given, in Polish too,
+# with the PDF's broken words; they are data, not prose.
+extend-exclude = ["docs/evals/*-baseline.json", "evals/datasets/calibration.yaml"]

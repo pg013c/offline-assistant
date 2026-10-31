@@ -35,6 +35,7 @@ def test_the_chat_stream_documents_discard_and_error_events_and_usage() -> None:
         "model_unreachable",
         "model_timeout",
         "model_error",
+        "invalid_tool_call",
     ]
     assert "usage" in schemas["ChatEndEvent"]["properties"]
 
@@ -68,3 +69,9 @@ def test_models_are_listed_and_a_chat_request_may_name_one() -> None:
     request = schema["components"]["schemas"]["ChatRequest"]
     assert "model" in request["properties"]
     assert "model" not in request.get("required", [])
+
+
+def test_a_chunk_summary_carries_its_text() -> None:
+    schemas = json.loads(openapi_json())["components"]["schemas"]
+
+    assert "text" in schemas["ChunkSummary"]["required"]

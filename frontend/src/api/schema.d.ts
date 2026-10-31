@@ -100,7 +100,7 @@ export interface paths {
         };
         /**
          * List Document Chunks
-         * @description The passages of a document with their locations, in order.
+         * @description The passages of a document with their locations and text, in order.
          */
         get: operations["list_document_chunks"];
         put?: never;
@@ -290,7 +290,7 @@ export interface components {
              * Code
              * @enum {string}
              */
-            code: "invalid_answer" | "model_unreachable" | "model_timeout" | "model_error";
+            code: "invalid_answer" | "model_unreachable" | "model_timeout" | "model_error" | "invalid_tool_call";
             /** Message */
             message: string;
         };
@@ -368,10 +368,12 @@ export interface components {
             attempts: number;
             /** Tool Turns */
             tool_turns: number;
+            /** Failed Tool Turns */
+            failed_tool_turns: number;
         };
         /**
          * ChunkSummary
-         * @description A passage of a document: its id and where it is, without its text.
+         * @description A passage of a document: its id, where it is, and its own text (F-09a).
          */
         ChunkSummary: {
             /** Chunk Id */
@@ -379,6 +381,8 @@ export interface components {
             /** Position */
             position: number;
             location: components["schemas"]["CitationLocation"];
+            /** Text */
+            text: string;
         };
         /**
          * CitationLocation

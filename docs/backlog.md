@@ -17,7 +17,9 @@ Status: `planned` → `spec` → `building` → `review` → `done`.
 | F-07 | Agent with tools, resolvable citations, refusal, prompt-injection defence | FR-10–FR-12, FR-14 | 2 | done |
 | F-07a | `save_note` tool: notes and checklists written to the local notes directory | FR-10, AI-11 | 2 | done |
 | F-08 | Chat UI with clickable citations, document library, model selector, offline indicator | FR-60–FR-62 | 2 | done |
-| F-09 | Full evaluation set, comparison of 3–4 local models and Claude, performance measurements, published report | FR-41–FR-45 | 3 | planned |
+| F-09a | Evaluation set of 40–50 questions with reference answers, judged correctness and citation support, measured on the default model | FR-42, FR-43 | 3 | done |
+| F-09b | Comparison of 3–4 local models: performance and memory, published report, ADR with the final model and revised targets | FR-40, FR-44, FR-45 | 3 | planned |
+| F-09c | Claude in comparison mode: adapter behind ASSISTANT_ALLOW_NETWORK, cost, as the reference in the report | FR-41, FR-44 | 3 | planned |
 | F-10 | Docker Compose profiles and `make offline-check` in CI | FR-50, FR-51, NFR-01, NFR-02 | 4 | planned |
 | F-11 | Langfuse tracing (optional profile) | FR-53 | 4 | planned |
 | F-12 | Offline install bundle and guide | FR-52 | 4 | planned |
@@ -39,6 +41,9 @@ Small changes found during reviews, done as chores outside the feature that foun
 | Index each chunk with its article number and title, and keep section titles out of chunks (retrieval baseline causes 1 and 2) | F-04 baseline | became F-04a |
 | Record the highest out-of-scope similarity in the evaluation report, so the threshold margin is a measured figure | F-04a review #7 | done in F-05 |
 | Let an answer say the passages do not cover the question without citing unrelated passages (the schema requires a citation today) | F-06 answer baseline (`ref-article-83`) | done in F-07 |
-| Let the agent read an annex (e.g. Annex III) like an article, and route annex questions to the tools again | F-07 review #4 | planned for F-09 |
-| List the local model only while its server answers, not only at startup | F-08 review #10 | planned for F-09 |
+| Let the agent read an annex (e.g. Annex III) like an article, and route annex questions to the tools again | F-07 review #4 | planned for F-09b |
+| List the local model only while its server answers, not only at startup | F-08 review #10 | planned for F-09b |
+| Raise the judge's agreement with the calibration set on correctness to the 85 % bar (80 % now): a stronger or second judge, or more calibration items to measure it more finely | F-09a record, review #12 | done in F-09a (85.4 % on 48 items) |
+| Make the judge catch answers on another subject (cal-46) and invented details, e.g. with gpt-oss-20b as a second judge; needed at once if calibration falls below 85 % | F-09a record | planned |
+| Improve citation support, and check it more strictly than the judge, which errs on the lenient side | F-09a record, review #12 | planned |
 | Decide whether paragraph-level cases accept a sibling paragraph that answers too (dataset-only commit; cross-language cases done in dataset version 2) | F-04 baseline | planned after the indexing change |

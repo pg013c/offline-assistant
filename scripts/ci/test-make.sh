@@ -52,5 +52,30 @@ set -e
 check "eval-answers refuses to run without the model server, naming make llm" \
   "$([[ $status -ne 0 && "$output" == *"make llm"* ]] && echo yes || echo no)"
 
+# judge_preflight <env(1) arguments>: checks the judge's file and port without starting it.
+judge_preflight() {
+  env "$@" make -C "$root" --no-print-directory judge-preflight \
+    ENV_FILE="$scratch/missing.env" JUDGE_PORT=59995 2>&1
+}
+
+set +e
+output="$(judge_preflight ASSISTANT_MODELS_DIR="$scratch/no-models")"
+status=$?
+set -e
+check "judge refuses to start without the pinned judge file, naming make judge-models" \
+  "$([[ $status -ne 0 && "$output" == *"make judge-models"* ]] && echo yes || echo no)"
+
+check "judge serves on JUDGE_PORT as qwen3-30b-a3b" \
+  "$(make -C "$root" --no-print-directory -n judge JUDGE_PORT=59994 ASSISTANT_MODELS_DIR="$scratch" 2>/dev/null \
+    | grep -q -- "--port 59994.*--alias qwen3-30b-a3b\|--alias qwen3-30b-a3b.*--port 59994" && echo yes || echo no)"
+
+judge_recipe="$(make -C "$root" --no-print-directory -n judge ASSISTANT_MODELS_DIR="$scratch" 2>/dev/null)"
+check "judge thinks before it rules (ADR 0023)" \
+  "$([[ "$judge_recipe" == *"--alias qwen3-30b-a3b"* && "$judge_recipe" != *"--reasoning-budget 0"* ]] && echo yes || echo no)"
+
+llm_recipe="$(make -C "$root" --no-print-directory -n llm ASSISTANT_MODELS_DIR="$scratch" 2>/dev/null)"
+check "llm serves qwen3-8b with thinking off (ADR 0021)" \
+  "$([[ "$llm_recipe" == *"--alias qwen3-8b"* && "$llm_recipe" == *"--reasoning-budget 0"* ]] && echo yes || echo no)"
+
 [[ "$failures" -eq 0 ]] || { echo "$failures Makefile test(s) failed"; exit 1; }
 echo "All Makefile tests passed."

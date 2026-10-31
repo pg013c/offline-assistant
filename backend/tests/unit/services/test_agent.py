@@ -565,3 +565,21 @@ def test_a_save_that_fails_in_the_last_turn_gets_one_more_turn_to_be_corrected()
 
     assert len(agent.seen) == 3
     assert len(notes.list_notes()) == 1
+
+
+def test_a_tool_turn_with_no_valid_call_after_retries_ends_as_an_invalid_tool_call() -> None:
+    failed = ModelFailed(
+        "invalid_answer",
+        "The model made no valid tool call after 3 attempts: there is no tool fly",
+        usage=usage(300, 30, 900.0),
+    )
+    agent = ScriptedAgent([reading("33"), failed])
+    questions, _, _ = service(agent)
+
+    events = ask(questions)
+
+    assert AnswerFailed(code="invalid_tool_call", message=failed.detail) in events
+    end = events[-1]
+    assert isinstance(end, AnswerEnd)
+    assert end.usage is not None
+    assert (end.usage.tool_turns, end.usage.failed_tool_turns) == (1, 1)

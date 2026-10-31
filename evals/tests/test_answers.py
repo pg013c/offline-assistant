@@ -1,3 +1,4 @@
+import dataclasses
 import json
 from pathlib import Path
 
@@ -10,10 +11,13 @@ from harness.answers import (
     ChatResult,
     SavedNote,
     answers_markdown,
+    cited_numbers,
+    judge_input,
     language_of,
     parse_chat_stream,
     score_answers,
 )
+from harness.judge import JudgedSentence, Verdict
 from harness.promptfoo import outputs_by_case
 from harness.run import fetch_notes
 
@@ -203,6 +207,7 @@ def test_each_case_is_reported_with_its_own_result() -> None:
         "error": None,
         "tools": [],
         "tool_turns": 0,
+        "failed_tool_turns": 0,
     }
     assert metrics.per_case["pl-b"]["cites_expected"] is False
     text = answers_markdown(metrics, {})
@@ -405,3 +410,111 @@ def test_notes_are_read_back_from_the_api_by_id() -> None:
         saved = fetch_notes(api, ["n1"])
 
     assert saved == {"n1": SavedNote(sources=("d:1",), content="Keep logs [1].")}
+
+
+def test_a_stream_keeps_each_citation_by_its_number() -> None:
+    result = parse_chat_stream(
+        sse(
+            {"type": "text", "text": "Kept [2]. Inspected [1]."},
+            {**citation("d:4"), "number": 2},
+            {**citation("d:1"), "number": 1},
+            end(),
+        )
+    )
+
+    assert result.citation_numbers == {2: "d:4", 1: "d:1"}
+
+
+def test_the_judge_reads_each_sentence_with_the_text_of_the_passages_it_cites() -> None:
+    case = AnswerCase("en-a", "en", "answer", frozenset({"d:1"}), key_points=("Six months.",))
+    answer = result("Logs are kept six months [2]. Authorities inspect them [1].", ("d:4", "d:1"))
+    answer = dataclasses.replace(answer, citation_numbers={2: "d:4", 1: "d:1"})
+
+    judged = judge_input(
+        case, answer, "How long?", {"d:4": "Kept six months.", "d:1": "Inspection."}
+    )
+
+    assert judged.question == "How long?"
+    assert judged.key_points == ("Six months.",)
+    assert judged.sentences == (
+        JudgedSentence(index=1, text="Logs are kept six months [2].", cites=(2,)),
+        JudgedSentence(index=2, text="Authorities inspect them [1].", cites=(1,)),
+    )
+    assert judged.passages == {2: "Kept six months.", 1: "Inspection."}
+
+
+JUDGED_CASES = [
+    AnswerCase("a", "en", "answer", frozenset({"d:1"}), key_points=("x",)),
+    AnswerCase("b", "en", "answer", frozenset({"d:2"}), key_points=("y",)),
+    AnswerCase("c", "en", "answer", frozenset({"d:3"}), key_points=("z",)),
+    AnswerCase("d", "en", "answer", frozenset({"d:4"}), key_points=("w",)),
+]
+JUDGED_RESULTS = {
+    "a": result("A [1].", ("d:1",), usage={**USAGE, "tool_turns": 2, "failed_tool_turns": 0}),
+    "b": result("B [1].", ("d:2",), usage={**USAGE, "tool_turns": 1, "failed_tool_turns": 1}),
+    "c": result("C [1].", ("d:3",)),
+    "d": result("D [1].", ("d:4",)),
+}
+VERDICTS = {
+    "a": Verdict("correct", "All points.", {1: True, 2: True}),
+    "b": Verdict("partial", "One point.", {1: True, 2: False}),
+    "c": Verdict("wrong", "None.", {1: False}),
+    "d": None,
+}
+
+
+def test_judged_metrics_count_partial_as_half_and_supported_cited_sentences() -> None:
+    metrics = score_answers(JUDGED_CASES, JUDGED_RESULTS, verdicts=VERDICTS)
+
+    assert metrics.values["judged_correct"] == pytest.approx((1 + 0.5 + 0) / 3)
+    assert metrics.values["citation_support"] == pytest.approx(3 / 5)
+    assert metrics.cases["judged_correct"] == 3
+    assert metrics.cases["citation_support"] == 5
+    assert metrics.performance["not_judged"] == 1
+    assert metrics.per_case["b"]["correctness"] == "partial"
+    assert metrics.per_case["b"]["judge_reason"] == "One point."
+    assert metrics.per_case["d"]["correctness"] is None
+
+
+def test_tool_call_validity_is_valid_turns_over_all_tool_turns() -> None:
+    metrics = score_answers(JUDGED_CASES, JUDGED_RESULTS)
+
+    assert metrics.values["tool_call_validity"] == pytest.approx(3 / 4)
+    assert metrics.cases["tool_call_validity"] == 4
+
+
+def test_without_a_judge_the_judged_metrics_are_skipped() -> None:
+    metrics = score_answers(JUDGED_CASES, JUDGED_RESULTS)
+
+    assert metrics.values["judged_correct"] is None
+    assert metrics.values["citation_support"] is None
+
+
+def test_a_failed_answer_counts_as_wrong_and_only_a_judge_failure_as_not_judged() -> None:
+    cases = [*JUDGED_CASES, AnswerCase("e", "en", "answer", frozenset({"d:5"}), key_points=("v",))]
+    results = {**JUDGED_RESULTS, "e": result("", (), error="invalid_answer")}
+
+    metrics = score_answers(cases, results, verdicts=VERDICTS)
+
+    assert metrics.values["judged_correct"] == pytest.approx((1 + 0.5 + 0 + 0) / 4)
+    assert metrics.cases["judged_correct"] == 4
+    assert metrics.performance["not_judged"] == 1
+    assert metrics.per_case["e"]["correctness"] == "wrong"
+    assert metrics.per_case["e"]["judge_reason"] == "the answer failed: invalid_answer"
+
+
+def test_each_case_reports_its_judged_measures() -> None:
+    metrics = score_answers(JUDGED_CASES, JUDGED_RESULTS, verdicts=VERDICTS)
+
+    row = metrics.per_case["b"]
+    assert (row["supported_sentences"], row["cited_sentences"]) == (1, 2)
+    assert (row["tool_turns"], row["failed_tool_turns"]) == (1, 1)
+    text = answers_markdown(metrics, {})
+    assert "| Correctness | Supported | Valid tool turns |" in text
+    assert next(line for line in text.splitlines() if line.startswith("| b |")).endswith(
+        "| partial | 1/2 | 0/1 |"
+    )
+
+
+def test_cited_numbers_are_read_once_each_in_order() -> None:
+    assert cited_numbers("Kept [2, 1]. Inspected [2][3].") == (2, 1, 3)

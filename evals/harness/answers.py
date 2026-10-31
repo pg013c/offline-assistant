@@ -3,10 +3,11 @@
 import json
 import re
 import statistics
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
+from harness.judge import JudgedSentence, JudgeInput, Verdict
 from harness.metrics import latency
 
 
@@ -23,6 +24,8 @@ class AnswerCase:
     injection: bool = False
     # Whether the answer must save a note (F-07a).
     note: bool = False
+    # The key points a correct answer makes, for the judge (F-09a).
+    key_points: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -45,6 +48,8 @@ class ChatResult:
     tools: tuple[str, ...] = ()
     # Ids of the notes the agent saved (F-07a).
     notes: tuple[str, ...] = ()
+    # Citation number, as the answer's markers use it -> cited chunk id (F-09a).
+    citation_numbers: Mapping[int, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -63,6 +68,7 @@ def parse_chat_stream(text: str) -> ChatResult:
     """The final attempt's answer, citations, error and usage from a raw /api/chat stream."""
     answer: list[str] = []
     cited: list[str] = []
+    numbers: dict[int, str] = {}
     tools: list[str] = []
     notes: list[str] = []
     error = None
@@ -83,8 +89,11 @@ def parse_chat_stream(text: str) -> ChatResult:
             case "discard":
                 answer.clear()
                 cited.clear()
+                numbers.clear()
             case "citation":
                 cited.append(event["chunk_id"])
+                if "number" in event:
+                    numbers[int(event["number"])] = event["chunk_id"]
             case "error":
                 error = event["code"]
             case "end":
@@ -100,6 +109,7 @@ def parse_chat_stream(text: str) -> ChatResult:
         complete,
         tools=tuple(tools),
         notes=tuple(notes),
+        citation_numbers=numbers,
     )
 
 
@@ -165,11 +175,49 @@ def language_of(text: str) -> str | None:
     return "en" if words else None
 
 
+def judge_input(
+    case: AnswerCase, result: ChatResult, question: str, texts: Mapping[str, str]
+) -> JudgeInput:
+    """What the judge reads: each sentence with the passages its markers cite, by number."""
+    sentences = tuple(
+        JudgedSentence(
+            index=index,
+            text=sentence,
+            cites=cited_numbers(sentence),
+        )
+        for index, sentence in enumerate(statements_of(result.answer), start=1)
+    )
+    passages = {
+        number: texts[chunk_id]
+        for number, chunk_id in result.citation_numbers.items()
+        if chunk_id in texts
+    }
+    return JudgeInput(
+        question=question,
+        key_points=case.key_points,
+        answer=result.answer,
+        sentences=sentences,
+        passages=passages,
+    )
+
+
+def cited_numbers(text: str) -> tuple[int, ...]:
+    """The passage numbers a text's citation markers name, each once, in order."""
+    return tuple(dict.fromkeys(_marker_numbers(text)))
+
+
+def _marker_numbers(text: str) -> list[int]:
+    return [
+        int(number) for marker in _MARKER.findall(text) for number in re.findall(r"\d+", marker)
+    ]
+
+
 def score_answers(
     cases: Sequence[AnswerCase],
     results: Mapping[str, ChatResult],
     stored: frozenset[str] | None = None,
     notes: Mapping[str, SavedNote] | None = None,
+    verdicts: Mapping[str, Verdict | None] | None = None,
 ) -> AnswerMetrics:
     """Citation, language, validity and refusal shares, the agent's (F-07), and the speed.
 
@@ -218,6 +266,8 @@ def score_answers(
     first_token = latency(first_tokens)
     per_case = {case.id: _case_result(case, results[case.id]) for case in answering}
     agent = _agent_scores(cases, results, stored, notes or {}, missed)
+    judged = _judged_scores(answering, results, verdicts, per_case) if verdicts is not None else {}
+    validity = _tool_call_validity(results.values())
     return AnswerMetrics(
         values={
             "cites_expected": _share(cites, len(answering)),
@@ -226,6 +276,9 @@ def score_answers(
             "answer_failed": _share(failed, len(answering)),
             "out_of_scope_refused": _share(refused, len(refusing)),
             **{name: _share(count, total) for name, (count, total) in agent.items()},
+            "judged_correct": _share(*judged["judged_correct"]) if judged else None,
+            "citation_support": _share(*judged["citation_support"]) if judged else None,
+            "tool_call_validity": _share(*validity),
         },
         cases={
             "cites_expected": len(answering),
@@ -234,10 +287,21 @@ def score_answers(
             "answer_failed": len(answering),
             "out_of_scope_refused": len(refusing),
             **{name: total for name, (_, total) in agent.items()},
+            "judged_correct": judged["judged_correct"][1] if judged else 0,
+            "citation_support": judged["citation_support"][1] if judged else 0,
+            "tool_call_validity": validity[1],
         },
         performance={
             "mean_attempts": statistics.fmean(attempts) if attempts else None,
             "mean_tool_turns": statistics.fmean(tool_turns) if tool_turns else None,
+            "not_judged": (
+                sum(
+                    verdicts.get(case.id) is None and _answered(results[case.id])
+                    for case in answering
+                )
+                if verdicts is not None
+                else None
+            ),
             "first_token_ms_median": first_token.median_ms,
             "first_token_ms_p95": first_token.p95_ms,
             "tokens_per_second_median": statistics.median(speeds) if speeds else None,
@@ -325,6 +389,53 @@ def _agent_scores(
     }
 
 
+def _answered(result: ChatResult) -> bool:
+    return not result.error and result.complete
+
+
+def _judged_scores(
+    answering: Sequence[AnswerCase],
+    results: Mapping[str, ChatResult],
+    verdicts: Mapping[str, Verdict | None],
+    per_case: dict[str, dict[str, Any]],
+) -> dict[str, tuple[float, int]]:
+    """Judged correctness (partial counts half, a failed answer wrong) and supported cited
+    sentences (ADR 0022); the verdict and its reason go into each case's row."""
+    weights = {"correct": 1.0, "partial": 0.5, "wrong": 0.0}
+    correct = 0.0
+    judged = supported = cited = 0
+    for case in answering:
+        result = results[case.id]
+        verdict = verdicts.get(case.id)
+        row = per_case.setdefault(case.id, {})
+        if not _answered(result):
+            judged += 1
+            row["correctness"] = "wrong"
+            row["judge_reason"] = f"the answer failed: {result.error or 'the stream ended early'}"
+            continue
+        row["correctness"] = verdict.correctness if verdict else None
+        row["judge_reason"] = verdict.reason if verdict else None
+        if verdict is None:
+            continue
+        row["supported_sentences"] = sum(verdict.supported.values())
+        row["cited_sentences"] = len(verdict.supported)
+        judged += 1
+        correct += weights[verdict.correctness]
+        cited += len(verdict.supported)
+        supported += sum(verdict.supported.values())
+    return {"judged_correct": (correct, judged), "citation_support": (supported, cited)}
+
+
+def _tool_call_validity(results: Iterable[ChatResult]) -> tuple[int, int]:
+    """Tool turns with a valid call after retries, of all tool turns (PRD §9)."""
+    valid = failed = 0
+    for result in results:
+        usage = result.usage or {}
+        valid += int(usage.get("tool_turns", 0))
+        failed += int(usage.get("failed_tool_turns", 0))
+    return valid, valid + failed
+
+
 def _note_cites(
     asked: Sequence[AnswerCase],
     results: Mapping[str, ChatResult],
@@ -363,6 +474,7 @@ def _case_result(case: AnswerCase, result: ChatResult) -> dict[str, Any]:
         "error": result.error,
         "tools": list(result.tools),
         "tool_turns": usage.get("tool_turns", 0),
+        "failed_tool_turns": usage.get("failed_tool_turns", 0),
     }
 
 
@@ -384,8 +496,9 @@ def answers_markdown(metrics: AnswerMetrics, metadata: Mapping[str, Any]) -> str
         lines.append(f"| {name} | {shown} |")
     lines += [
         "",
-        "| Case | Cites expected | Language | Attempts | First token (ms) | Tokens/s | Tools |",
-        "|---|---|---|---|---|---|---|",
+        "| Case | Cites expected | Language | Attempts | First token (ms) | Tokens/s | Tools"
+        " | Correctness | Supported | Valid tool turns |",
+        "|---|---|---|---|---|---|---|---|---|---|",
     ]
     for case_id, row in metrics.per_case.items():
         cells = [
@@ -395,6 +508,12 @@ def answers_markdown(metrics: AnswerMetrics, metadata: Mapping[str, Any]) -> str
             "n/a" if row["first_token_ms"] is None else f"{row['first_token_ms']:.0f}",
             "n/a" if row["tokens_per_second"] is None else f"{row['tokens_per_second']:.1f}",
             ", ".join(row["tools"]) or "none",
+            row.get("correctness") or "n/a",
+            _fraction(row.get("supported_sentences"), row.get("cited_sentences")),
+            _fraction(
+                row["tool_turns"] - row["failed_tool_turns"] if row["tool_turns"] else None,
+                row["tool_turns"],
+            ),
         ]
         lines.append(f"| {case_id} | " + " | ".join(cells) + " |")
     lines += ["", "Missed cases:", ""]
@@ -404,5 +523,9 @@ def answers_markdown(metrics: AnswerMetrics, metadata: Mapping[str, Any]) -> str
     return "\n".join(lines) + "\n"
 
 
-def _share(count: int, total: int) -> float | None:
+def _fraction(count: int | None, total: int | None) -> str:
+    return "n/a" if count is None or not total else f"{count}/{total}"
+
+
+def _share(count: float, total: int) -> float | None:
     return count / total if total else None

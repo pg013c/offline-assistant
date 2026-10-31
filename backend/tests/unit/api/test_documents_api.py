@@ -225,7 +225,7 @@ def test_an_unknown_document_is_reported_as_not_found(
     assert body["details"] is None
 
 
-def test_a_document_lists_its_chunks_with_their_locations(
+def test_a_document_lists_its_chunks_with_their_locations_and_text(
     client: TestClient, settle: Settle
 ) -> None:
     created = upload(client, "policy.md", b"# Logs\n\n" + POLICY)["body"]
@@ -245,8 +245,12 @@ def test_a_document_lists_its_chunks_with_their_locations(
                 "paragraph": None,
                 "page": None,
             },
+            # The evaluation's judge reads the passage itself (F-09a).
+            "text": text,
         }
-        for position in (0, 1)
+        for position, text in enumerate(
+            ["Providers keep logs.", "Authorities may inspect the logs."]
+        )
     ]
 
 
