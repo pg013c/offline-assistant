@@ -490,7 +490,7 @@ def answers_markdown(metrics: AnswerMetrics, metadata: Mapping[str, Any]) -> str
             "n/a"
             if value is None
             else f"{value:.0f}"
-            if name.endswith("_ms_median") or name.endswith("_ms_p95")
+            if name.endswith(("_ms_median", "_ms_p95", "_mb"))
             else f"{value:.1f}"
         )
         lines.append(f"| {name} | {shown} |")

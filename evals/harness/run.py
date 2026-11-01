@@ -19,6 +19,7 @@ from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import IO, Any
+from urllib.parse import urlsplit
 
 import httpx
 import yaml
@@ -50,6 +51,7 @@ from harness.judge import (
     JudgeUnavailable,
     Verdict,
 )
+from harness.memory import PeakMemory, SystemProcesses
 from harness.metrics import CaseResult, compute, latency, top_out_of_scope_similarity
 from harness.promptfoo import (
     MODES,
@@ -176,6 +178,8 @@ def run_answers(config: RunConfig) -> Outcome:
     """The answer suite from an empty index, against the configured chat model (F-06)."""
     started_at = datetime.now(UTC)
     pin = llm_pin(config.chat_model, _served_pins())
+    # Found before the run starts, so a wrong server on the port fails it at once.
+    memory = PeakMemory(SystemProcesses(), urlsplit(config.llm_url).port or 80)
     corpus = verify_corpus(config.corpus_dir, config.corpus)
     ensure_port_free(config.port)
     _reset(config)
@@ -188,9 +192,11 @@ def run_answers(config: RunConfig) -> Outcome:
             chunks = _chunk_refs(api, document_ids)
         cases = load_answer_cases(config.dataset)
         expected = resolve(cases, chunks)
-        outputs = outputs_by_case(
-            _promptfoo(ANSWERS_CONFIG, cases, api_url, config.results_dir, started_at)
-        )
+        # The model server's memory is sampled while it answers (FR-44).
+        with memory:
+            outputs = outputs_by_case(
+                _promptfoo(ANSWERS_CONFIG, cases, api_url, config.results_dir, started_at)
+            )
         results = {case.id: parse_chat_stream(outputs[case.id]) for case in cases}
         # Notes are read back while the API still runs.
         with httpx.Client(base_url=api_url, timeout=60) as api:
@@ -233,7 +239,11 @@ def run_answers(config: RunConfig) -> Outcome:
         verdicts=verdicts,
     )
     trusted, untrusted = trusted_judged(metrics.values, calibration)
-    metrics = replace(metrics, values=trusted)
+    metrics = replace(
+        metrics,
+        values=trusted,
+        performance={**metrics.performance, "peak_memory_mb": memory.peak_mb},
+    )
     metadata = {
         **_metadata(config, started_at),
         "corpus": corpus,

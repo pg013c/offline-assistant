@@ -112,7 +112,7 @@ No ADR is needed before step 1. ADR 0024 covers the pins, the server and the fla
 - Change: `evals/harness/memory.py` (new), `run.py`, `answers.py` (Markdown).
 - Done when: the tests pass and `make check` is green. If the integration test shows resident memory undercounting, physical footprint replaces it in the same green commit.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 5. A model is listed only while its server answers
 
