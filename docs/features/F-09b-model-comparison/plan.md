@@ -83,7 +83,7 @@ No ADR is needed before step 1. ADR 0024 covers the pins, the server and the fla
   - `llm-preflight` names `make llm-models LLM_MODEL=<name>` when that model's file is missing.
 - Change: `Makefile`, `scripts/download_models.py` (`--llm <name>`), README commands.
 - Done when: the checks pass and `make check` is green.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 3. The answer run is per model
