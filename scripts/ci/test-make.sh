@@ -98,8 +98,10 @@ for entry in "${served_models[@]}"; do
     "$([[ "$recipe" == *"-m \"$scratch/$file\""* && "$recipe" == *"--alias $name "* \
       && "$recipe" == *"--reasoning off"* && "$recipe" == *"--ctx-size 16384"* \
       && "$recipe" == *"--n-gpu-layers 99"* && "$recipe" == *"--jinja"* ]] && echo yes || echo no)"
-  # With the file and the name taken out, every model's command must be the same.
-  generic="${recipe//$scratch\/$file/FILE}"
+  # With the file and the name taken out, every model's server command must be the same. The
+  # preflight before it names the model on purpose, so only the llama-server command counts.
+  generic="$(sed -n '/^llama-server/,$p' <<<"$recipe")"
+  generic="${generic//$scratch\/$file/FILE}"
   generic="${generic//--alias $name /--alias NAME }"
   shared_recipe="${shared_recipe:-$generic}"
   check "llm gives $name no flag of its own" "$([[ "$generic" == "$shared_recipe" ]] && echo yes || echo no)"
