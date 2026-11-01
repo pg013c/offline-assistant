@@ -21,6 +21,9 @@ class FakeExtractiveChatModel:
     model_id = "fake-extractive"
     is_test_model = True
 
+    async def is_available(self) -> bool:
+        raise NotImplementedError
+
     async def answer(
         self, question: str, passages: Sequence[Chunk], notice: str | None = None
     ) -> AsyncIterator[ModelEvent]:
@@ -42,10 +45,16 @@ class ScriptedChatModel:
 
     is_test_model = False
 
-    def __init__(self, events: Sequence[ModelEvent], model_id: str = "scripted") -> None:
+    def __init__(
+        self, events: Sequence[ModelEvent], model_id: str = "scripted", available: bool = True
+    ) -> None:
         self.model_id = model_id
         self._events = list(events)
         self.calls = 0
+        self.available = available
+
+    async def is_available(self) -> bool:
+        raise NotImplementedError
 
     async def answer(
         self, question: str, passages: Sequence[Chunk], notice: str | None = None

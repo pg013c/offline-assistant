@@ -6,7 +6,7 @@ writes it, and an invalid answer is retried with the reason fed back (AI-21).
 
 import json
 import time
-from collections.abc import AsyncIterator, Sequence
+from collections.abc import AsyncIterator, Callable, Sequence
 from dataclasses import dataclass, field, replace
 from importlib.resources import files
 from string import Template
@@ -101,10 +101,14 @@ class OpenAICompatibleChat:
         model_id: str,
         server: LlmServer,
         transport: httpx.AsyncBaseTransport | None = None,
+        clock: Callable[[], float] = time.monotonic,
     ) -> None:
         self.model_id = model_id
         self._server = server
         self._transport = transport
+
+    async def is_available(self) -> bool:
+        raise NotImplementedError
 
     async def answer(
         self, question: str, passages: Sequence[Chunk], notice: str | None = None

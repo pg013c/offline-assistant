@@ -4,6 +4,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from assistant.domain.errors import UnknownModel
+from assistant.ports.chat_model import ChatModel
 from assistant.services.questions import Answerer
 
 
@@ -14,6 +15,8 @@ class ModelEntry:
     id: str
     is_test_model: bool
     answerer: Answerer
+    # Asked whether it answers each time the models are listed (F-09b).
+    model: ChatModel
 
 
 @dataclass(frozen=True, slots=True)
@@ -36,13 +39,8 @@ class ChatModels:
             self._entries[entry.id] = entry
         self._default = entries[0].id
 
-    def list_models(self) -> list[ModelChoice]:
-        return [
-            ModelChoice(
-                id=entry.id, is_test_model=entry.is_test_model, is_default=entry.id == self._default
-            )
-            for entry in self._entries.values()
-        ]
+    async def list_models(self) -> list[ModelChoice]:
+        raise NotImplementedError
 
     def answerer(self, model_id: str | None) -> Answerer:
         """What answers with this model, or with the default; `UnknownModel` if none does."""

@@ -19,6 +19,10 @@ class ChatModel(Protocol):
         """True for stand-ins that are not language models; the UI must say so (AC-8)."""
         ...
 
+    async def is_available(self) -> bool:
+        """Whether the model answers now; the model list offers only those that do (F-09b)."""
+        ...
+
     def answer(
         self, question: str, passages: Sequence[Chunk], notice: str | None = None
     ) -> AsyncIterator[ModelEvent]:

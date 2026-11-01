@@ -247,6 +247,9 @@ class ScriptedAgent:
     model_id = "qwen3-8b"
     is_test_model = False
 
+    async def is_available(self) -> bool:
+        return True
+
     def __init__(
         self, turns: list[ToolCalls | FinalText | ModelFailed], answer: list[ModelEvent]
     ) -> None:

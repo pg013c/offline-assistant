@@ -34,6 +34,8 @@ def stub_openai_compatible() -> ChatModel:
     body = "".join(f"data: {json.dumps(line)}\n\n" for line in lines) + "data: [DONE]\n\n"
 
     def server(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/v1/models":
+            return httpx.Response(200, json={"object": "list", "data": [{"id": "stub"}]})
         return httpx.Response(200, content=body.encode())
 
     return OpenAICompatibleChat(
@@ -111,3 +113,7 @@ def test_an_answer_cites_only_passages_it_was_given(model: ChatModel) -> None:
     assert outcome.answer.cited
     assert all(1 <= number <= len(PASSAGES) for number in outcome.answer.cited)
     assert outcome.usage.attempts >= 1
+
+
+def test_says_whether_it_answers_now(model: ChatModel) -> None:
+    assert asyncio.run(model.is_available()) is True

@@ -357,3 +357,95 @@ def test_a_passage_cannot_close_its_own_block() -> None:
     content = messages[1]["content"]
     assert content.count("</passage>") == 1
     assert content.count("<passage") == 1
+
+
+class ModelsServer:
+    """Answers `/v1/models` with the listed names, or fails as told; counts the requests."""
+
+    def __init__(self, *names: str) -> None:
+        self.names = list(names)
+        self.failure: Exception | None = None
+        self.status = 200
+        self.requests: list[httpx.Request] = []
+
+    def __call__(self, request: httpx.Request) -> httpx.Response:
+        assert request.url == httpx.URL(f"{URL}/v1/models")
+        self.requests.append(request)
+        if self.failure:
+            raise self.failure
+        data = [{"id": name} for name in self.names]
+        return httpx.Response(self.status, json={"object": "list", "data": data})
+
+
+class Clock:
+    def __init__(self) -> None:
+        self.now = 1000.0
+
+    def __call__(self) -> float:
+        return self.now
+
+
+def watched(server: ModelsServer, clock: Clock | None = None) -> OpenAICompatibleChat:
+    return OpenAICompatibleChat(
+        model_id="qwen3-8b",
+        server=LlmServer(base_url=URL, served_model="qwen3-8b", timeout_seconds=30, max_retries=2),
+        transport=httpx.MockTransport(server),
+        clock=clock or Clock(),
+    )
+
+
+def available(chat: OpenAICompatibleChat) -> bool:
+    return asyncio.run(chat.is_available())
+
+
+def test_a_model_its_server_lists_is_available() -> None:
+    assert available(watched(ModelsServer("qwen3-8b"))) is True
+
+
+def test_a_model_its_server_does_not_list_is_unavailable() -> None:
+    assert available(watched(ModelsServer("gemma-4-26b-a4b"))) is False
+
+
+def test_a_server_that_answers_with_an_error_leaves_the_model_unavailable() -> None:
+    server = ModelsServer("qwen3-8b")
+    server.status = 503
+
+    assert available(watched(server)) is False
+
+
+@pytest.mark.parametrize(
+    "failure",
+    [httpx.ConnectError("refused"), httpx.ReadTimeout("slow")],
+    ids=["refused", "timeout"],
+)
+def test_a_server_that_does_not_answer_leaves_the_model_unavailable(failure: Exception) -> None:
+    server = ModelsServer("qwen3-8b")
+    server.failure = failure
+
+    assert available(watched(server)) is False
+
+
+def test_the_check_waits_only_briefly_for_the_server() -> None:
+    server = ModelsServer("qwen3-8b")
+
+    available(watched(server))
+
+    timeouts = server.requests[0].extensions["timeout"]
+    assert 0 < timeouts["read"] <= 2
+    assert 0 < timeouts["connect"] <= 2
+
+
+def test_the_answer_is_kept_for_a_few_seconds_then_asked_again() -> None:
+    server = ModelsServer("qwen3-8b")
+    clock = Clock()
+    chat = watched(server, clock)
+    assert available(chat) is True
+
+    server.failure = httpx.ConnectError("refused")
+    clock.now += 4
+    still = available(chat)
+    clock.now += 2
+    later = available(chat)
+
+    assert (still, later) == (True, False)
+    assert len(server.requests) == 2
