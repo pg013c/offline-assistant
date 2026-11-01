@@ -56,6 +56,9 @@ def server(tmp_path: Path) -> Iterator[tuple[int, Path]]:
                 "--jinja",
                 "--reasoning",
                 "off",
+                # llama.cpp 0.8.0 logs the buffer sizes only from verbosity 4.
+                "-lv",
+                "4",
             ],
             stdout=out,
             stderr=subprocess.STDOUT,
