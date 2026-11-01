@@ -26,10 +26,22 @@ class CalibrationItem:
 
 
 @dataclass(frozen=True)
+class Disagreement:
+    """One hand verdict the judge did not match; `judged` is None when it could not judge."""
+
+    item: str
+    kind: Literal["correctness", "support"]
+    sentence: int | None
+    expected: str
+    judged: str | None
+
+
+@dataclass(frozen=True)
 class Agreement:
     correctness: float
     support: float
     items: int
+    disagreements: tuple[Disagreement, ...] = ()
 
 
 def load_calibration(path: Path) -> list[CalibrationItem]:

@@ -12,7 +12,7 @@ from harness.corpus import CorpusDocument, documents
 from harness.run import (
     CorpusError,
     PortInUse,
-    answer_report_stem,
+    answer_reports,
     api_environment,
     api_log_tail,
     default_answers_config,
@@ -21,6 +21,7 @@ from harness.run import (
     ensure_port_free,
     llm_pin,
     media_type,
+    promptfoo_seconds,
     verify_corpus,
     warm_up,
 )
@@ -183,12 +184,29 @@ def test_the_answer_suite_answers_with_the_model_make_llm_serves() -> None:
     assert env["ASSISTANT_CHAT_MODEL"] == "gemma-4-26b-a4b"
 
 
-def test_answer_reports_carry_the_models_name() -> None:
+def test_answer_reports_carry_the_whole_model_name_dots_included() -> None:
     started_at = datetime(2026, 11, 1, 12, 30, 5, tzinfo=UTC)
 
-    stem = answer_report_stem(Path("results"), "qwen3.6-35b-a3b", started_at)
+    reports = answer_reports(Path("results"), "qwen3.6-35b-a3b", started_at)
 
-    assert stem == Path("results") / "answers-qwen3.6-35b-a3b-20261101T123005Z"
+    assert reports == (
+        Path("results") / "answers-qwen3.6-35b-a3b-20261101T123005Z.json",
+        Path("results") / "answers-qwen3.6-35b-a3b-20261101T123005Z.md",
+    )
+
+
+def test_no_two_models_share_a_report() -> None:
+    started_at = datetime(2026, 11, 1, 12, 30, 5, tzinfo=UTC)
+    names = ["qwen3-8b", "qwen3.5-9b", "qwen3.6-35b-a3b", "gemma-4-26b-a4b"]
+
+    paths = [path for name in names for path in answer_reports(Path("r"), name, started_at)]
+
+    assert len(set(paths)) == len(paths)
+
+
+def test_the_promptfoo_limit_grows_with_the_cases_and_keeps_the_old_minimum() -> None:
+    assert promptfoo_seconds(5) == 600
+    assert promptfoo_seconds(47) == 47 * 60
 
 
 GEMMA_PIN = {

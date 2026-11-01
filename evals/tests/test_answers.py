@@ -166,6 +166,48 @@ def test_the_markdown_lists_metrics_performance_and_missed_cases() -> None:
     assert "- chat_model: qwen3-8b" in text
 
 
+CALIBRATION = {
+    "correctness": 0.8125,
+    "support": 0.919,
+    "items": 48,
+    "disagreements": [
+        {
+            "item": "cal-09",
+            "kind": "correctness",
+            "sentence": None,
+            "expected": "partial",
+            "judged": "correct",
+        },
+        {
+            "item": "cal-48",
+            "kind": "support",
+            "sentence": 2,
+            "expected": "unsupported",
+            "judged": None,
+        },
+    ],
+}
+
+
+def test_the_markdown_lists_the_calibration_disagreements_under_their_own_heading() -> None:
+    metrics = score_answers(CASES[:1], {"en-a": result("Logs are kept.", ("d:1",))})
+
+    text = answers_markdown(metrics, {"calibration": CALIBRATION})
+
+    assert "Calibration disagreements:" in text
+    assert "| cal-09 | correctness |  | partial | correct |" in text
+    assert "| cal-48 | support | 2 | unsupported | not judged |" in text
+    assert "- calibration: {'correctness': 0.8125, 'support': 0.919, 'items': 48}" in text
+
+
+def test_the_markdown_says_when_the_judge_agreed_on_every_item() -> None:
+    metrics = score_answers(CASES[:1], {"en-a": result("Logs are kept.", ("d:1",))})
+
+    text = answers_markdown(metrics, {"calibration": {**CALIBRATION, "disagreements": []}})
+
+    assert "Calibration disagreements:\n\n- none" in text
+
+
 def test_promptfoo_outputs_are_read_per_case() -> None:
     results = {
         "results": {

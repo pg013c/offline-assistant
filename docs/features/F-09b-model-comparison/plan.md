@@ -183,7 +183,7 @@ Results, 2026-11-01, llama.cpp 0.8.0 (build 11960), `make llm LLM_MODEL=<name>`:
   - `evals/tests/test_memory_server.py`: the measure covers the logged buffers and exceeds them by no more than 2 GiB, run against Qwen3 8B and against Qwen3.6 35B-A3B (the mixture of experts).
 - Change: `evals/harness/calibration.py`, `run.py`, `answers.py`, `memory.py`. The spec's memory measure becomes "physical footprint plus the mapped model file", in the same green commit.
 - Done when: the tests pass, the memory integration test passes on both models, and `make check` is green.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 9. Five judged runs and the published table

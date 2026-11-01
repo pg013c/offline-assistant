@@ -65,7 +65,7 @@ def sample(
     return samples
 
 
-def peak_mb(samples: list[int]) -> float | None:
+def peak_mb(samples: list[int], mapped: int) -> float | None:
     """The largest sample in MB (1024 x 1024 bytes); None without samples."""
     return max(samples) / (1024 * 1024) if samples else None
 
@@ -101,7 +101,17 @@ class PeakMemory:
 
     @property
     def peak_mb(self) -> float | None:
-        return peak_mb(self._samples)
+        return peak_mb(self._samples, mapped=0)
+
+
+def footprint_bytes(output: str) -> int | None:
+    """The physical footprint in the output of `footprint -f bytes`; None when it is empty."""
+    raise NotImplementedError
+
+
+def mapped_bytes(model_path: str | None) -> int:
+    """The size of the model file the server maps, from the path its /props gives."""
+    raise NotImplementedError
 
 
 class SystemProcesses:

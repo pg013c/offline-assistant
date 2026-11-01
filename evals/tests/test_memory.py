@@ -1,11 +1,20 @@
 """The model server's peak memory (F-09b): finding the server and sampling it."""
 
 from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
 
 from harness.answers import AnswerCase, ChatResult, answers_markdown, score_answers
-from harness.memory import NotTheModelServer, Process, find_server, peak_mb, sample
+from harness.memory import (
+    NotTheModelServer,
+    Process,
+    find_server,
+    footprint_bytes,
+    mapped_bytes,
+    peak_mb,
+    sample,
+)
 
 MB = 1024 * 1024
 
@@ -74,15 +83,44 @@ def test_a_server_that_ends_stops_the_sampling_and_its_samples_still_count() -> 
     samples = sample(table, SERVER.pid, FakeClock(ticks=10).stopped, FakeClock(ticks=10).wait)
 
     assert samples == [5000 * MB, 6000 * MB]
-    assert peak_mb(samples) == 6000.0
+    assert peak_mb(samples, mapped=0) == 6000.0
 
 
-def test_the_peak_is_the_largest_sample_in_mb() -> None:
-    assert peak_mb([5000 * MB, 5200 * MB + MB // 2, 5100 * MB]) == pytest.approx(5200.5)
+def test_the_peak_is_the_largest_sample_plus_the_mapped_model_file_in_mb() -> None:
+    samples = [800 * MB, 1200 * MB + MB // 2, 900 * MB]
+
+    assert peak_mb(samples, mapped=19_000 * MB) == pytest.approx(20_200.5)
 
 
 def test_without_samples_there_is_no_peak() -> None:
-    assert peak_mb([]) is None
+    assert peak_mb([], mapped=19_000 * MB) is None
+
+
+def test_the_footprint_is_read_from_the_tools_byte_output() -> None:
+    output = (
+        "======================================================================\n"
+        "llama-server [22756]: 64-bit    Footprint: 810614576 B (16384 bytes per page)\n"
+        "======================================================================\n"
+    )
+
+    assert footprint_bytes(output) == 810_614_576
+
+
+def test_an_ended_process_has_no_footprint() -> None:
+    assert footprint_bytes("") is None
+
+
+def test_the_mapped_bytes_are_the_size_of_the_served_model_file(tmp_path: Path) -> None:
+    model = tmp_path / "model.gguf"
+    model.write_bytes(b"x" * 4096)
+
+    assert mapped_bytes(str(model)) == 4096
+
+
+@pytest.mark.parametrize("path", [None, "/nowhere/model.gguf"])
+def test_an_unknown_model_file_is_refused_naming_props(path: str | None) -> None:
+    with pytest.raises(NotTheModelServer, match="/props"):
+        mapped_bytes(path)
 
 
 def test_the_markdown_gives_the_peak_memory_in_whole_mb() -> None:

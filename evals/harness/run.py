@@ -376,6 +376,21 @@ def answer_report_stem(results_dir: Path, chat_model: str, started_at: datetime)
     return results_dir / f"answers-{chat_model}-{started_at:%Y%m%dT%H%M%SZ}"
 
 
+def answer_reports(results_dir: Path, chat_model: str, started_at: datetime) -> tuple[Path, Path]:
+    """The JSON and Markdown reports of an answer run, named after the whole model name."""
+    raise NotImplementedError
+
+
+def promptfoo_seconds(cases: int) -> float:
+    """How long the Promptfoo call may take: a budget per case, never below the old limit."""
+    raise NotImplementedError
+
+
+def calibration_metadata(calibration: Agreement | None) -> dict[str, Any] | str:
+    """The judge's calibration as the report keeps it, each disagreement included."""
+    raise NotImplementedError
+
+
 def llm_pin(name: str, pins: Mapping[str, Mapping[str, str]]) -> Mapping[str, str]:
     """The pinned file of the served model the run answers with (ADR 0024)."""
     if name not in pins:

@@ -1,5 +1,6 @@
 """The memory measure against a real llama-server (F-09b). Needs `make llm-models` and
-llama.cpp; it starts its own server on a free port and stops it."""
+llama.cpp; it starts its own server on a free port and stops it, once for a dense model and
+once for a mixture of experts."""
 
 import os
 import re
@@ -14,13 +15,19 @@ from pathlib import Path
 import httpx
 import pytest
 
-from harness.memory import SystemProcesses, find_server, peak_mb, sample
+from harness.memory import SystemProcesses, find_server, mapped_bytes, peak_mb, sample
 
 pytestmark = pytest.mark.integration
 
 ROOT = Path(__file__).parents[2]
 MODELS_DIR = Path(os.environ.get("ASSISTANT_MODELS_DIR", ROOT / "data" / "models"))
-MODEL = MODELS_DIR / "llm" / "Qwen--Qwen3-8B-GGUF" / "Qwen3-8B-Q4_K_M.gguf"
+MODELS = {
+    "dense": MODELS_DIR / "llm" / "Qwen--Qwen3-8B-GGUF" / "Qwen3-8B-Q4_K_M.gguf",
+    "mixture-of-experts": MODELS_DIR
+    / "llm"
+    / "ggml-org--Qwen3.6-35B-A3B-GGUF"
+    / "Qwen3.6-35B-A3B-Q4_K_M.gguf",
+}
 # The buffers llama-server allocates for the model, its cache and its computation.
 BUFFER = re.compile(r"buffer size\s*=\s*([\d.]+) MiB")
 
@@ -32,10 +39,11 @@ def free_port() -> int:
         return port
 
 
-@pytest.fixture
-def server(tmp_path: Path) -> Iterator[tuple[int, Path]]:
+@pytest.fixture(params=sorted(MODELS))
+def server(request: pytest.FixtureRequest, tmp_path: Path) -> Iterator[tuple[int, Path, Path]]:
+    model = MODELS[request.param]
     executable = shutil.which("llama-server")
-    if executable is None or not MODEL.exists():
+    if executable is None or not model.exists():
         pytest.skip("needs llama.cpp and make llm-models")
     port = free_port()
     log = tmp_path / "llama-server.log"
@@ -44,7 +52,7 @@ def server(tmp_path: Path) -> Iterator[tuple[int, Path]]:
             [
                 executable,
                 "-m",
-                str(MODEL),
+                str(model),
                 "--host",
                 "127.0.0.1",
                 "--port",
@@ -73,16 +81,16 @@ def server(tmp_path: Path) -> Iterator[tuple[int, Path]]:
             except httpx.TransportError:
                 pass
             time.sleep(1)
-        yield port, log
+        yield port, log, model
     finally:
         os.killpg(process.pid, signal.SIGTERM)
         process.wait(timeout=30)
 
 
-def test_the_peak_memory_covers_the_buffers_llama_server_allocates(
-    server: tuple[int, Path],
+def test_the_peak_memory_covers_the_buffers_llama_server_allocates_and_little_more(
+    server: tuple[int, Path, Path],
 ) -> None:
-    port, log = server
+    port, log, model = server
     table = SystemProcesses()
     found = find_server(table, port)
     httpx.post(
@@ -92,9 +100,10 @@ def test_the_peak_memory_covers_the_buffers_llama_server_allocates(
     ).raise_for_status()
     ticks = iter(range(3))
 
-    peak = peak_mb(sample(table, found.pid, lambda: next(ticks, None) is None, time.sleep))
+    samples = sample(table, found.pid, lambda: next(ticks, None) is None, time.sleep)
+    peak = peak_mb(samples, mapped=mapped_bytes(str(model)))
 
     buffers = sum(float(size) for size in BUFFER.findall(log.read_text(errors="replace")))
     assert buffers > 4000
     assert peak is not None
-    assert peak >= 0.9 * buffers, f"peak {peak:.0f} MB, buffers {buffers:.0f} MiB"
+    assert 0.9 * buffers <= peak <= buffers + 2048, f"peak {peak:.0f} MB, buffers {buffers:.0f} MiB"

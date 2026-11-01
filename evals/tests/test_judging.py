@@ -8,7 +8,7 @@ import pytest
 
 from harness import run
 from harness.answers import AnswerCase, ChatResult
-from harness.calibration import Agreement
+from harness.calibration import Agreement, Disagreement
 from harness.judge import JUDGE_PROMPT, JudgeInput, JudgeUnavailable, Verdict
 
 CASES = [
@@ -175,3 +175,31 @@ def test_the_baselines_model_is_read_from_its_metadata() -> None:
     assert run.same_model(baseline, "qwen3-8b") is True
     assert run.same_model(baseline, "qwen3.5-9b") is False
     assert run.same_model({"metrics": {}, "metadata": {}}, "qwen3-8b") is False
+
+
+def test_the_reports_calibration_keeps_each_disagreement() -> None:
+    calibration = Agreement(
+        correctness=0.5,
+        support=1.0,
+        items=2,
+        disagreements=(Disagreement("cal-09", "correctness", None, "partial", "correct"),),
+    )
+
+    assert run.calibration_metadata(calibration) == {
+        "correctness": 0.5,
+        "support": 1.0,
+        "items": 2,
+        "disagreements": [
+            {
+                "item": "cal-09",
+                "kind": "correctness",
+                "sentence": None,
+                "expected": "partial",
+                "judged": "correct",
+            }
+        ],
+    }
+
+
+def test_a_run_without_calibration_says_so_in_its_metadata() -> None:
+    assert run.calibration_metadata(None) == "not run"
