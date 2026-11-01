@@ -103,12 +103,12 @@ eval: ## Retrieval evaluation on the corpus, compared with the baseline; needs m
 	  echo "Qdrant is not running on port $(QDRANT_PORT). Start it with: make qdrant"; exit 1; }
 	HF_HUB_OFFLINE=1 $(EVALS) python -m harness.run
 
-eval-answers: ## Answer evaluation against the local LLM, compared with its baseline; needs make llm, models, qdrant, eval-corpus
+eval-answers: ## Answer evaluation against the LLM named by LLM_MODEL, compared with a baseline of that model; needs make llm, models, qdrant, eval-corpus
 	@curl -fs http://127.0.0.1:$(LLM_PORT)/health >/dev/null || { \
 	  echo "No model server on port $(LLM_PORT). Start it with: make llm"; exit 1; }
 	@curl -fs http://127.0.0.1:$(QDRANT_PORT)/readyz >/dev/null || { \
 	  echo "Qdrant is not running on port $(QDRANT_PORT). Start it with: make qdrant"; exit 1; }
-	HF_HUB_OFFLINE=1 $(EVALS) python -m harness.run --answers
+	$(LLM_CHECK_NAME)HF_HUB_OFFLINE=1 LLM_MODEL=$(LLM_MODEL) $(EVALS) python -m harness.run --answers
 
 qdrant: ## Start Qdrant in Docker on QDRANT_PORT (data in ASSISTANT_DATA_DIR/qdrant, telemetry off)
 	@if [ -z "$(ASSISTANT_DATA_DIR)" ]; then \

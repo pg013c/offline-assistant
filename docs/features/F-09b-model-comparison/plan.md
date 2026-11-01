@@ -97,7 +97,7 @@ No ADR is needed before step 1. ADR 0024 covers the pins, the server and the fla
 - Change: `evals/harness/run.py`, `Makefile` (`eval-answers` passes `LLM_MODEL`).
 - Done when: the tests pass and `make check` is green.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 4. Peak memory of the model server
 

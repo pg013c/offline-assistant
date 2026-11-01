@@ -175,6 +175,7 @@ def run(config: RunConfig) -> Outcome:
 def run_answers(config: RunConfig) -> Outcome:
     """The answer suite from an empty index, against the configured chat model (F-06)."""
     started_at = datetime.now(UTC)
+    pin = llm_pin(config.chat_model, _served_pins())
     corpus = verify_corpus(config.corpus_dir, config.corpus)
     ensure_port_free(config.port)
     _reset(config)
@@ -237,6 +238,7 @@ def run_answers(config: RunConfig) -> Outcome:
         **_metadata(config, started_at),
         "corpus": corpus,
         "chat_model": config.chat_model,
+        "chat_model_file": dict(pin),
         "llm_server": _llm_server(config.llm_url),
         "judge": judge,
         "calibration": (
@@ -280,18 +282,18 @@ def run_answers(config: RunConfig) -> Outcome:
         "metadata": metadata,
     }
     baseline = (
-        json.loads(config.baseline.read_text(encoding="utf-8"))["metrics"]
+        json.loads(config.baseline.read_text(encoding="utf-8"))
         if config.baseline.exists()
-        else {}
+        else {"metrics": {}}
     )
     failures = answer_failures(
         metrics.values,
-        {name: values["value"] for name, values in baseline.items()},
+        {name: values["value"] for name, values in baseline["metrics"].items()},
         calibration,
         judged=verdicts is not None,
-        same_model=True,
+        same_model=same_model(baseline, config.chat_model),
     )
-    stem = config.results_dir / f"answers-{started_at:%Y%m%dT%H%M%SZ}"
+    stem = answer_report_stem(config.results_dir, config.chat_model, started_at)
     report_json = stem.with_suffix(".json")
     report_markdown = stem.with_suffix(".md")
     report_json.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", "utf-8")
@@ -306,6 +308,22 @@ def _llm_server(url: str) -> dict[str, Any]:
     except (httpx.HTTPError, ValueError):
         return {"url": url}
     return {"url": url, "build": props.get("build_info"), "model_path": props.get("model_path")}
+
+
+# Every served model's pinned file, from the backend's registry (ADR 0024).
+SERVED_PINS = (
+    "import json; from assistant.adapters.chat_models import CHAT_MODELS; "
+    "print(json.dumps({name: {'repository': s.pinned.repository, 'revision': s.pinned.revision, "
+    "'file': f, 'sha256': h} for name, s in CHAT_MODELS.items() if s.pinned "
+    "for f, h in s.pinned.files.items()}))"
+)
+
+
+def _served_pins() -> dict[str, dict[str, str]]:
+    pins: dict[str, dict[str, str]] = json.loads(
+        _command(["uv", "run", "--directory", str(ROOT / "backend"), "python", "-c", SERVED_PINS])
+    )
+    return pins
 
 
 def verify_corpus(corpus_dir: Path, pins: Sequence[CorpusDocument]) -> dict[str, str]:
@@ -344,15 +362,20 @@ def drop_collections(qdrant: httpx.Client, prefix: str) -> None:
 
 
 def answer_report_stem(results_dir: Path, chat_model: str, started_at: datetime) -> Path:
-    raise NotImplementedError
+    """Where an answer run's reports go, named after the model so runs of several sit together."""
+    return results_dir / f"answers-{chat_model}-{started_at:%Y%m%dT%H%M%SZ}"
 
 
 def llm_pin(name: str, pins: Mapping[str, Mapping[str, str]]) -> Mapping[str, str]:
-    raise NotImplementedError
+    """The pinned file of the served model the run answers with (ADR 0024)."""
+    if name not in pins:
+        raise ValueError(f"{name} is not a served model; choose one of: {', '.join(pins)}")
+    return pins[name]
 
 
 def same_model(baseline: Mapping[str, Any], chat_model: str) -> bool:
-    raise NotImplementedError
+    """Whether the baseline was answered by this run's model, so the two compare."""
+    return bool(baseline.get("metadata", {}).get("chat_model") == chat_model)
 
 
 def default_answers_config(env: Mapping[str, str]) -> RunConfig:
@@ -364,7 +387,7 @@ def default_answers_config(env: Mapping[str, str]) -> RunConfig:
         dataset=ROOT / "evals" / "datasets" / "answers.yaml",
         baseline=ANSWER_BASELINE,
         floors=False,
-        chat_model="qwen3-8b",
+        chat_model=env.get("LLM_MODEL", "qwen3-8b"),
         llm_url=f"http://127.0.0.1:{env.get('LLM_PORT', '8080')}",
         judge_url=f"http://127.0.0.1:{env.get('JUDGE_PORT', '8081')}",
     )
@@ -542,10 +565,10 @@ def answer_failures(
     judged: bool,
     same_model: bool,
 ) -> list[str]:
-    """The answer gate's failures, the judge's calibration among them (ADR 0022)."""
-    failures = gate_failures(dict(values), dict(baseline), floors=False) + below_answer_floors(
-        values
-    )
+    """The answer gate's failures, the judge's calibration among them (ADR 0022). The
+    regression rule holds only against a baseline of the same model (F-09b)."""
+    compared = dict(baseline) if same_model else {}
+    failures = gate_failures(dict(values), compared, floors=False) + below_answer_floors(values)
     if calibration is not None:
         failures += calibration_failures(calibration)
     elif judged:
@@ -763,6 +786,10 @@ def main() -> None:
     print(f"Report: {outcome.report_json}")
     if not config.baseline.exists():
         print(f"No baseline at {config.baseline}; this run can become it.")
+    elif config.chat_model != "fake-extractive" and not same_model(
+        json.loads(config.baseline.read_text(encoding="utf-8")), config.chat_model
+    ):
+        print(f"The baseline is of another model; {config.chat_model} met floors only.")
     if outcome.gate_failures:
         sys.exit(
             "Gate failures:\n" + "\n".join(f"- {failure}" for failure in outcome.gate_failures)
