@@ -164,9 +164,29 @@ Results, 2026-11-01, llama.cpp 0.8.0 (build 11960), `make llm LLM_MODEL=<name>`:
 
 - Thinking stayed off with `--reasoning off`: every completion was 2 to 90 tokens.
 - llama-server warns for Qwen3.6 and Bonsai that their templates keep earlier reasoning in the history. With thinking off there is none to keep.
-- The speeds come from the server's own log on these few short answers; step 8 measures them properly.
+- The speeds come from the server's own log on these few short answers; step 9 measures them properly.
 
-### Step 8. Five judged runs and the published table
+### Step 8. Harness fixes from the first comparison runs
+
+- Kind: code
+- Why: the first five runs on 2026-11-01 could not be published:
+  - the judge agreed with the calibration set on 81.2 % of correctness verdicts (bar 85 %). The report keeps only the shares, so the disagreeing items cannot be named;
+  - `stem.with_suffix(".json")` cuts a report name at the dot of `qwen3.5-9b` and `qwen3.6-35b-a3b`, so both runs wrote `answers-qwen3.json`;
+  - Bonsai's run hit the fixed 600 s limit on the Promptfoo call;
+  - Qwen3.6 measured 10.2 GB for a 20.4 GB file. Served alone, its resident memory is 20.4 GB; during the run, with the judge loaded, macOS evicted clean pages of the mapped model file, so resident memory measures what is resident, not what the server holds. The physical footprint leaves the mapped file out (0.8 GB for Qwen3.6).
+- Tests first:
+  - `evals/tests/test_calibration.py`: the agreement lists every disagreement: item, kind of verdict (correctness or support), sentence for support, the hand verdict and the judge's (none when it could not judge);
+  - `evals/tests/test_report.py` or `test_answers.py`: the report's calibration section keeps the disagreements, and the Markdown lists them under their own heading instead of a raw dictionary;
+  - `evals/tests/test_run_preparation.py`: the report paths of `qwen3.5-9b` and `qwen3.6-35b-a3b` keep the whole model name, and no two models share a path;
+  - `evals/tests/test_run_preparation.py`: the Promptfoo limit grows with the number of cases (a budget per case, at least the old 600 s);
+  - `evals/tests/test_memory.py`: the peak is the largest physical-footprint sample plus the size of the model file the server maps;
+  - `evals/tests/test_memory_server.py`: the measure covers the logged buffers and exceeds them by no more than 2 GiB, run against Qwen3 8B and against Qwen3.6 35B-A3B (the mixture of experts).
+- Change: `evals/harness/calibration.py`, `run.py`, `answers.py`, `memory.py`. The spec's memory measure becomes "physical footprint plus the mapped model file", in the same green commit.
+- Done when: the tests pass, the memory integration test passes on both models, and `make check` is green.
+- [ ] red
+- [ ] green
+
+### Step 9. Five judged runs and the published table
 
 - Kind: eval (`/eval-run`, a `docs(eval)` commit, no red/green)
 - Work:
@@ -182,7 +202,7 @@ Results, 2026-11-01, llama.cpp 0.8.0 (build 11960), `make llm LLM_MODEL=<name>`:
   4. Summarise the record in the README.
 - Done when: the record is committed with all five reports' metadata in it.
 
-### Step 9. The choice: ADR, targets and default
+### Step 10. The choice: ADR, targets and default
 
 - Kind: code, after `/adr`
 - Work:
@@ -204,8 +224,8 @@ Results, 2026-11-01, llama.cpp 0.8.0 (build 11960), `make llm LLM_MODEL=<name>`:
 | AC | Proved by step |
 |---|---|
 | AC-1 | 1, 2, 7 |
-| AC-2 | 3, 4 |
-| AC-3 | 8 |
-| AC-4 | 9 |
-| AC-5 | 8, 9 |
+| AC-2 | 3, 4, 8 |
+| AC-3 | 9 |
+| AC-4 | 10 |
+| AC-5 | 9, 10 |
 | AC-6 | 5, 6 |
