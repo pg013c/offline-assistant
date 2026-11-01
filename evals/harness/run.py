@@ -289,6 +289,7 @@ def run_answers(config: RunConfig) -> Outcome:
         {name: values["value"] for name, values in baseline.items()},
         calibration,
         judged=verdicts is not None,
+        same_model=True,
     )
     stem = config.results_dir / f"answers-{started_at:%Y%m%dT%H%M%SZ}"
     report_json = stem.with_suffix(".json")
@@ -340,6 +341,18 @@ def drop_collections(qdrant: httpx.Client, prefix: str) -> None:
     for name in (item["name"] for item in listed):
         if name.startswith(f"{prefix}-"):
             qdrant.delete(f"/collections/{name}").raise_for_status()
+
+
+def answer_report_stem(results_dir: Path, chat_model: str, started_at: datetime) -> Path:
+    raise NotImplementedError
+
+
+def llm_pin(name: str, pins: Mapping[str, Mapping[str, str]]) -> Mapping[str, str]:
+    raise NotImplementedError
+
+
+def same_model(baseline: Mapping[str, Any], chat_model: str) -> bool:
+    raise NotImplementedError
 
 
 def default_answers_config(env: Mapping[str, str]) -> RunConfig:
@@ -527,6 +540,7 @@ def answer_failures(
     baseline: Mapping[str, float | None],
     calibration: Agreement | None,
     judged: bool,
+    same_model: bool,
 ) -> list[str]:
     """The answer gate's failures, the judge's calibration among them (ADR 0022)."""
     failures = gate_failures(dict(values), dict(baseline), floors=False) + below_answer_floors(

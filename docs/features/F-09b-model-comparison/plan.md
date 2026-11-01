@@ -96,7 +96,7 @@ No ADR is needed before step 1. ADR 0024 covers the pins, the server and the fla
   - `answer_failures` applies the regression rule only when the baseline's `chat_model` is the run's, and always applies floors and calibration.
 - Change: `evals/harness/run.py`, `Makefile` (`eval-answers` passes `LLM_MODEL`).
 - Done when: the tests pass and `make check` is green.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 4. Peak memory of the model server

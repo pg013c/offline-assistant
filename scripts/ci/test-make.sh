@@ -129,5 +129,9 @@ check "llm-models fetches only the chosen model" \
     ASSISTANT_MODELS_DIR="$scratch" LLM_MODEL=qwen3.5-9b 2>/dev/null \
     | grep -q -- "--llm qwen3.5-9b" && echo yes || echo no)"
 
+check "eval-answers answers with the model named by LLM_MODEL" \
+  "$(env -u LLM_MODEL make -C "$root" --no-print-directory -n eval-answers ENV_FILE="$scratch/missing.env" \
+    LLM_MODEL=qwen3.5-9b 2>/dev/null | grep -q "LLM_MODEL=qwen3.5-9b .*harness.run --answers" && echo yes || echo no)"
+
 [[ "$failures" -eq 0 ]] || { echo "$failures Makefile test(s) failed"; exit 1; }
 echo "All Makefile tests passed."

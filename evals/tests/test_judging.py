@@ -116,13 +116,13 @@ JUDGED = {"cites_expected": 0.9, "judged_correct": 0.65, "citation_support": 0.9
 
 
 def test_judged_metrics_without_calibration_fail_the_run() -> None:
-    failures = run.answer_failures(JUDGED, {}, calibration=None, judged=True)
+    failures = run.answer_failures(JUDGED, {}, calibration=None, judged=True, same_model=True)
 
     assert failures == ["the judge was not calibrated: its calibration set did not run (ADR 0022)"]
 
 
 def test_a_judge_below_the_bar_fails_the_run() -> None:
-    failures = run.answer_failures(JUDGED, {}, calibration=BELOW, judged=True)
+    failures = run.answer_failures(JUDGED, {}, calibration=BELOW, judged=True, same_model=True)
 
     assert failures == [
         "the judge agrees with the calibration set on 80.0 % of correctness verdicts, "
@@ -133,7 +133,7 @@ def test_a_judge_below_the_bar_fails_the_run() -> None:
 def test_an_unjudged_run_needs_no_calibration() -> None:
     unjudged = {**JUDGED, "judged_correct": None, "citation_support": None}
 
-    assert run.answer_failures(unjudged, {}, calibration=None, judged=False) == []
+    assert run.answer_failures(unjudged, {}, calibration=None, judged=False, same_model=True) == []
 
 
 def test_metrics_from_a_judge_below_the_bar_are_set_apart() -> None:
@@ -145,3 +145,33 @@ def test_metrics_from_a_judge_below_the_bar_are_set_apart() -> None:
 
 def test_metrics_from_a_calibrated_judge_are_kept() -> None:
     assert run.trusted_judged(JUDGED, ABOVE) == (JUDGED, {})
+
+
+BASELINE = {"cites_expected": 0.95, "judged_correct": 0.80, "citation_support": 0.95}
+WORSE = {"cites_expected": 0.70, "judged_correct": 0.60, "citation_support": 0.85}
+
+
+def test_a_run_of_the_baselines_model_is_held_to_the_baseline() -> None:
+    failures = run.answer_failures(WORSE, BASELINE, calibration=ABOVE, judged=True, same_model=True)
+
+    assert any(failure.startswith("judged_correct dropped") for failure in failures)
+
+
+def test_a_run_of_another_model_is_held_to_the_floors_and_calibration_only() -> None:
+    failures = run.answer_failures(
+        WORSE, BASELINE, calibration=BELOW, judged=True, same_model=False
+    )
+
+    assert failures == [
+        "citation_support is 85.0, below its floor of 90.0 (ADR 0022)",
+        "the judge agrees with the calibration set on 80.0 % of correctness verdicts, "
+        "below 85 % (ADR 0022)",
+    ]
+
+
+def test_the_baselines_model_is_read_from_its_metadata() -> None:
+    baseline = {"metrics": {}, "metadata": {"chat_model": "qwen3-8b"}}
+
+    assert run.same_model(baseline, "qwen3-8b") is True
+    assert run.same_model(baseline, "qwen3.5-9b") is False
+    assert run.same_model({"metrics": {}, "metadata": {}}, "qwen3-8b") is False

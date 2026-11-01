@@ -2,6 +2,7 @@ import hashlib
 import json
 import socket
 from dataclasses import replace
+from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx
@@ -11,12 +12,14 @@ from harness.corpus import CorpusDocument, documents
 from harness.run import (
     CorpusError,
     PortInUse,
+    answer_report_stem,
     api_environment,
     api_log_tail,
     default_answers_config,
     default_config,
     drop_collections,
     ensure_port_free,
+    llm_pin,
     media_type,
     verify_corpus,
     warm_up,
@@ -169,3 +172,41 @@ def test_only_the_answer_suite_indexes_the_injected_documents() -> None:
 def test_a_corpus_file_is_uploaded_with_the_media_type_of_its_extension() -> None:
     assert media_type(Path("gdpr-en.pdf")) == "application/pdf"
     assert media_type(Path("injected-model-card.md")) == "text/markdown"
+
+
+def test_the_answer_suite_answers_with_the_model_make_llm_serves() -> None:
+    config = default_answers_config({"LLM_MODEL": "gemma-4-26b-a4b"})
+
+    env = api_environment(config, {"PATH": "/usr/bin"})
+
+    assert config.chat_model == "gemma-4-26b-a4b"
+    assert env["ASSISTANT_CHAT_MODEL"] == "gemma-4-26b-a4b"
+
+
+def test_answer_reports_carry_the_models_name() -> None:
+    started_at = datetime(2026, 11, 1, 12, 30, 5, tzinfo=UTC)
+
+    stem = answer_report_stem(Path("results"), "qwen3.6-35b-a3b", started_at)
+
+    assert stem == Path("results") / "answers-qwen3.6-35b-a3b-20261101T123005Z"
+
+
+GEMMA_PIN = {
+    "repository": "google/gemma-4-26B-A4B-it-qat-q4_0-gguf",
+    "revision": "d1c082be9cf3c8a514acf63b8761f4b41935842e",
+    "file": "gemma-4-26B_q4_0-it.gguf",
+    "sha256": "3eca3b8f6d7baf218a7dd6bba5fb59a56ee25fe2d567b6f5f589b4f697eca51d",
+}
+
+
+def test_the_report_names_the_pinned_file_of_the_model_it_answered_with() -> None:
+    pins = {"qwen3-8b": {"file": "Qwen3-8B-Q4_K_M.gguf"}, "gemma-4-26b-a4b": GEMMA_PIN}
+
+    assert llm_pin("gemma-4-26b-a4b", pins) == GEMMA_PIN
+
+
+def test_a_model_without_a_pin_is_refused_naming_the_served_models() -> None:
+    pins = {"qwen3-8b": {"file": "Qwen3-8B-Q4_K_M.gguf"}, "gemma-4-26b-a4b": GEMMA_PIN}
+
+    with pytest.raises(ValueError, match=r"no-such-model.*qwen3-8b, gemma-4-26b-a4b"):
+        llm_pin("no-such-model", pins)
