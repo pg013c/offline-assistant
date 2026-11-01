@@ -2,18 +2,25 @@
 
 The sampler finds the process listening on the model server's port, checks that it is
 llama-server, and reads its memory once a second until the run stops it or the process ends.
+
+The memory is the server's physical footprint plus the model file it maps. Resident memory
+would count the mapped file only while it stays resident, and macOS evicts its clean pages
+under memory pressure: Qwen3.6 35B-A3B measured 10 GB of its 20 GB with the judge loaded.
 """
 
+import re
 import shutil
 import subprocess
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 from types import TracebackType
 from typing import Protocol
 
 SERVER = "llama-server"
 INTERVAL_SECONDS = 1.0
+FOOTPRINT = re.compile(r"Footprint:\s*(\d+) B")
 
 
 @dataclass(frozen=True)
@@ -66,8 +73,9 @@ def sample(
 
 
 def peak_mb(samples: list[int], mapped: int) -> float | None:
-    """The largest sample in MB (1024 x 1024 bytes); None without samples."""
-    return max(samples) / (1024 * 1024) if samples else None
+    """The largest sample plus the mapped model file, in MB (1024 x 1024 bytes); None without
+    samples."""
+    return (max(samples) + mapped) / (1024 * 1024) if samples else None
 
 
 class PeakMemory:
@@ -76,8 +84,9 @@ class PeakMemory:
     The server is found when the object is made, so a wrong one fails the run before it starts.
     """
 
-    def __init__(self, table: ProcessTable, port: int) -> None:
+    def __init__(self, table: ProcessTable, port: int, mapped: int) -> None:
         self.table = table
+        self.mapped = mapped
         self.server = find_server(table, port)
         self._stop = threading.Event()
         self._samples: list[int] = []
@@ -101,17 +110,22 @@ class PeakMemory:
 
     @property
     def peak_mb(self) -> float | None:
-        return peak_mb(self._samples, mapped=0)
+        return peak_mb(self._samples, mapped=self.mapped)
 
 
 def footprint_bytes(output: str) -> int | None:
     """The physical footprint in the output of `footprint -f bytes`; None when it is empty."""
-    raise NotImplementedError
+    match = FOOTPRINT.search(output)
+    return int(match.group(1)) if match else None
 
 
 def mapped_bytes(model_path: str | None) -> int:
     """The size of the model file the server maps, from the path its /props gives."""
-    raise NotImplementedError
+    if model_path is None or not Path(model_path).is_file():
+        raise NotTheModelServer(
+            f"the model server's /props names no model file this machine has: {model_path}"
+        )
+    return Path(model_path).stat().st_size
 
 
 class SystemProcesses:
@@ -125,16 +139,15 @@ class SystemProcesses:
         return Process(pid, name) if pid is not None and name is not None else None
 
     def memory_bytes(self, pid: int) -> int | None:
-        # Resident memory in KiB; empty once the process has ended.
-        resident = _run("ps", "-o", "rss=", "-p", str(pid)).strip()
-        return int(resident) * 1024 if resident else None
+        # The physical footprint; no figure once the process has ended.
+        return footprint_bytes(_run("footprint", "-p", str(pid), "-f", "bytes", "--noCategories"))
 
 
 def _run(*arguments: str) -> str:
     executable = shutil.which(arguments[0])
     if executable is None:
         raise RuntimeError(f"{arguments[0]} is not installed or not on PATH")
-    # Exit status 1 means no match (lsof) or no such process (ps).
+    # A failing status means no match (lsof) or no such process (footprint).
     return subprocess.run(  # noqa: S603 (fixed commands)
         [executable, *arguments[1:]], capture_output=True, text=True, check=False
     ).stdout

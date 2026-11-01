@@ -26,7 +26,7 @@ ADR 0021 made Qwen3 8B the default so the pipeline could be built, not because m
 - **Performance (FR-44):** measured per model in the same run:
   - time to first token, median and 95th percentile;
   - tokens per second;
-  - peak memory of the model server: its resident memory, sampled every second during the run.
+  - peak memory of the model server: its physical footprint, sampled every second during the run, plus the model file it maps. Resident memory was the first measure; macOS evicts a mapped model's pages under memory pressure, so it undercounted (plan step 8).
 - **Published table (FR-45):** a record in `docs/evals/` with one row per model, covering quality, speed and memory. It names the hardware, the server build, the settings and the judge. The README shows a summary of it.
 - **Choosing the default:** the default is the model with the highest judged correctness among those that meet all of these:
   - the floors of PRD §9 and ADR 0022;
@@ -66,7 +66,7 @@ Confirmed by the human on 2026-10-31.
 1. **Candidates:** the five models above, picked after a check of Hugging Face on 2026-10-31. About 48 GB of downloads, which start once the ADR that pins them is accepted. The files are in ADR 0024.
 2. **Server:** llama.cpp from Homebrew, upgraded. The build is recorded, as in ADR 0021, and no fork is used.
 3. **Choosing the default:** the rule above, fixed before the runs.
-4. **Memory:** the peak resident memory of the model server.
+4. **Memory:** the peak memory of the model server, measured as its physical footprint plus its mapped model file (revised in plan step 8, after resident memory undercounted).
 5. **Follow-ups:** the model list is part of this feature, and reading annexes is a chore after it.
 6. **ADRs:** one before the plan (`/adr`), covering the candidates' pins and the llama.cpp upgrade; one after the runs, covering the choice and the revised targets.
 

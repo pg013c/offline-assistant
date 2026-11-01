@@ -15,7 +15,7 @@ import subprocess
 import sys
 import time
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, replace
+from dataclasses import asdict, dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import IO, Any
@@ -51,7 +51,7 @@ from harness.judge import (
     JudgeUnavailable,
     Verdict,
 )
-from harness.memory import PeakMemory, SystemProcesses
+from harness.memory import PeakMemory, SystemProcesses, mapped_bytes
 from harness.metrics import CaseResult, compute, latency, top_out_of_scope_similarity
 from harness.promptfoo import (
     MODES,
@@ -75,7 +75,10 @@ JUDGED = ("judged_correct", "citation_support")
 ANSWERS_CONFIG = ROOT / "evals" / "promptfoo" / "answers.yaml"
 STARTUP_SECONDS = 180
 INGESTION_SECONDS = 1800
+# The least time a Promptfoo call gets, and the time per case beyond it: the slowest model
+# of F-09b needs about 40 s for an agent case.
 PROMPTFOO_SECONDS = 600
+PROMPTFOO_SECONDS_PER_CASE = 60
 # The similarity threshold the suite measures at; the app's default (F-03).
 EVAL_THRESHOLD = 0.5
 POLL_SECONDS = 1.0
@@ -179,7 +182,12 @@ def run_answers(config: RunConfig) -> Outcome:
     started_at = datetime.now(UTC)
     pin = llm_pin(config.chat_model, _served_pins())
     # Found before the run starts, so a wrong server on the port fails it at once.
-    memory = PeakMemory(SystemProcesses(), urlsplit(config.llm_url).port or 80)
+    llm_server = _llm_server(config.llm_url)
+    memory = PeakMemory(
+        SystemProcesses(),
+        urlsplit(config.llm_url).port or 80,
+        mapped=mapped_bytes(llm_server.get("model_path")),
+    )
     corpus = verify_corpus(config.corpus_dir, config.corpus)
     ensure_port_free(config.port)
     _reset(config)
@@ -249,17 +257,9 @@ def run_answers(config: RunConfig) -> Outcome:
         "corpus": corpus,
         "chat_model": config.chat_model,
         "chat_model_file": dict(pin),
-        "llm_server": _llm_server(config.llm_url),
+        "llm_server": llm_server,
         "judge": judge,
-        "calibration": (
-            {
-                "correctness": calibration.correctness,
-                "support": calibration.support,
-                "items": calibration.items,
-            }
-            if calibration
-            else "not run"
-        ),
+        "calibration": calibration_metadata(calibration),
         "untrusted": {
             name: {"value": value, "cases": metrics.cases[name]}
             for name, value in untrusted.items()
@@ -303,9 +303,7 @@ def run_answers(config: RunConfig) -> Outcome:
         judged=verdicts is not None,
         same_model=same_model(baseline, config.chat_model),
     )
-    stem = answer_report_stem(config.results_dir, config.chat_model, started_at)
-    report_json = stem.with_suffix(".json")
-    report_markdown = stem.with_suffix(".md")
+    report_json, report_markdown = answer_reports(config.results_dir, config.chat_model, started_at)
     report_json.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", "utf-8")
     report_markdown.write_text(answers_markdown(metrics, metadata), encoding="utf-8")
     return Outcome(report_json, report_markdown, failures)
@@ -371,24 +369,30 @@ def drop_collections(qdrant: httpx.Client, prefix: str) -> None:
             qdrant.delete(f"/collections/{name}").raise_for_status()
 
 
-def answer_report_stem(results_dir: Path, chat_model: str, started_at: datetime) -> Path:
-    """Where an answer run's reports go, named after the model so runs of several sit together."""
-    return results_dir / f"answers-{chat_model}-{started_at:%Y%m%dT%H%M%SZ}"
-
-
 def answer_reports(results_dir: Path, chat_model: str, started_at: datetime) -> tuple[Path, Path]:
-    """The JSON and Markdown reports of an answer run, named after the whole model name."""
-    raise NotImplementedError
+    """The JSON and Markdown reports of an answer run, named after the whole model name.
+
+    The suffix is appended, not set with `with_suffix`, which would cut `qwen3.5-9b` at its dot.
+    """
+    name = f"answers-{chat_model}-{started_at:%Y%m%dT%H%M%SZ}"
+    return results_dir / f"{name}.json", results_dir / f"{name}.md"
 
 
 def promptfoo_seconds(cases: int) -> float:
     """How long the Promptfoo call may take: a budget per case, never below the old limit."""
-    raise NotImplementedError
+    return max(PROMPTFOO_SECONDS, PROMPTFOO_SECONDS_PER_CASE * cases)
 
 
 def calibration_metadata(calibration: Agreement | None) -> dict[str, Any] | str:
     """The judge's calibration as the report keeps it, each disagreement included."""
-    raise NotImplementedError
+    if calibration is None:
+        return "not run"
+    return {
+        "correctness": calibration.correctness,
+        "support": calibration.support,
+        "items": calibration.items,
+        "disagreements": [asdict(item) for item in calibration.disagreements],
+    }
 
 
 def llm_pin(name: str, pins: Mapping[str, Mapping[str, str]]) -> Mapping[str, str]:
@@ -683,7 +687,7 @@ def _promptfoo(
         command_line(Path(_executable("pnpm")), suite, tests, output),
         env=environment(os.environ, api_url),
         check=True,
-        timeout=PROMPTFOO_SECONDS,
+        timeout=promptfoo_seconds(len(cases)),
     )
     decoded: dict[str, Any] = json.loads(output.read_text(encoding="utf-8"))
     return decoded
