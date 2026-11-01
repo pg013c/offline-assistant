@@ -22,7 +22,7 @@ class FakeExtractiveChatModel:
     is_test_model = True
 
     async def is_available(self) -> bool:
-        raise NotImplementedError
+        return True
 
     async def answer(
         self, question: str, passages: Sequence[Chunk], notice: str | None = None
@@ -54,7 +54,7 @@ class ScriptedChatModel:
         self.available = available
 
     async def is_available(self) -> bool:
-        raise NotImplementedError
+        return self.available
 
     async def answer(
         self, question: str, passages: Sequence[Chunk], notice: str | None = None

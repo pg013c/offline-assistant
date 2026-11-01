@@ -1,5 +1,6 @@
 """The models a question can be answered with, and which is the default (F-08)."""
 
+import asyncio
 from collections.abc import Sequence
 from dataclasses import dataclass
 
@@ -40,7 +41,16 @@ class ChatModels:
         self._default = entries[0].id
 
     async def list_models(self) -> list[ModelChoice]:
-        raise NotImplementedError
+        """The models that answer now; one whose server stops is left out until it answers."""
+        entries = list(self._entries.values())
+        available = await asyncio.gather(*(entry.model.is_available() for entry in entries))
+        return [
+            ModelChoice(
+                id=entry.id, is_test_model=entry.is_test_model, is_default=entry.id == self._default
+            )
+            for entry, answers in zip(entries, available, strict=True)
+            if answers
+        ]
 
     def answerer(self, model_id: str | None) -> Answerer:
         """What answers with this model, or with the default; `UnknownModel` if none does."""

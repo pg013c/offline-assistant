@@ -45,6 +45,11 @@ USER_PROMPT = Template(_PROMPTS.joinpath("answer_user.md").read_text(encoding="u
 RETRY_PROMPT = Template(_PROMPTS.joinpath("retry.md").read_text(encoding="utf-8"))
 
 
+# How long a model's availability is kept, and how long the check waits (F-09b).
+AVAILABILITY_SECONDS = 5.0
+AVAILABILITY_TIMEOUT_SECONDS = 2.0
+
+
 @dataclass(frozen=True)
 class LlmServer:
     """Where a model is served and how long and how often to try it (AI-21, AI-22)."""
@@ -106,9 +111,31 @@ class OpenAICompatibleChat:
         self.model_id = model_id
         self._server = server
         self._transport = transport
+        self._clock = clock
+        # The last answer to "is the model served?", and when it was asked.
+        self._available: tuple[float, bool] | None = None
 
     async def is_available(self) -> bool:
-        raise NotImplementedError
+        """Whether the server lists the model now, asked at most every few seconds (F-09b)."""
+        now = self._clock()
+        if self._available and now - self._available[0] < AVAILABILITY_SECONDS:
+            return self._available[1]
+        available = await self._served()
+        self._available = (now, available)
+        return available
+
+    async def _served(self) -> bool:
+        try:
+            async with httpx.AsyncClient(
+                base_url=self._server.base_url,
+                timeout=AVAILABILITY_TIMEOUT_SECONDS,
+                transport=self._transport,
+            ) as client:
+                response = await client.get("/v1/models")
+            listed = response.json()["data"] if response.status_code == httpx.codes.OK else []
+            return any(model.get("id") == self._server.served_model for model in listed)
+        except (httpx.HTTPError, ValueError, KeyError, TypeError, AttributeError):
+            return False
 
     async def answer(
         self, question: str, passages: Sequence[Chunk], notice: str | None = None

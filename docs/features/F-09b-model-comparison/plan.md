@@ -125,7 +125,7 @@ No ADR is needed before step 1. ADR 0024 covers the pins, the server and the fla
 - Change: `ports/chat_model.py`, `adapters/openai_compatible_chat.py`, the fake, `services/models.py`. `make api-client` only if the schema changes; it should not.
 - Done when: the tests pass and `make check` is green.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 6. The UI follows the model list
 
