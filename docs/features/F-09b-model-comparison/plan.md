@@ -150,7 +150,21 @@ No ADR is needed before step 1. ADR 0024 covers the pins, the server and the fla
 - Change: none expected. A defect in shared code found here is fixed in the green commit; a per-model workaround is not.
 - Done when: the test has been run against all five, and the results are noted for the record.
 - [x] red
-- [ ] green
+- [x] green
+
+Results, 2026-11-01, llama.cpp 0.8.0 (build 11960), `make llm LLM_MODEL=<name>`: no code change was needed.
+
+| Model | Answer with a resolving citation | Valid tool call | Generation speed |
+|---|---|---|---|
+| qwen3-8b | passed | passed | about 50 tokens/s |
+| qwen3.5-9b | passed | passed | about 45 tokens/s |
+| qwen3.6-35b-a3b | passed | passed | about 66 tokens/s |
+| gemma-4-26b-a4b | passed | passed | about 74 tokens/s |
+| ternary-bonsai-2-27b | passed | passed | about 25 tokens/s |
+
+- Thinking stayed off with `--reasoning off`: every completion was 2 to 90 tokens.
+- llama-server warns for Qwen3.6 and Bonsai that their templates keep earlier reasoning in the history. With thinking off there is none to keep.
+- The speeds come from the server's own log on these few short answers; step 8 measures them properly.
 
 ### Step 8. Five judged runs and the published table
 
