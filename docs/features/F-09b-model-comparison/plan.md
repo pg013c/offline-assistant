@@ -149,7 +149,7 @@ No ADR is needed before step 1. ADR 0024 covers the pins, the server and the fla
   Run once per candidate. A failure is recorded as a finding for the record, not worked around.
 - Change: none expected. A defect in shared code found here is fixed in the green commit; a per-model workaround is not.
 - Done when: the test has been run against all five, and the results are noted for the record.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 8. Five judged runs and the published table
