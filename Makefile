@@ -28,8 +28,13 @@ export QDRANT_PORT ?= 6333
 
 # The local LLM for `make llm` (ADR 0021): llama.cpp's llama-server on LLM_PORT.
 export LLM_PORT ?= 8080
-# The model file's path comes from its pin (pinned_models.py), so the two cannot drift apart.
-LLM_FILE = $(shell $(BACKEND) python -c "from assistant.adapters.pinned_models import QWEN3_8B as m; print('$(ASSISTANT_MODELS_DIR)/' + m.directory + '/' + next(iter(m.files)))")
+# The served model, by its name in the registry (chat_models.py; ADR 0024).
+LLM_MODEL ?= qwen3-8b
+# The model file's path comes from its pin, so the two cannot drift apart; empty for an unknown name.
+LLM_FILE = $(shell $(BACKEND) python -c "from assistant.adapters.chat_models import CHAT_MODELS; s = CHAT_MODELS.get('$(LLM_MODEL)'); m = s and s.pinned; print('$(ASSISTANT_MODELS_DIR)/' + m.directory + '/' + next(iter(m.files)) if m else '')")
+LLM_MODELS_SERVED = $(shell $(BACKEND) python -c "from assistant.adapters.chat_models import CHAT_MODELS; print(', '.join(n for n, s in CHAT_MODELS.items() if s.pinned))")
+# Stops make, also under -n, when LLM_MODEL names no served model.
+LLM_CHECK_NAME = $(if $(LLM_FILE),,$(error LLM_MODEL=$(LLM_MODEL) is not a served model. Choose one of: $(LLM_MODELS_SERVED)))
 
 # The evaluation's judge for `make judge` (ADR 0022): llama-server on JUDGE_PORT.
 export JUDGE_PORT ?= 8081
@@ -58,21 +63,21 @@ setup: node-version ## Install project dependencies
 models: ## Download the parsing and embedding models into ASSISTANT_MODELS_DIR (the only step that needs the network)
 	$(BACKEND) python scripts/download_models.py "$(ASSISTANT_MODELS_DIR)"
 
-llm-models: ## Download the local LLM (Qwen3 8B, about 5 GB) into ASSISTANT_MODELS_DIR, checked by hash
-	$(BACKEND) python scripts/download_models.py "$(ASSISTANT_MODELS_DIR)" --llm
+llm-models: ## Download the local LLM named by LLM_MODEL (default Qwen3 8B, about 5 GB) into ASSISTANT_MODELS_DIR, checked by hash
+	$(LLM_CHECK_NAME)$(BACKEND) python scripts/download_models.py "$(ASSISTANT_MODELS_DIR)" --llm $(LLM_MODEL)
 
 llm-preflight: ## Check that make llm can start: llama-server installed, model file pinned, port free
-	@$(BACKEND) python -c "from pathlib import Path; from assistant.adapters.pinned_models import LLM_MODELS, verify_models; verify_models(Path('$(ASSISTANT_MODELS_DIR)'), LLM_MODELS)" 2>/dev/null \
-	  || { echo "The local LLM is missing or changed in $(ASSISTANT_MODELS_DIR). Fetch it with: make llm-models"; exit 1; }
+	@$(LLM_CHECK_NAME)$(BACKEND) python -c "from pathlib import Path; from assistant.adapters.chat_models import CHAT_MODELS; from assistant.adapters.pinned_models import verify_models; verify_models(Path('$(ASSISTANT_MODELS_DIR)'), (CHAT_MODELS['$(LLM_MODEL)'].pinned,))" 2>/dev/null \
+	  || { echo "The local LLM $(LLM_MODEL) is missing or changed in $(ASSISTANT_MODELS_DIR). Fetch it with: make llm-models LLM_MODEL=$(LLM_MODEL)"; exit 1; }
 	@command -v llama-server >/dev/null || { echo "llama-server is not installed. Install it with: brew install llama.cpp"; exit 1; }
 	@if lsof -nP -iTCP:$(LLM_PORT) -sTCP:LISTEN >/dev/null 2>&1; then \
 	  owner="$$(lsof -nP -iTCP:$(LLM_PORT) -sTCP:LISTEN | awk 'NR==2 {print $$1 " (pid " $$2 ")"}')"; \
 	  echo "Port $(LLM_PORT) is already used by $$owner. Stop it or set LLM_PORT."; exit 1; \
 	fi
 
-llm: llm-preflight ## Serve the local LLM with llama-server on LLM_PORT (Metal, thinking off; ADR 0021)
-	llama-server -m "$(LLM_FILE)" --alias qwen3-8b --host 127.0.0.1 --port $(LLM_PORT) \
-	  --n-gpu-layers 99 --ctx-size 16384 --jinja --reasoning-budget 0
+llm: llm-preflight ## Serve the local LLM named by LLM_MODEL with llama-server on LLM_PORT (Metal, thinking off; ADR 0024)
+	$(LLM_CHECK_NAME)llama-server -m "$(LLM_FILE)" --alias $(LLM_MODEL) --host 127.0.0.1 --port $(LLM_PORT) \
+	  --n-gpu-layers 99 --ctx-size 16384 --jinja --reasoning off
 
 judge-models: ## Download the evaluation's judge (Qwen3 30B-A3B, about 18.6 GB) into ASSISTANT_MODELS_DIR, checked by hash
 	$(BACKEND) python scripts/download_models.py "$(ASSISTANT_MODELS_DIR)" --judge

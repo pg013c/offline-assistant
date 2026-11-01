@@ -84,7 +84,7 @@ No ADR is needed before step 1. ADR 0024 covers the pins, the server and the fla
 - Change: `Makefile`, `scripts/download_models.py` (`--llm <name>`), README commands.
 - Done when: the checks pass and `make check` is green.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 3. The answer run is per model
 
