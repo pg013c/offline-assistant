@@ -5,6 +5,9 @@ import type { components } from '../../api/schema'
 
 export type ModelChoice = components['schemas']['ModelChoiceResponse']
 
+// How often the list is asked for again (F-09b); a stub until the hook refreshes.
+export const MODELS_REFRESH_MS = Number.POSITIVE_INFINITY
+
 /** The models the API can answer with now (F-08). */
 export function useModels() {
   return useQuery({

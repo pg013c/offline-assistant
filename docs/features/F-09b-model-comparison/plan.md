@@ -135,7 +135,7 @@ No ADR is needed before step 1. ADR 0024 covers the pins, the server and the fla
   - when the selected model leaves the list, the selection returns to the default, and a notice says the model stopped answering.
 - Change: `useModels.ts`, `ModelSelect.tsx`.
 - Done when: the tests pass and `make check` and the e2e journeys are green.
-- [ ] red
+- [x] red
 - [ ] green
 
 ### Step 7. Every candidate serves and answers
