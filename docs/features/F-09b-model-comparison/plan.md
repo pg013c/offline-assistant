@@ -136,7 +136,7 @@ No ADR is needed before step 1. ADR 0024 covers the pins, the server and the fla
 - Change: `useModels.ts`, `ModelSelect.tsx`.
 - Done when: the tests pass and `make check` and the e2e journeys are green.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 7. Every candidate serves and answers
 
