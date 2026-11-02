@@ -15,7 +15,6 @@ from assistant.adapters.openai_compatible_chat import OpenAICompatibleChat
 from assistant.adapters.pinned_models import (
     GEMMA_4_26B_A4B,
     JUDGE_MODELS,
-    LLM_MODELS,
     PINNED_MODELS,
     QWEN3_6_35B_A3B,
     PinnedModel,
@@ -81,7 +80,6 @@ def test_each_candidate_is_pinned_as_adr_0024_says(name: str) -> None:
         {file: sha256},
     )
     assert pinned.directory == "llm/" + repository.replace("/", "--")
-    assert pinned in LLM_MODELS
     assert pinned not in PINNED_MODELS
 
 
@@ -98,10 +96,9 @@ def test_the_settings_accept_exactly_the_catalogue_names() -> None:
     assert set(get_args(Settings.model_fields["chat_model"].annotation)) == set(CHAT_MODELS)
 
 
-def test_the_llm_models_are_the_served_models_pins() -> None:
-    served = [spec.pinned.repository for spec in CHAT_MODELS.values() if spec.pinned is not None]
-
-    assert sorted(model.repository for model in LLM_MODELS) == sorted(served)
+def test_the_registry_is_the_only_list_of_served_models() -> None:
+    # A second list beside CHAT_MODELS could drift from it (F-09b review #5).
+    assert not hasattr(pinned_models, "LLM_MODELS")
 
 
 def test_the_test_model_needs_no_server() -> None:
