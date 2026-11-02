@@ -20,6 +20,10 @@ from typing import Protocol
 
 SERVER = "llama-server"
 INTERVAL_SECONDS = 1.0
+# How long one lsof or footprint call may take, and how long the run waits for the sampler
+# to stop (AI-22, F-09b review #4).
+COMMAND_SECONDS = 10.0
+JOIN_SECONDS = 15.0
 FOOTPRINT = re.compile(r"Footprint:\s*(\d+) B")
 
 

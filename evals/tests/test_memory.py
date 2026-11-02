@@ -1,13 +1,19 @@
 """The model server's peak memory (F-09b): finding the server and sampling it."""
 
+import shutil
+import subprocess
+import threading
 from collections.abc import Iterator
 from pathlib import Path
+from typing import Any
 
 import pytest
 
+from harness import memory
 from harness.answers import AnswerCase, ChatResult, answers_markdown, score_answers
 from harness.memory import (
     NotTheModelServer,
+    PeakMemory,
     Process,
     find_server,
     footprint_bytes,
@@ -138,3 +144,45 @@ def test_the_markdown_gives_the_peak_memory_in_whole_mb() -> None:
     metrics.performance["peak_memory_mb"] = 5200.6
 
     assert "| peak_memory_mb | 5201 |" in answers_markdown(metrics, {})
+
+
+def test_a_tool_that_hangs_is_stopped_and_gives_no_reading(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[dict[str, Any]] = []
+
+    def hang(arguments: list[str], **options: Any) -> subprocess.CompletedProcess[str]:
+        calls.append(options)
+        raise subprocess.TimeoutExpired(arguments, options.get("timeout") or 0)
+
+    monkeypatch.setattr(shutil, "which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr(subprocess, "run", hang)
+
+    assert memory.SystemProcesses().memory_bytes(4242) is None
+    assert calls[0]["timeout"] == memory.COMMAND_SECONDS
+
+
+class StuckTable(FakeTable):
+    """A server whose memory read never returns until released."""
+
+    def __init__(self) -> None:
+        super().__init__(SERVER, [])
+        self.release = threading.Event()
+
+    def memory_bytes(self, pid: int) -> int | None:
+        self.release.wait()
+        return None
+
+
+def test_the_run_goes_on_when_the_sampler_does_not_stop(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(memory, "JOIN_SECONDS", 0.1)
+    table = StuckTable()
+    peak = PeakMemory(table, 8080, mapped=0)
+    peak.__enter__()
+    leaving = threading.Thread(target=peak.__exit__, args=(None, None, None))
+
+    leaving.start()
+    leaving.join(timeout=2)
+    finished = not leaving.is_alive()
+    table.release.set()
+    leaving.join()
+
+    assert finished, "the run must not wait on a sampler that hangs"
