@@ -22,20 +22,24 @@ The [comparison record of 2026-11-02](../evals/2026-11-02-model-comparison.md) r
 | Ternary-Bonsai-2 27B | 79.3 % | 2.85 / 23.2 s | 21.5 GB |
 
 **The spec's rule:**
+
 - among models that meet the floors, with a median first token of at most 3 s and peak memory of at most 24 GB, the highest judged correctness wins;
 - within 5 points, the faster model wins.
 
 **What the record shows:**
+
 - all five meet the floors;
 - Qwen3.6 and Gemma 4 exceed the memory limit. Peak memory counts llama-server's default prompt cache of up to 8 GiB, and the human chose to keep that measure;
 - Qwen3.5 9B beats Bonsai by 2.4 points and is faster.
 
 **Qwen3.5 9B's weaknesses:**
+
 - its structured answer is valid on the first try in 63 % of cases, a mean of 1.4 attempts;
 - it uses the expected tools in 5 of 7 agent cases;
 - it saves 1 of 3 requested notes.
 
 **What the PRD leaves open:**
+
 - NFR-03 (first token at most 3 s) is an initial target, to be revised once after the first measured baseline;
 - PRD §9 sets no correctness target until there is a baseline.
 

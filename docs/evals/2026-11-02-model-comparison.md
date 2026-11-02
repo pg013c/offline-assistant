@@ -29,6 +29,7 @@ As in the [judged-answers record](2026-10-30-answers-judged.md), with these chan
 The revisions and full hashes are in ADR 0024 and in each report's metadata.
 
 **Gemma 4's run** is judged by Gemma 4 itself and also by the check judge, Qwen3.6 35B-A3B with thinking off (ADR 0025, decision 4).
+
 - **Ports:** a first attempt with the candidate, the judge and the check judge as three servers ran out of GPU memory while indexing. The run in the table therefore uses the candidate's own server on port 8080 as the judge: the same file, flags and name as `make judge`. The check judge ran on port 8083.
 - **Memory measure:** judging starts after the answers, so the memory measure covers answering only.
 - **An earlier run of Gemma 4** (`…T144203Z`, with `make judge` on port 8081) gave the same quality metrics. Its first-token median was 0.74 s and its peak memory 25 956 MiB.
@@ -58,10 +59,12 @@ The revisions and full hashes are in ADR 0024 and in each report's metadata.
 **Peak memory** is the server's largest physical footprint while it answers, plus the size of the model file it maps (step 8). It is measured in MiB (1024 × 1024 bytes), and the spec's 24 GB limit is read as 24 GiB. Each model is on the same side of the limit under either reading. Earlier versions of this record and ADR 0026 gave these figures as GB by dividing by 1000 (review #8). Up to 8 GiB of it can be llama-server's default prompt cache, which is counted for every model as served.
 
 **The judge's calibration** disagrees with the hand verdicts on the same 4 items in every run:
+
 - cal-01 is labelled partial, and the judge rules it correct;
 - cal-02 S1, cal-04 S1 and cal-12 S1 are labelled unsupported, and the judge rules them supported.
 
 **The gate:**
+
 - Qwen3 8B's run fails its gate against its own baseline of 2026-10-30, which was judged by Qwen3 30B-A3B:
   - notes saved when asked and their expected citations drop from 3 of 3 to 2 of 3;
   - citation support drops from 100 % to 94.7 %.

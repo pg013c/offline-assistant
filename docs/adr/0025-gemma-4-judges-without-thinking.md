@@ -24,6 +24,7 @@ On llama.cpp 0.8.0 (ADR 0024), Qwen3 30B-A3B with thinking on agrees with the ha
 | **Gemma 4 26B-A4B, thinking off** | **97.9 %** | **95.9 %** | **1.9 min** | the same verdicts on a second run |
 
 **Where Gemma 4 with thinking off still disagrees with the labels:**
+
 - cal-01: it rules correct where the label says partial;
 - three sentences are labelled unsupported but it rules them supported: cal-02 S1, cal-04 S1 and cal-12 S1. All three are known borderline cases.
 
