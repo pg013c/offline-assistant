@@ -72,7 +72,7 @@
     "first_token_ms_median": 1153.4,
     "first_token_ms_p95": 11826.834790990873,
     "tokens_per_second_median": 45.778133089690876,
-    "peak_memory_mb": 15786.177520751953
+    "peak_memory_mib": 15786.177520751953
   },
   "missed": {
     "pl-ai-serious-incident": "cites no expected passage",

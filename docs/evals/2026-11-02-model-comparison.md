@@ -31,7 +31,7 @@ The revisions and full hashes are in ADR 0024 and in each report's metadata.
 **Gemma 4's run** is judged by Gemma 4 itself and also by the check judge, Qwen3.6 35B-A3B with thinking off (ADR 0025, decision 4).
 - **Ports:** a first attempt with the candidate, the judge and the check judge as three servers ran out of GPU memory while indexing. The run in the table therefore uses the candidate's own server on port 8080 as the judge: the same file, flags and name as `make judge`. The check judge ran on port 8083.
 - **Memory measure:** judging starts after the answers, so the memory measure covers answering only.
-- **An earlier run of Gemma 4** (`…T144203Z`, with `make judge` on port 8081) gave the same quality metrics. Its first-token median was 0.74 s and its peak memory 25 956 MB.
+- **An earlier run of Gemma 4** (`…T144203Z`, with `make judge` on port 8081) gave the same quality metrics. Its first-token median was 0.74 s and its peak memory 25 956 MiB.
 
 ## Results
 
@@ -52,10 +52,10 @@ The revisions and full hashes are in ADR 0024 and in each report's metadata.
 | First token, median | 1.14 s | 1.14 s | 0.73 s | 0.79 s | 2.85 s | | 3 s |
 | First token, 95th percentile | 9.1 s | 11.7 s | 14.3 s | 9.0 s | 23.2 s | | |
 | Tokens per second, median | 49 | 44 | 72 | 82 | 29 | | |
-| Peak memory | 17 097 MB | 15 785 MB | 29 439 MB | 26 496 MB | 21 454 MB | | 24 GB |
+| Peak memory | 17 097 MiB | 15 785 MiB | 29 439 MiB | 26 496 MiB | 21 454 MiB | | 24 GiB (24 576 MiB) |
 | Calibration, correctness / support | 97.9 / 95.9 % | 97.9 / 95.9 % | 97.9 / 95.9 % | 97.9 / 95.9 % | 97.9 / 95.9 % | 48 / 74 | 85 % |
 
-**Peak memory** is the server's largest physical footprint while it answers, plus the size of the model file it maps (step 8). Up to 8 GiB of it can be llama-server's default prompt cache, which is counted for every model as served.
+**Peak memory** is the server's largest physical footprint while it answers, plus the size of the model file it maps (step 8). It is measured in MiB (1024 × 1024 bytes), and the spec's 24 GB limit is read as 24 GiB. Each model is on the same side of the limit under either reading. Earlier versions of this record and ADR 0026 gave these figures as GB by dividing by 1000 (review #8). Up to 8 GiB of it can be llama-server's default prompt cache, which is counted for every model as served.
 
 **The judge's calibration** disagrees with the hand verdicts on the same 4 items in every run:
 - cal-01 is labelled partial, and the judge rules it correct;
@@ -80,11 +80,11 @@ The revisions and full hashes are in ADR 0024 and in each report's metadata.
 
 ## The selection rule
 
-The spec's rule picks, among models that meet the floors, have a median first token of 3 s or less and peak memory of 24 GB or less, the one with the highest judged correctness. Within 5 points of each other, the faster one wins.
+The spec's rule picks, among models that meet the floors, have a median first token of 3 s or less and peak memory of 24 GiB or less, the one with the highest judged correctness. Within 5 points of each other, the faster one wins.
 
 1. **Floors:** all five models meet them.
 2. **Median first token:** all five are within 3 s. Bonsai is the closest to the limit, at 2.85 s.
-3. **Peak memory:** Qwen3.6 35B-A3B (29.4 GB) and Gemma 4 26B-A4B (26.5 GB) exceed 24 GB. Qwen3 8B, Qwen3.5 9B and Bonsai remain.
+3. **Peak memory:** Qwen3.6 35B-A3B (28.7 GiB) and Gemma 4 26B-A4B (25.9 GiB) exceed 24 GiB. Qwen3 8B, Qwen3.5 9B and Bonsai remain.
 4. **Judged correctness:** Qwen3.5 9B scores 81.7 %. Bonsai scores 79.3 %, within 5 points, but it is slower: 2.85 s to the first token against 1.14 s, and 29 tokens per second against 44. Qwen3 8B scores 63.4 %.
 
 **By the rule, Qwen3.5 9B is the default.** Memory was kept as measured, prompt cache included, as the human decided.
@@ -97,7 +97,7 @@ The spec's rule picks, among models that meet the floors, have a median first to
    - it saves 1 of 3 requested notes.
 
    These belong to the agent path and the answer schema, not to correctness.
-2. **Qwen3.6 35B-A3B answers best overall:** 84.1 % judged correct, the fastest first token at 0.73 s, and 72 tokens per second. It misses only the memory limit, by about 5 GB. Up to 8 GiB of its figure can be the prompt cache. Without that cache it might fit, and then it would win under the 5-point rule. Not measured here; that trade-off belongs to the ADR.
+2. **Qwen3.6 35B-A3B answers best overall:** 84.1 % judged correct, the fastest first token at 0.73 s, and 72 tokens per second. It misses only the memory limit, by about 4.7 GiB. Up to 8 GiB of its figure can be the prompt cache. Without that cache it might fit, and then it would win under the 5-point rule. Not measured here; that trade-off belongs to the ADR.
 3. **Gemma 4 26B-A4B is the fastest generator** at 82 tokens per second. Two of its answers fail the answer schema after retries (`ref-annex-iii` and `note-checklist-en`), the same two in both of its runs.
 4. **Bonsai 27B** in 7.6 GB comes within 2.4 points of Qwen3.5 9B. It is the slowest model, however: 2.85 s median first token and 23 s at the 95th percentile.
 5. **No model is good at saying the documents do not cover a question.** Apart from Qwen3 8B, each misses 1 or 2 of the 3 not-covered cases, and Qwen3.6 misses 2. The sample is small.

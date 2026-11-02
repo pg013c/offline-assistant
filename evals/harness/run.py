@@ -251,7 +251,7 @@ def run_answers(config: RunConfig) -> Outcome:
     metrics = replace(
         metrics,
         values=trusted,
-        performance={**metrics.performance, "peak_memory_mb": memory.peak_mb},
+        performance={**metrics.performance, "peak_memory_mib": memory.peak_mib},
     )
     metadata = {
         **_metadata(config, started_at),

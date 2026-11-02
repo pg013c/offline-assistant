@@ -77,12 +77,7 @@ def sample(
 
 
 def peak_mib(samples: list[int], mapped: int) -> float | None:
-    """The largest sample plus the mapped model file, in MiB (F-09b review #8)."""
-    raise NotImplementedError
-
-
-def peak_mb(samples: list[int], mapped: int) -> float | None:
-    """The largest sample plus the mapped model file, in MB (1024 x 1024 bytes); None without
+    """The largest sample plus the mapped model file, in MiB (1024 x 1024 bytes); None without
     samples."""
     return (max(samples) + mapped) / (1024 * 1024) if samples else None
 
@@ -119,8 +114,8 @@ class PeakMemory:
         self._thread.join(timeout=JOIN_SECONDS)
 
     @property
-    def peak_mb(self) -> float | None:
-        return peak_mb(self._samples, mapped=self.mapped)
+    def peak_mib(self) -> float | None:
+        return peak_mib(self._samples, mapped=self.mapped)
 
 
 def footprint_bytes(output: str) -> int | None:

@@ -31,7 +31,7 @@ The setup is the same as in the [model comparison](2026-11-02-model-comparison.m
 | First token, median | 1.15 s | 1.14 s | | ≤ 2 s (NFR-03) |
 | First token, 95th percentile | 11.8 s | 11.7 s | | ≤ 15 s (NFR-03) |
 | Tokens per second, median | 46 | 44 | | |
-| Peak memory | 15 786 MB | 15 785 MB | | 24 GB |
+| Peak memory | 15 786 MiB | 15 785 MiB | | 24 GiB |
 | Calibration, correctness / support | 97.9 / 95.9 % | 97.9 / 95.9 % | 48 / 74 | 85 % |
 
 **The run passes its gate.** It meets every floor, the 75 % correctness target and both NFR-03 limits. It was held to the floors only, because the previous baseline was of another model.

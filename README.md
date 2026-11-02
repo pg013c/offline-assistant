@@ -23,13 +23,13 @@ F-09b ran five local models through the same suite on the same Mac, graded by th
 
 | Model | Judged correct | Citation support | First token, median | Tokens/s | Peak memory |
 |---|---|---|---|---|---|
-| Qwen3 8B | 63 % | 95 % | 1.1 s | 49 | 17.1 GB |
-| Qwen3.5 9B | 82 % | 98 % | 1.1 s | 44 | 15.8 GB |
-| Qwen3.6 35B-A3B | 84 % | 98 % | 0.7 s | 72 | 29.4 GB |
-| Gemma 4 26B-A4B | 79 % | 98 % | 0.8 s | 82 | 26.5 GB |
-| Ternary-Bonsai-2 27B | 79 % | 98 % | 2.85 s | 29 | 21.5 GB |
+| Qwen3 8B | 63 % | 95 % | 1.1 s | 49 | 16.7 GiB |
+| Qwen3.5 9B | 82 % | 98 % | 1.1 s | 44 | 15.4 GiB |
+| Qwen3.6 35B-A3B | 84 % | 98 % | 0.7 s | 72 | 28.7 GiB |
+| Gemma 4 26B-A4B | 79 % | 98 % | 0.8 s | 82 | 25.9 GiB |
+| Ternary-Bonsai-2 27B | 79 % | 98 % | 2.85 s | 29 | 21.0 GiB |
 
-All five meet the floors for citation support, tool calls and refusals. Under the 24 GB memory limit, Qwen3.5 9B answers best ([record](docs/evals/2026-11-02-model-comparison.md)).
+All five meet the floors for citation support, tool calls and refusals. Under the 24 GiB memory limit, Qwen3.5 9B answers best ([record](docs/evals/2026-11-02-model-comparison.md)).
 
 ## What it will do
 
