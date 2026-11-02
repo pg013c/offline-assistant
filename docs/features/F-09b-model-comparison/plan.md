@@ -164,7 +164,7 @@ Results, 2026-11-01, llama.cpp 0.8.0 (build 11960), `make llm LLM_MODEL=<name>`:
 
 - Thinking stayed off with `--reasoning off`: every completion was 2 to 90 tokens.
 - llama-server warns for Qwen3.6 and Bonsai that their templates keep earlier reasoning in the history. With thinking off there is none to keep.
-- The speeds come from the server's own log on these few short answers; step 9 measures them properly.
+- The speeds come from the server's own log on these few short answers; step 10 measures them properly.
 
 ### Step 8. Harness fixes from the first comparison runs
 
@@ -186,11 +186,33 @@ Results, 2026-11-01, llama.cpp 0.8.0 (build 11960), `make llm LLM_MODEL=<name>`:
 - [x] red
 - [x] green
 
-### Step 9. Five judged runs and the published table
+### Step 9. The judge becomes Gemma 4 26B-A4B, thinking off (ADR 0025)
+
+- Kind: code
+- Why:
+  - the five runs on 2026-11-02 all failed calibration at 81.2 %, with Qwen3 30B-A3B thinking;
+  - a calibration-only spike found Gemma 4 26B-A4B without thinking at 97.9 % correctness and 95.9 % support;
+  - Gemma 4 is also a candidate, so Qwen3.6 35B-A3B without thinking (95.8 % / 87.8 %) re-judges Gemma 4's own answers.
+- Tests first:
+  - `backend/tests/unit/adapters/test_chat_models.py`: `JUDGE_MODELS` is the Gemma 4 pin of ADR 0024, and Qwen3 30B-A3B is no longer pinned;
+  - `scripts/ci/test-make.sh`:
+    - `make judge` serves Gemma 4 on `JUDGE_PORT` under its name, with `--reasoning off`;
+    - `make judge JUDGE=qwen3.6-35b-a3b` serves the check judge the same way;
+    - any other name stops make with the names it accepts.
+  - `evals/tests/test_judging.py`: the run's judge identity names the model the judge server lists, not a constant, and records `thinking: false` when no reply carried reasoning.
+  - `evals/tests/test_judge.py`: the request names the model the judge server lists.
+- Change:
+  - code: `pinned_models.py`, `Makefile`, `evals/harness/judge.py`, `run.py`, `scripts/download_models.py` if it names the judge;
+  - docs: in the README, the judge sentence and the licence table.
+- Done when: the tests pass, `make check` is green, and `make judge` serves Gemma 4 that answers the calibration at 85 % or more.
+- [ ] red
+- [ ] green
+
+### Step 10. Five judged runs and the published table
 
 - Kind: eval (`/eval-run`, a `docs(eval)` commit, no red/green)
 - Work:
-  1. Run `make eval-answers LLM_MODEL=<name>` for each candidate with `make judge` up, each run passing its calibration gate.
+  1. Run `make eval-answers LLM_MODEL=<name>` for each candidate with `make judge` up, each run passing its calibration gate. Gemma 4's run is judged a second time with `make judge JUDGE=qwen3.6-35b-a3b`; the record gives both and flags a gap over 5 points (ADR 0025).
   2. Write `docs/evals/2026-11-xx-model-comparison.md`. It gives one row per model with:
      - quality: judged correctness, citation support, tool-call validity, refusal, `cites_expected`, failed answers;
      - speed: first-token median and 95th percentile, tokens per second;
@@ -202,7 +224,7 @@ Results, 2026-11-01, llama.cpp 0.8.0 (build 11960), `make llm LLM_MODEL=<name>`:
   4. Summarise the record in the README.
 - Done when: the record is committed with all five reports' metadata in it.
 
-### Step 10. The choice: ADR, targets and default
+### Step 11. The choice: ADR, targets and default
 
 - Kind: code, after `/adr`
 - Work:
@@ -225,7 +247,7 @@ Results, 2026-11-01, llama.cpp 0.8.0 (build 11960), `make llm LLM_MODEL=<name>`:
 |---|---|
 | AC-1 | 1, 2, 7 |
 | AC-2 | 3, 4, 8 |
-| AC-3 | 9 |
-| AC-4 | 10 |
-| AC-5 | 9, 10 |
+| AC-3 | 9, 10 |
+| AC-4 | 11 |
+| AC-5 | 10, 11 |
 | AC-6 | 5, 6 |
