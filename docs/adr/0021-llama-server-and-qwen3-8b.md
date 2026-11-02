@@ -1,6 +1,6 @@
 # 0021. Serve the local LLM with llama.cpp's llama-server, starting with Qwen3 8B
 
-- Status: accepted
+- Status: accepted, amended by [0026](0026-qwen3-5-9b-is-the-default-model.md)
 - Date: 2026-10-29
 - Related: FR-13, FR-15, FR-40, FR-44, NFR-03, AI-23, AI-40 to AI-42, AI-50, AI-51, F-06, ADR 0003, ADR 0004, ADR 0007, ADR 0016
 

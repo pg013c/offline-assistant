@@ -44,7 +44,10 @@ Small changes found during reviews, done as chores outside the feature that foun
 | Let the agent read an annex (e.g. Annex III) like an article, and route annex questions to the tools again | F-07 review #4 | planned after F-09b |
 | List the local model only while its server answers, not only at startup | F-08 review #10 | in F-09b |
 | Raise the judge's agreement with the calibration set on correctness to the 85 % bar (80 % now): a stronger or second judge, or more calibration items to measure it more finely | F-09a record, review #12 | done in F-09a (85.4 % on 48 items) |
-| Make the judge catch answers on another subject (cal-46) and invented details, e.g. with gpt-oss-20b as a second judge; needed at once if calibration falls below 85 % | F-09a record | planned |
+| Make the judge catch answers on another subject (cal-46) and invented details, e.g. with gpt-oss-20b as a second judge; needed at once if calibration falls below 85 % | F-09a record | done in F-09b (Gemma 4 judge, ADR 0025) |
 | Improve citation support, and check it more strictly than the judge, which errs on the lenient side | F-09a record, review #12 | planned |
 | Decide whether paragraph-level cases accept a sibling paragraph that answers too (dataset-only commit; cross-language cases done in dataset version 2) | F-04 baseline | planned after the indexing change |
 | Compare other servers (MLX, Ollama, the PrismML llama.cpp fork for Bonsai's denser packings) with llama.cpp | F-09b spec | planned |
+| Raise Qwen3.5 9B's valid structured answers on the first try (63 % now, a mean of 1.4 attempts), which adds to the 95th-percentile first token | F-09b record, ADR 0026 | planned |
+| Improve Qwen3.5 9B's note saving (1 of 3 requests) and its use of the expected tools (5 of 7 agent cases) | F-09b record, ADR 0026 | planned |
+| Make every model say when the documents do not cover a question; four of the five models missed 1 or 2 of the 3 not-covered cases | F-09b record | planned |

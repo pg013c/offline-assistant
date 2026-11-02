@@ -113,7 +113,7 @@ Requirement IDs are stable; feature specs reference them.
 |---|---|---|
 | NFR-01 | No network egress at runtime in the default mode. The only allowed outbound connection is the cloud model in comparison mode, behind an explicit flag. | CI runs the end-to-end suite with container networking disabled. |
 | NFR-02 | No telemetry from any component. | Configuration checklist in the offline install guide; same CI check. |
-| NFR-03 | Time to first token ≤ 3 s for a typical question on the reference hardware with the default model. | Performance run in M5. |
+| NFR-03 | Time to first token for the default model on the reference hardware, over the answer suite: median ≤ 2 s, 95th percentile ≤ 15 s (revised from ≤ 3 s by ADR 0026). | Reported by every answer run (`make eval-answers`); enforced by the performance run in M5. |
 | NFR-04 | First spoken audio ≤ 4 s after the user stops speaking. | Performance run in M5. |
 | NFR-05 | Ingesting the EU AI Act (~150 pages) takes ≤ 5 min. | Timed ingestion test. |
 | NFR-06 | All documentation, code and commit messages in English. | Review. |
@@ -130,7 +130,7 @@ Measured by the evaluation suite on the default local model:
 | Citation accuracy (cited passage supports the claim) | ≥ 90 % |
 | Correct refusal on out-of-scope questions | ≥ 90 % |
 | Valid tool calls after retries | ≥ 95 % |
-| Answer correctness (judged) | reported per model, no fixed target until the baseline |
+| Answer correctness (judged, a partial answer counts half) | ≥ 75 % (ADR 0026) |
 
 A change that lowers any metric below its target, or by more than 5 points from the last recorded result, does not merge.
 
