@@ -99,7 +99,7 @@ describe('useChatThread', () => {
       { type: 'tool', name: 'save_note', arguments: { title: 'Breach duties', content: 'x [1]' } },
       { type: 'note', id: '20261030-091507-breach-duties', title: 'Breach duties' },
       { type: 'text', text: 'Saved the checklist [1].' },
-      { type: 'end', model_id: 'qwen3-8b', found: true, is_test_model: false },
+      { type: 'end', model_id: 'qwen3.5-9b', found: true, is_test_model: false },
     ])
     const { result } = renderHook(() => useChatThread(), { wrapper })
 
@@ -120,7 +120,7 @@ describe('useChatThread', () => {
       { type: 'tool', name: 'search_documents', arguments: { query: 'breach' } },
       { type: 'tool', name: 'get_article', arguments: { document: 'GDPR (EN)', number: '33' } },
       { type: 'text', text: 'Within 72 hours [1].' },
-      { type: 'end', model_id: 'qwen3-8b', found: true, is_test_model: false },
+      { type: 'end', model_id: 'qwen3.5-9b', found: true, is_test_model: false },
     ])
     const { result } = renderHook(() => useChatThread(), { wrapper })
 
@@ -180,7 +180,7 @@ describe('useChatThread', () => {
     })
     serveAnswer([
       { type: 'text', text: 'Second answer.' },
-      { type: 'end', model_id: 'qwen3-8b', found: false, is_test_model: false },
+      { type: 'end', model_id: 'qwen3.5-9b', found: false, is_test_model: false },
     ])
 
     act(() => {
@@ -199,7 +199,7 @@ describe('useChatThread', () => {
     expect(second?.question).toBe('Second?')
     expect(second?.answer.text).toBe('Second answer.')
     expect(second?.answer.citations).toEqual([])
-    expect(second?.answer.modelId).toBe('qwen3-8b')
+    expect(second?.answer.modelId).toBe('qwen3.5-9b')
   })
 
   it('stops the running answer when a new question is asked', async () => {
@@ -279,7 +279,7 @@ describe('useChatThread', () => {
       { type: 'discard', reason: 'the answer cites no passage' },
       { type: 'text', text: 'Right answer.' },
       CITATION,
-      { type: 'end', model_id: 'qwen3-8b', found: true, is_test_model: false, usage: null },
+      { type: 'end', model_id: 'qwen3.5-9b', found: true, is_test_model: false, usage: null },
     ])
     const { result } = renderHook(() => useChatThread(), { wrapper })
 
@@ -303,7 +303,7 @@ describe('useChatThread', () => {
         code: 'invalid_answer',
         message: 'The model gave no valid answer after 3 attempts.',
       },
-      { type: 'end', model_id: 'qwen3-8b', found: true, is_test_model: false, usage: null },
+      { type: 'end', model_id: 'qwen3.5-9b', found: true, is_test_model: false, usage: null },
     ])
     const { result } = renderHook(() => useChatThread(), { wrapper })
 
@@ -324,7 +324,7 @@ describe('useChatThread', () => {
     serveAnswer([
       { type: 'note', id: '20261030-091507-breach-duties', title: 'Breach duties' },
       { type: 'text', text: 'Saved [1].' },
-      { type: 'end', model_id: 'qwen3-8b', found: true, is_test_model: false },
+      { type: 'end', model_id: 'qwen3.5-9b', found: true, is_test_model: false },
     ])
     const client = new QueryClient()
     client.setQueryData(['notes'], [])

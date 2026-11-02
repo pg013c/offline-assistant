@@ -41,10 +41,10 @@ PASSAGES = [
 )
 def test_the_local_model_answers_from_the_passages_with_valid_citations(question: str) -> None:
     chat = OpenAICompatibleChat(
-        model_id="qwen3-8b",
+        model_id="qwen3.5-9b",
         server=LlmServer(
             base_url=URL,
-            served_model="qwen3-8b",
+            served_model="qwen3.5-9b",
             timeout_seconds=60,
             max_retries=2,
         ),

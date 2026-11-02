@@ -69,6 +69,8 @@ PROMPTFOO_CONFIG = ROOT / "evals" / "promptfoo" / "retrieval.yaml"
 GATED_MODE = "reranked"
 BASELINE = ROOT / "docs" / "evals" / "retrieval-baseline.json"
 ANSWER_BASELINE = ROOT / "docs" / "evals" / "answer-baseline.json"
+# The served model a run answers with when LLM_MODEL names none (ADR 0021).
+DEFAULT_CHAT_MODEL = "qwen3-8b"
 # The metrics that only the judge measures (ADR 0022).
 JUDGED = ("judged_correct", "citation_support")
 ANSWERS_CONFIG = ROOT / "evals" / "promptfoo" / "answers.yaml"
@@ -410,6 +412,11 @@ def llm_pin(name: str, pins: Mapping[str, Mapping[str, str]]) -> Mapping[str, st
     return pins[name]
 
 
+def correctness_failures(values: Mapping[str, float | None], chat_model: str) -> list[str]:
+    """The judged-correctness floor, which holds for the default model only (ADR 0026)."""
+    raise NotImplementedError
+
+
 def same_model(baseline: Mapping[str, Any], chat_model: str) -> bool:
     """Whether the baseline was answered by this run's model, so the two compare."""
     return bool(baseline.get("metadata", {}).get("chat_model") == chat_model)
@@ -424,7 +431,7 @@ def default_answers_config(env: Mapping[str, str]) -> RunConfig:
         dataset=ROOT / "evals" / "datasets" / "answers.yaml",
         baseline=ANSWER_BASELINE,
         floors=False,
-        chat_model=env.get("LLM_MODEL", "qwen3-8b"),
+        chat_model=env.get("LLM_MODEL", DEFAULT_CHAT_MODEL),
         llm_url=f"http://127.0.0.1:{env.get('LLM_PORT', '8080')}",
         judge_url=f"http://127.0.0.1:{env.get('JUDGE_PORT', '8081')}",
     )

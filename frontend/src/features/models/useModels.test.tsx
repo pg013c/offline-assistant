@@ -18,7 +18,7 @@ describe('useModels', () => {
     server.use(
       http.get('*/api/models', () => {
         requests += 1
-        return HttpResponse.json([{ id: 'qwen3-8b', is_test_model: false, is_default: true }])
+        return HttpResponse.json([{ id: 'qwen3.5-9b', is_test_model: false, is_default: true }])
       }),
     )
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })

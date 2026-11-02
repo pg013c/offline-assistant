@@ -18,7 +18,6 @@ from assistant.adapters.pinned_models import (
     LLM_MODELS,
     PINNED_MODELS,
     QWEN3_6_35B_A3B,
-    QWEN3_8B,
     PinnedModel,
 )
 from assistant.settings import Settings
@@ -40,8 +39,8 @@ def serving(*names: str) -> httpx.MockTransport:
     return httpx.MockTransport(handler)
 
 
-# The comparison's candidates (F-09b), pinned as ADR 0024 says: name -> repository,
-# revision, file and SHA-256.
+# The served models ADR 0026 keeps, pinned as ADR 0024 says: name -> repository, revision,
+# file and SHA-256.
 CANDIDATES = {
     "qwen3.5-9b": (
         "unsloth/Qwen3.5-9B-GGUF",
@@ -61,19 +60,12 @@ CANDIDATES = {
         "gemma-4-26B_q4_0-it.gguf",
         "3eca3b8f6d7baf218a7dd6bba5fb59a56ee25fe2d567b6f5f589b4f697eca51d",
     ),
-    "ternary-bonsai-2-27b": (
-        "prism-ml/Ternary-Bonsai-2-27B-gguf",
-        "94dd51cdbbec5309ed8b76a12f3268bc4fdceb93",
-        "Ternary-Bonsai-2-27B-Q2_0.gguf",
-        "4f99aed01b8a877e153f9aa6569a4440fe17c59701cc0953e36d7f460549e70e",
-    ),
 }
 
 
-def test_the_catalogue_has_the_test_model_qwen3_8b_and_the_candidates() -> None:
-    assert set(CHAT_MODELS) == {"fake-extractive", "qwen3-8b", *CANDIDATES}
-    assert CHAT_MODELS["qwen3-8b"].tools is True
-    assert CHAT_MODELS["qwen3-8b"].pinned == QWEN3_8B
+def test_the_catalogue_has_the_test_model_and_the_models_adr_0026_keeps() -> None:
+    assert set(CHAT_MODELS) == {"fake-extractive", *CANDIDATES}
+    assert CHAT_MODELS["qwen3.5-9b"].tools is True
 
 
 @pytest.mark.parametrize("name", sorted(CANDIDATES))
@@ -117,10 +109,10 @@ def test_the_test_model_needs_no_server() -> None:
 
 
 def test_a_served_model_is_answered_by_the_openai_compatible_adapter() -> None:
-    model = chat_model_for(settings("qwen3-8b"), transport=serving("qwen3-8b"))
+    model = chat_model_for(settings("qwen3.5-9b"), transport=serving("qwen3.5-9b"))
 
     assert isinstance(model, OpenAICompatibleChat)
-    assert model.model_id == "qwen3-8b"
+    assert model.model_id == "qwen3.5-9b"
     assert model.is_test_model is False
 
 
@@ -129,22 +121,19 @@ def test_without_a_server_startup_fails_naming_the_variable_and_the_command() ->
         raise httpx.ConnectError("refused")
 
     with pytest.raises(ChatModelNotReady, match=r"ASSISTANT_LLM_URL.*make llm"):
-        chat_model_for(settings("qwen3-8b"), transport=httpx.MockTransport(refused))
+        chat_model_for(settings("qwen3.5-9b"), transport=httpx.MockTransport(refused))
 
 
 def test_a_server_serving_another_model_fails_naming_both() -> None:
-    with pytest.raises(ChatModelNotReady, match=r"does not serve qwen3-8b.*other-model"):
-        chat_model_for(settings("qwen3-8b"), transport=serving("other-model"))
+    with pytest.raises(ChatModelNotReady, match=r"does not serve qwen3.5-9b.*other-model"):
+        chat_model_for(settings("qwen3.5-9b"), transport=serving("other-model"))
 
 
-def test_the_llm_is_pinned_as_adr_0021_says_and_kept_apart_from_make_models() -> None:
-    assert QWEN3_8B.repository == "Qwen/Qwen3-8B-GGUF"
-    assert QWEN3_8B.revision == "7c41481f57cb95916b40956ab2f0b139b296d974"
-    assert QWEN3_8B.files == {
-        "Qwen3-8B-Q4_K_M.gguf": "d98cdcbd03e17ce47681435b5150e34c1417f50b5c0019dd560e4882c5745785"
-    }
-    assert QWEN3_8B in LLM_MODELS
-    assert QWEN3_8B not in PINNED_MODELS
+@pytest.mark.parametrize("repository", ["Qwen/Qwen3-8B-GGUF", "prism-ml/Ternary-Bonsai-2-27B-gguf"])
+def test_the_models_adr_0026_removes_are_no_longer_pinned(repository: str) -> None:
+    pins = [value for value in vars(pinned_models).values() if isinstance(value, PinnedModel)]
+
+    assert all(pin.repository != repository for pin in pins)
 
 
 def test_the_judge_is_gemma_4_and_its_check_is_qwen3_6_as_adr_0025_says() -> None:
@@ -168,19 +157,19 @@ def test_a_server_that_does_not_list_models_fails_with_the_command(body: bytes) 
         return httpx.Response(200, content=body)
 
     with pytest.raises(ChatModelNotReady, match="make llm"):
-        chat_model_for(settings("qwen3-8b"), transport=httpx.MockTransport(handler))
+        chat_model_for(settings("qwen3.5-9b"), transport=httpx.MockTransport(handler))
 
 
 def test_each_served_model_declares_its_capabilities() -> None:
-    qwen = CHAT_MODELS["qwen3-8b"]
+    qwen = CHAT_MODELS["qwen3.5-9b"]
 
     assert (qwen.tools, qwen.json_schema, qwen.streaming) == (True, True, True)
 
 
 def test_a_model_declared_able_to_call_tools_is_the_agent() -> None:
-    model = chat_model_for(settings("qwen3-8b"), transport=serving("qwen3-8b"))
+    model = chat_model_for(settings("qwen3.5-9b"), transport=serving("qwen3.5-9b"))
 
-    assert tool_model_for(settings("qwen3-8b"), model) is model
+    assert tool_model_for(settings("qwen3.5-9b"), model) is model
 
 
 def test_the_test_model_is_no_agent() -> None:

@@ -41,7 +41,7 @@ def citation(chunk_id: str) -> dict[str, object]:
 def end(usage: dict[str, object] | None = USAGE, found: bool = True) -> dict[str, object]:
     return {
         "type": "end",
-        "model_id": "qwen3-8b",
+        "model_id": "qwen3.5-9b",
         "found": found,
         "is_test_model": False,
         "usage": usage,
@@ -159,11 +159,11 @@ def test_an_out_of_scope_case_answered_by_the_model_is_not_refused() -> None:
 def test_the_markdown_lists_metrics_performance_and_missed_cases() -> None:
     metrics = score_answers(CASES[:1], {"en-a": result("Logs are kept.", ("d:1",))})
 
-    text = answers_markdown(metrics, {"chat_model": "qwen3-8b"})
+    text = answers_markdown(metrics, {"chat_model": "qwen3.5-9b"})
 
     assert "| cites_expected | 100.0 % | 1 |" in text
     assert "| first_token_ms_median | 400 |" in text
-    assert "- chat_model: qwen3-8b" in text
+    assert "- chat_model: qwen3.5-9b" in text
 
 
 CALIBRATION = {

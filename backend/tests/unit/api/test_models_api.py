@@ -20,7 +20,7 @@ USAGE = Usage(prompt_tokens=1, completion_tokens=1, first_token_ms=1.0, total_ms
 def local_model() -> ScriptedChatModel:
     return ScriptedChatModel(
         [TextDelta("Six months [1]."), Answered(ModelAnswer("Six months [1].", (1,)), USAGE)],
-        model_id="qwen3-8b",
+        model_id="qwen3.5-9b",
     )
 
 
@@ -59,7 +59,7 @@ def test_a_local_model_is_offered_as_the_default_beside_the_test_model(tmp_path:
         models = client.get("/api/models").json()
 
     assert models == [
-        {"id": "qwen3-8b", "is_test_model": False, "is_default": True},
+        {"id": "qwen3.5-9b", "is_test_model": False, "is_default": True},
         {"id": "fake-extractive", "is_test_model": True, "is_default": False},
     ]
 
@@ -71,7 +71,7 @@ def test_a_question_is_answered_by_the_model_it_names_or_by_the_default(tmp_path
         _, default = chat(client, {"question": "How long are logs kept?"})
 
     assert named[-1]["model_id"] == "fake-extractive"
-    assert default[-1]["model_id"] == "qwen3-8b"
+    assert default[-1]["model_id"] == "qwen3.5-9b"
 
 
 def test_an_unknown_model_is_a_422_in_the_standard_error_shape(client: TestClient) -> None:
@@ -103,4 +103,4 @@ def test_a_local_model_whose_server_stops_answering_is_not_offered_until_it_answ
         again = [choice["id"] for choice in client.get("/api/models").json()]
 
     assert without == ["fake-extractive"]
-    assert again == ["qwen3-8b", "fake-extractive"]
+    assert again == ["qwen3.5-9b", "fake-extractive"]

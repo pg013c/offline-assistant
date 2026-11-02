@@ -22,7 +22,7 @@ pytestmark = pytest.mark.integration
 ROOT = Path(__file__).parents[2]
 MODELS_DIR = Path(os.environ.get("ASSISTANT_MODELS_DIR", ROOT / "data" / "models"))
 MODELS = {
-    "dense": MODELS_DIR / "llm" / "Qwen--Qwen3-8B-GGUF" / "Qwen3-8B-Q4_K_M.gguf",
+    "dense": MODELS_DIR / "llm" / "unsloth--Qwen3.5-9B-GGUF" / "Qwen3.5-9B-Q4_K_M.gguf",
     "mixture-of-experts": MODELS_DIR
     / "llm"
     / "ggml-org--Qwen3.6-35B-A3B-GGUF"

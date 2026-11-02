@@ -14,7 +14,7 @@ def answerer(model: FakeExtractiveChatModel | ScriptedChatModel) -> QuestionServ
     return QuestionService(InMemoryChunkIndex(), model, FakeDocumentStore(), min_similarity=0)
 
 
-LOCAL_MODEL = ScriptedChatModel([], model_id="qwen3-8b")
+LOCAL_MODEL = ScriptedChatModel([], model_id="qwen3.5-9b")
 LOCAL = answerer(LOCAL_MODEL)
 TEST = answerer(FakeExtractiveChatModel())
 
@@ -22,7 +22,7 @@ TEST = answerer(FakeExtractiveChatModel())
 def models(local: ScriptedChatModel = LOCAL_MODEL) -> ChatModels:
     return ChatModels(
         [
-            ModelEntry(id="qwen3-8b", is_test_model=False, answerer=LOCAL, model=local),
+            ModelEntry(id="qwen3.5-9b", is_test_model=False, answerer=LOCAL, model=local),
             ModelEntry(
                 id="fake-extractive",
                 is_test_model=True,
@@ -39,7 +39,7 @@ def listed(chat_models: ChatModels) -> list[ModelChoice]:
 
 def test_the_models_are_listed_with_the_first_as_the_default() -> None:
     assert listed(models()) == [
-        ModelChoice(id="qwen3-8b", is_test_model=False, is_default=True),
+        ModelChoice(id="qwen3.5-9b", is_test_model=False, is_default=True),
         ModelChoice(id="fake-extractive", is_test_model=True, is_default=False),
     ]
 
@@ -53,7 +53,7 @@ def test_a_named_model_answers() -> None:
 
 
 def test_an_unknown_model_is_an_error_naming_the_models() -> None:
-    with pytest.raises(UnknownModel, match="qwen3-8b, fake-extractive"):
+    with pytest.raises(UnknownModel, match=r"qwen3\.5-9b, fake-extractive"):
         models().answerer("gpt-latest")
 
 
@@ -63,16 +63,16 @@ def test_no_models_is_a_configuration_error() -> None:
 
 
 def test_a_model_listed_twice_is_a_configuration_error() -> None:
-    entry = ModelEntry(id="qwen3-8b", is_test_model=False, answerer=LOCAL, model=LOCAL_MODEL)
+    entry = ModelEntry(id="qwen3.5-9b", is_test_model=False, answerer=LOCAL, model=LOCAL_MODEL)
 
-    with pytest.raises(ValueError, match="qwen3-8b is listed twice"):
+    with pytest.raises(ValueError, match=r"qwen3\.5-9b is listed twice"):
         ChatModels([entry, entry])
 
 
 def test_a_model_whose_server_stops_answering_is_left_out_and_listed_again_once_it_answers() -> (
     None
 ):
-    local = ScriptedChatModel([], model_id="qwen3-8b")
+    local = ScriptedChatModel([], model_id="qwen3.5-9b")
     chat_models = models(local)
 
     local.available = False
@@ -81,4 +81,4 @@ def test_a_model_whose_server_stops_answering_is_left_out_and_listed_again_once_
     again = [choice.id for choice in listed(chat_models)]
 
     assert without == ["fake-extractive"]
-    assert again == ["qwen3-8b", "fake-extractive"]
+    assert again == ["qwen3.5-9b", "fake-extractive"]

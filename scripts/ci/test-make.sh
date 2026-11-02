@@ -90,11 +90,11 @@ check "judge serves gemma-4-26b-a4b when no judge is named" \
   "$([[ "$(judge_recipe)" == *"--alias gemma-4-26b-a4b "* ]] && echo yes || echo no)"
 
 set +e
-output="$(judge_recipe JUDGE=qwen3-8b)"
+output="$(judge_recipe JUDGE=qwen3.5-9b)"
 status=$?
 set -e
-check "judge refuses JUDGE=qwen3-8b, listing the judges" \
-  "$([[ $status -ne 0 && "$output" == *"qwen3-8b"* && "$output" == *"gemma-4-26b-a4b"* \
+check "judge refuses JUDGE=qwen3.5-9b, listing the judges" \
+  "$([[ $status -ne 0 && "$output" == *"qwen3.5-9b"* && "$output" == *"gemma-4-26b-a4b"* \
     && "$output" == *"qwen3.6-35b-a3b"* ]] && echo yes || echo no)"
 
 set +e
@@ -115,16 +115,17 @@ llm_recipe() {
     ENV_FILE="$scratch/missing.env" ASSISTANT_MODELS_DIR="$scratch" "$@" 2>&1
 }
 
-check "llm serves qwen3-8b when no model is named" \
-  "$([[ "$(llm_recipe)" == *"--alias qwen3-8b "* ]] && echo yes || echo no)"
+check "llm serves qwen3.5-9b when no model is named (ADR 0026)" \
+  "$([[ "$(llm_recipe)" == *"--alias qwen3.5-9b "* ]] && echo yes || echo no)"
+
+check "the example environment answers with qwen3.5-9b (ADR 0026)" \
+  "$(grep -qx "ASSISTANT_CHAT_MODEL=qwen3.5-9b" "$root/.env.example" && echo yes || echo no)"
 
 # Every served model in the registry (F-09b, ADR 0024) and its pinned file under the models dir.
 served_models=(
-  "qwen3-8b llm/Qwen--Qwen3-8B-GGUF/Qwen3-8B-Q4_K_M.gguf"
   "qwen3.5-9b llm/unsloth--Qwen3.5-9B-GGUF/Qwen3.5-9B-Q4_K_M.gguf"
   "qwen3.6-35b-a3b llm/ggml-org--Qwen3.6-35B-A3B-GGUF/Qwen3.6-35B-A3B-Q4_K_M.gguf"
   "gemma-4-26b-a4b llm/google--gemma-4-26B-A4B-it-qat-q4_0-gguf/gemma-4-26B_q4_0-it.gguf"
-  "ternary-bonsai-2-27b llm/prism-ml--Ternary-Bonsai-2-27B-gguf/Ternary-Bonsai-2-27B-Q2_0.gguf"
 )
 shared_recipe=""
 for entry in "${served_models[@]}"; do
@@ -143,14 +144,14 @@ for entry in "${served_models[@]}"; do
   check "llm gives $name no flag of its own" "$([[ "$generic" == "$shared_recipe" ]] && echo yes || echo no)"
 done
 
-for name in no-such-model fake-extractive; do
+for name in no-such-model fake-extractive qwen3-8b ternary-bonsai-2-27b; do
   set +e
   output="$(llm_recipe LLM_MODEL="$name")"
   status=$?
   set -e
   check "llm refuses LLM_MODEL=$name, listing the served models" \
-    "$([[ $status -ne 0 && "$output" == *"$name"* && "$output" == *"qwen3-8b"* \
-      && "$output" == *"gemma-4-26b-a4b"* && "$output" == *"ternary-bonsai-2-27b"* ]] && echo yes || echo no)"
+    "$([[ $status -ne 0 && "$output" == *"$name"* && "$output" == *"qwen3.5-9b"* \
+      && "$output" == *"gemma-4-26b-a4b"* && "$output" == *"qwen3.6-35b-a3b"* ]] && echo yes || echo no)"
 done
 
 set +e

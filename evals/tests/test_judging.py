@@ -221,11 +221,11 @@ def test_a_run_of_another_model_is_held_to_the_floors_and_calibration_only() -> 
 
 
 def test_the_baselines_model_is_read_from_its_metadata() -> None:
-    baseline = {"metrics": {}, "metadata": {"chat_model": "qwen3-8b"}}
+    baseline = {"metrics": {}, "metadata": {"chat_model": "qwen3.5-9b"}}
 
-    assert run.same_model(baseline, "qwen3-8b") is True
-    assert run.same_model(baseline, "qwen3.5-9b") is False
-    assert run.same_model({"metrics": {}, "metadata": {}}, "qwen3-8b") is False
+    assert run.same_model(baseline, "qwen3.5-9b") is True
+    assert run.same_model(baseline, "gemma-4-26b-a4b") is False
+    assert run.same_model({"metrics": {}, "metadata": {}}, "qwen3.5-9b") is False
 
 
 def test_the_reports_calibration_keeps_each_disagreement() -> None:
@@ -254,3 +254,28 @@ def test_the_reports_calibration_keeps_each_disagreement() -> None:
 
 def test_a_run_without_calibration_says_so_in_its_metadata() -> None:
     assert run.calibration_metadata(None) == "not run"
+
+
+def test_the_default_model_is_the_one_adr_0026_chose() -> None:
+    assert run.DEFAULT_CHAT_MODEL == "qwen3.5-9b"
+
+
+@pytest.mark.parametrize(
+    ("judged_correct", "chat_model", "failures"),
+    [
+        (
+            0.70,
+            "qwen3.5-9b",
+            ["judged_correct is 70.0, below its floor of 75.0 for the default model (ADR 0026)"],
+        ),
+        (0.75, "qwen3.5-9b", []),
+        (None, "qwen3.5-9b", []),
+        (0.70, "gemma-4-26b-a4b", []),
+    ],
+)
+def test_judged_correctness_has_a_floor_for_the_default_model_only(
+    judged_correct: float | None, chat_model: str, failures: list[str]
+) -> None:
+    values = {**JUDGED, "judged_correct": judged_correct}
+
+    assert run.correctness_failures(values, chat_model) == failures

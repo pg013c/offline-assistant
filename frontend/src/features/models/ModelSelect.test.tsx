@@ -10,7 +10,7 @@ import { ModelSelect } from './ModelSelect'
 import { MODELS_REFRESH_MS, type ModelChoice } from './useModels'
 
 const MODELS = [
-  { id: 'qwen3-8b', is_test_model: false, is_default: true },
+  { id: 'qwen3.5-9b', is_test_model: false, is_default: true },
   { id: 'fake-extractive', is_test_model: true, is_default: false },
 ]
 
@@ -21,8 +21,8 @@ describe('ModelSelect', () => {
     renderWithQueryClient(<ModelSelect value={undefined} onChange={vi.fn()} />)
 
     const select = await screen.findByRole('combobox', { name: 'Model' })
-    await screen.findByRole('option', { name: 'qwen3-8b' })
-    expect(select).toHaveValue('qwen3-8b')
+    await screen.findByRole('option', { name: 'qwen3.5-9b' })
+    expect(select).toHaveValue('qwen3.5-9b')
     expect(screen.getByRole('option', { name: 'fake-extractive (test model)' })).toBeInTheDocument()
   })
 
@@ -30,7 +30,7 @@ describe('ModelSelect', () => {
     server.use(http.get('*/api/models', () => HttpResponse.json(MODELS)))
     const onChange = vi.fn()
     renderWithQueryClient(<ModelSelect value={undefined} onChange={onChange} />)
-    await screen.findByRole('option', { name: 'qwen3-8b' })
+    await screen.findByRole('option', { name: 'qwen3.5-9b' })
 
     await userEvent.selectOptions(
       screen.getByRole('combobox', { name: 'Model' }),
@@ -65,24 +65,24 @@ describe('ModelSelect', () => {
     })
   }
 
-  const CANDIDATE = { id: 'qwen3.5-9b', is_test_model: false, is_default: false }
+  const CANDIDATE = { id: 'qwen3.6-35b-a3b', is_test_model: false, is_default: false }
 
   it('returns to the default when the picked model stops answering, and says so', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     const change = serveChanging([...MODELS, CANDIDATE], MODELS)
-    renderWithQueryClient(<Picker initial="qwen3.5-9b" />)
+    renderWithQueryClient(<Picker initial="qwen3.6-35b-a3b" />)
     const select = await screen.findByRole('combobox', { name: 'Model' })
-    await screen.findByRole('option', { name: 'qwen3.5-9b' })
-    expect(select).toHaveValue('qwen3.5-9b')
+    await screen.findByRole('option', { name: 'qwen3.6-35b-a3b' })
+    expect(select).toHaveValue('qwen3.6-35b-a3b')
 
     change()
     await refresh()
 
     expect(await screen.findByRole('status')).toHaveTextContent(
-      'qwen3.5-9b stopped answering. Questions now go to qwen3-8b.',
+      'qwen3.6-35b-a3b stopped answering. Questions now go to qwen3.5-9b.',
     )
-    expect(select).toHaveValue('qwen3-8b')
-    expect(screen.queryByRole('option', { name: 'qwen3.5-9b' })).not.toBeInTheDocument()
+    expect(select).toHaveValue('qwen3.5-9b')
+    expect(screen.queryByRole('option', { name: 'qwen3.6-35b-a3b' })).not.toBeInTheDocument()
   })
 
   it('moves to the test model when the default stops answering, and says so', async () => {
@@ -90,13 +90,13 @@ describe('ModelSelect', () => {
     const change = serveChanging(MODELS, MODELS.slice(1))
     renderWithQueryClient(<Picker />)
     const select = await screen.findByRole('combobox', { name: 'Model' })
-    await screen.findByRole('option', { name: 'qwen3-8b' })
+    await screen.findByRole('option', { name: 'qwen3.5-9b' })
 
     change()
     await refresh()
 
     expect(await screen.findByRole('status')).toHaveTextContent(
-      'qwen3-8b stopped answering. Questions now go to fake-extractive.',
+      'qwen3.5-9b stopped answering. Questions now go to fake-extractive.',
     )
     expect(select).toHaveValue('fake-extractive')
   })
@@ -105,7 +105,7 @@ describe('ModelSelect', () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     serveChanging(MODELS, MODELS)
     renderWithQueryClient(<Picker />)
-    await screen.findByRole('option', { name: 'qwen3-8b' })
+    await screen.findByRole('option', { name: 'qwen3.5-9b' })
 
     await refresh()
 

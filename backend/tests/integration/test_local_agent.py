@@ -77,8 +77,10 @@ def ask(
     documents.upload("GDPR (EN).md", GDPR_EN)
     documents.upload("RODO (PL).md", GDPR_PL)
     model = OpenAICompatibleChat(
-        model_id="qwen3-8b",
-        server=LlmServer(base_url=URL, served_model="qwen3-8b", timeout_seconds=60, max_retries=2),
+        model_id="qwen3.5-9b",
+        server=LlmServer(
+            base_url=URL, served_model="qwen3.5-9b", timeout_seconds=60, max_retries=2
+        ),
     )
     # The in-memory index only finds passages that share a word with the query.
     questions = QuestionService(index, model, store, min_similarity=0)

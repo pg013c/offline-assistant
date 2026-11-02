@@ -145,7 +145,7 @@ def test_the_answer_suite_runs_the_api_with_the_local_model() -> None:
 
     env = api_environment(config, {"PATH": "/usr/bin"})
 
-    assert env["ASSISTANT_CHAT_MODEL"] == "qwen3-8b"
+    assert env["ASSISTANT_CHAT_MODEL"] == "qwen3.5-9b"
     assert env["ASSISTANT_LLM_URL"] == "http://127.0.0.1:8080"
     assert config.dataset.name == "answers.yaml"
     assert config.baseline.name == "answer-baseline.json"
@@ -153,7 +153,7 @@ def test_the_answer_suite_runs_the_api_with_the_local_model() -> None:
 
 
 def test_the_retrieval_suite_runs_the_api_with_the_test_model() -> None:
-    env = api_environment(default_config({}), {"ASSISTANT_CHAT_MODEL": "qwen3-8b"})
+    env = api_environment(default_config({}), {"ASSISTANT_CHAT_MODEL": "qwen3.5-9b"})
 
     assert env["ASSISTANT_CHAT_MODEL"] == "fake-extractive"
 
@@ -197,7 +197,7 @@ def test_answer_reports_carry_the_whole_model_name_dots_included() -> None:
 
 def test_no_two_models_share_a_report() -> None:
     started_at = datetime(2026, 11, 1, 12, 30, 5, tzinfo=UTC)
-    names = ["qwen3-8b", "qwen3.5-9b", "qwen3.6-35b-a3b", "gemma-4-26b-a4b"]
+    names = ["qwen3.5-9b", "qwen3.6-35b-a3b", "gemma-4-26b-a4b"]
 
     paths = [path for name in names for path in answer_reports(Path("r"), name, started_at)]
 
@@ -218,13 +218,13 @@ GEMMA_PIN = {
 
 
 def test_the_report_names_the_pinned_file_of_the_model_it_answered_with() -> None:
-    pins = {"qwen3-8b": {"file": "Qwen3-8B-Q4_K_M.gguf"}, "gemma-4-26b-a4b": GEMMA_PIN}
+    pins = {"qwen3.5-9b": {"file": "Qwen3.5-9B-Q4_K_M.gguf"}, "gemma-4-26b-a4b": GEMMA_PIN}
 
     assert llm_pin("gemma-4-26b-a4b", pins) == GEMMA_PIN
 
 
 def test_a_model_without_a_pin_is_refused_naming_the_served_models() -> None:
-    pins = {"qwen3-8b": {"file": "Qwen3-8B-Q4_K_M.gguf"}, "gemma-4-26b-a4b": GEMMA_PIN}
+    pins = {"qwen3.5-9b": {"file": "Qwen3.5-9B-Q4_K_M.gguf"}, "gemma-4-26b-a4b": GEMMA_PIN}
 
-    with pytest.raises(ValueError, match=r"no-such-model.*qwen3-8b, gemma-4-26b-a4b"):
+    with pytest.raises(ValueError, match=r"no-such-model.*qwen3.5-9b, gemma-4-26b-a4b"):
         llm_pin("no-such-model", pins)

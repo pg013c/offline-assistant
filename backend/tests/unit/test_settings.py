@@ -239,12 +239,12 @@ def test_a_local_model_is_chosen_by_configuration(
 ) -> None:
     monkeypatch.setenv("ASSISTANT_DATA_DIR", str(tmp_path))
     monkeypatch.setenv("ASSISTANT_MODELS_DIR", str(tmp_path / "models"))
-    monkeypatch.setenv("ASSISTANT_CHAT_MODEL", "qwen3-8b")
+    monkeypatch.setenv("ASSISTANT_CHAT_MODEL", "qwen3.5-9b")
     monkeypatch.setenv("ASSISTANT_LLM_URL", "http://127.0.0.1:8090")
 
     settings = load_settings()
 
-    assert (settings.chat_model, settings.llm_url) == ("qwen3-8b", "http://127.0.0.1:8090")
+    assert (settings.chat_model, settings.llm_url) == ("qwen3.5-9b", "http://127.0.0.1:8090")
 
 
 def test_an_unknown_chat_model_names_the_variable(
