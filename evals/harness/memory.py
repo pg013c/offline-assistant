@@ -110,7 +110,8 @@ class PeakMemory:
         traceback: TracebackType | None,
     ) -> None:
         self._stop.set()
-        self._thread.join()
+        # A sampler stuck in a tool call is left behind, and the run reports no peak.
+        self._thread.join(timeout=JOIN_SECONDS)
 
     @property
     def peak_mb(self) -> float | None:
@@ -151,7 +152,15 @@ def _run(*arguments: str) -> str:
     executable = shutil.which(arguments[0])
     if executable is None:
         raise RuntimeError(f"{arguments[0]} is not installed or not on PATH")
-    # A failing status means no match (lsof) or no such process (footprint).
-    return subprocess.run(  # noqa: S603 (fixed commands)
-        [executable, *arguments[1:]], capture_output=True, text=True, check=False
-    ).stdout
+    # A failing status means no match (lsof) or no such process (footprint); a call that
+    # hangs gives no output, as if there were no reading.
+    try:
+        return subprocess.run(  # noqa: S603 (fixed commands)
+            [executable, *arguments[1:]],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=COMMAND_SECONDS,
+        ).stdout
+    except subprocess.TimeoutExpired:
+        return ""
