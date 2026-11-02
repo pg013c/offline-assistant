@@ -29,7 +29,7 @@ export QDRANT_PORT ?= 6333
 # The local LLM for `make llm` (ADR 0021): llama.cpp's llama-server on LLM_PORT.
 export LLM_PORT ?= 8080
 # The served model, by its name in the registry (chat_models.py; ADR 0024).
-LLM_MODEL ?= qwen3-8b
+LLM_MODEL ?= qwen3.5-9b
 # The model file's path comes from its pin, so the two cannot drift apart; empty for an unknown name.
 LLM_FILE = $(shell $(BACKEND) python -c "from assistant.adapters.chat_models import CHAT_MODELS; s = CHAT_MODELS.get('$(LLM_MODEL)'); m = s and s.pinned; print('$(ASSISTANT_MODELS_DIR)/' + m.directory + '/' + next(iter(m.files)) if m else '')")
 LLM_MODELS_SERVED = $(shell $(BACKEND) python -c "from assistant.adapters.chat_models import CHAT_MODELS; print(', '.join(n for n, s in CHAT_MODELS.items() if s.pinned))")
@@ -68,7 +68,7 @@ setup: node-version ## Install project dependencies
 models: ## Download the parsing and embedding models into ASSISTANT_MODELS_DIR (the only step that needs the network)
 	$(BACKEND) python scripts/download_models.py "$(ASSISTANT_MODELS_DIR)"
 
-llm-models: ## Download the local LLM named by LLM_MODEL (default Qwen3 8B, about 5 GB) into ASSISTANT_MODELS_DIR, checked by hash
+llm-models: ## Download the local LLM named by LLM_MODEL (default Qwen3.5 9B, about 5.7 GB) into ASSISTANT_MODELS_DIR, checked by hash
 	$(LLM_CHECK_NAME)$(BACKEND) python scripts/download_models.py "$(ASSISTANT_MODELS_DIR)" --llm $(LLM_MODEL)
 
 llm-preflight: ## Check that make llm can start: llama-server installed, model file pinned, port free

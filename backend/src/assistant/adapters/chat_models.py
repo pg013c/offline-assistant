@@ -10,8 +10,6 @@ from assistant.adapters.pinned_models import (
     GEMMA_4_26B_A4B,
     QWEN3_5_9B,
     QWEN3_6_35B_A3B,
-    QWEN3_8B,
-    TERNARY_BONSAI_2_27B,
     PinnedModel,
 )
 from assistant.ports.chat_model import ChatModel, ToolCallingModel
@@ -35,15 +33,12 @@ def _served(name: str, pinned: PinnedModel) -> ChatModelSpec:
     )
 
 
-# The test model, Qwen3 8B as the default (ADR 0021), and the comparison's candidates
-# (F-09b, ADR 0024).
+# The test model, Qwen3.5 9B as the default (ADR 0026), and the two models kept beside it.
 CHAT_MODELS: dict[str, ChatModelSpec] = {
     "fake-extractive": ChatModelSpec(served_model=None, pinned=None, tools=False),
-    "qwen3-8b": _served("qwen3-8b", QWEN3_8B),
     "qwen3.5-9b": _served("qwen3.5-9b", QWEN3_5_9B),
     "qwen3.6-35b-a3b": _served("qwen3.6-35b-a3b", QWEN3_6_35B_A3B),
     "gemma-4-26b-a4b": _served("gemma-4-26b-a4b", GEMMA_4_26B_A4B),
-    "ternary-bonsai-2-27b": _served("ternary-bonsai-2-27b", TERNARY_BONSAI_2_27B),
 }
 
 

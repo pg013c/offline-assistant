@@ -137,18 +137,9 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-# The local LLM, served by llama-server rather than loaded by the API (ADR 0021); fetched by
-# `make llm-models`, not `make models`, so CI and the test model need no 5 GB download.
-QWEN3_8B = PinnedModel(
-    repository="Qwen/Qwen3-8B-GGUF",
-    revision="7c41481f57cb95916b40956ab2f0b139b296d974",
-    directory="llm/Qwen--Qwen3-8B-GGUF",
-    files={
-        "Qwen3-8B-Q4_K_M.gguf": "d98cdcbd03e17ce47681435b5150e34c1417f50b5c0019dd560e4882c5745785"
-    },
-)
-
-# The comparison's candidates (F-09b, ADR 0024), each in the build its source publishes.
+# The local LLMs, served by llama-server rather than loaded by the API (ADR 0021); fetched by
+# `make llm-models`, not `make models`, so CI and the test model need no download. Qwen3.5 9B
+# is the default (ADR 0026); Qwen3.6 and Gemma 4 are also the evaluation's judges (ADR 0025).
 QWEN3_5_9B = PinnedModel(
     repository="unsloth/Qwen3.5-9B-GGUF",
     revision="3885219b6810b007914f3a7950a8d1b469d598a5",
@@ -177,27 +168,10 @@ GEMMA_4_26B_A4B = PinnedModel(
         )
     },
 )
-TERNARY_BONSAI_2_27B = PinnedModel(
-    repository="prism-ml/Ternary-Bonsai-2-27B-gguf",
-    revision="94dd51cdbbec5309ed8b76a12f3268bc4fdceb93",
-    directory="llm/prism-ml--Ternary-Bonsai-2-27B-gguf",
-    files={
-        "Ternary-Bonsai-2-27B-Q2_0.gguf": (
-            "4f99aed01b8a877e153f9aa6569a4440fe17c59701cc0953e36d7f460549e70e"
-        )
-    },
-)
-LLM_MODELS: tuple[PinnedModel, ...] = (
-    QWEN3_8B,
-    QWEN3_5_9B,
-    QWEN3_6_35B_A3B,
-    GEMMA_4_26B_A4B,
-    TERNARY_BONSAI_2_27B,
-)
+LLM_MODELS: tuple[PinnedModel, ...] = (QWEN3_5_9B, QWEN3_6_35B_A3B, GEMMA_4_26B_A4B)
 
 # The evaluation's judges by name (ADR 0025), served by `make judge`, never loaded by the API:
-# the first is the judge, the second re-judges the first's own answers. Both are candidates
-# too (ADR 0024), and stay pinned here whichever the comparison keeps.
+# the first is the judge, the second re-judges the first's own answers.
 JUDGE_MODELS: dict[str, PinnedModel] = {
     "gemma-4-26b-a4b": GEMMA_4_26B_A4B,
     "qwen3.6-35b-a3b": QWEN3_6_35B_A3B,

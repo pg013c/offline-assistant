@@ -239,7 +239,7 @@ Results, 2026-11-01, llama.cpp 0.8.0 (build 11960), `make llm LLM_MODEL=<name>`:
   4. A baseline run of the default, with `/eval-run`, replaces `docs/evals/answer-baseline.json`.
 - Done when: the ADR is accepted, the defaults follow it, and the baseline run passes its floors and calibration.
 - [x] red
-- [ ] green
+- [x] green
 
 ## Acceptance criteria mapping
 

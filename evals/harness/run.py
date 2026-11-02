@@ -69,8 +69,10 @@ PROMPTFOO_CONFIG = ROOT / "evals" / "promptfoo" / "retrieval.yaml"
 GATED_MODE = "reranked"
 BASELINE = ROOT / "docs" / "evals" / "retrieval-baseline.json"
 ANSWER_BASELINE = ROOT / "docs" / "evals" / "answer-baseline.json"
-# The served model a run answers with when LLM_MODEL names none (ADR 0021).
-DEFAULT_CHAT_MODEL = "qwen3-8b"
+# The served model a run answers with when LLM_MODEL names none (ADR 0026).
+DEFAULT_CHAT_MODEL = "qwen3.5-9b"
+# The judged-correctness floor of the default model (ADR 0026, PRD §9).
+CORRECTNESS_FLOOR = 0.75
 # The metrics that only the judge measures (ADR 0022).
 JUDGED = ("judged_correct", "citation_support")
 ANSWERS_CONFIG = ROOT / "evals" / "promptfoo" / "answers.yaml"
@@ -303,7 +305,7 @@ def run_answers(config: RunConfig) -> Outcome:
         calibration,
         judged=verdicts is not None,
         same_model=same_model(baseline, config.chat_model),
-    )
+    ) + correctness_failures(metrics.values, config.chat_model)
     report_json, report_markdown = answer_reports(config.results_dir, config.chat_model, started_at)
     report_json.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", "utf-8")
     report_markdown.write_text(answers_markdown(metrics, metadata), encoding="utf-8")
@@ -414,7 +416,13 @@ def llm_pin(name: str, pins: Mapping[str, Mapping[str, str]]) -> Mapping[str, st
 
 def correctness_failures(values: Mapping[str, float | None], chat_model: str) -> list[str]:
     """The judged-correctness floor, which holds for the default model only (ADR 0026)."""
-    raise NotImplementedError
+    now = values.get("judged_correct")
+    if chat_model != DEFAULT_CHAT_MODEL or now is None or now >= CORRECTNESS_FLOOR - 1e-9:
+        return []
+    return [
+        f"judged_correct is {now * 100:.1f}, below its floor of {CORRECTNESS_FLOOR * 100:.1f} "
+        "for the default model (ADR 0026)"
+    ]
 
 
 def same_model(baseline: Mapping[str, Any], chat_model: str) -> bool:
