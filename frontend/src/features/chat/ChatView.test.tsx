@@ -345,6 +345,32 @@ describe('ChatView', () => {
     expect(bodies).toEqual([{ question: 'How long?', model: 'fake-extractive' }])
   })
 
+  it('asks the model it shows when the default is not answering at load', async () => {
+    const bodies: unknown[] = []
+    server.use(
+      http.get('*/api/models', () =>
+        HttpResponse.json([{ id: 'fake-extractive', is_test_model: true, is_default: false }]),
+      ),
+      http.post('*/api/chat', async ({ request }) => {
+        bodies.push(await request.json())
+        const body = [
+          { type: 'text', text: 'Quoted.' },
+          { type: 'end', model_id: 'fake-extractive', found: true, is_test_model: true },
+        ]
+          .map((event) => `data: ${JSON.stringify(event)}\n\n`)
+          .join('')
+        return new HttpResponse(body, { headers: { 'Content-Type': 'text/event-stream' } })
+      }),
+    )
+    renderWithQueryClient(<ChatView />)
+    await screen.findByRole('option', { name: 'fake-extractive (test model)' })
+
+    await ask('How long?')
+
+    expect(await screen.findByText(/Answered by fake-extractive/)).toBeInTheDocument()
+    expect(bodies).toEqual([{ question: 'How long?', model: 'fake-extractive' }])
+  })
+
   it('names the model a failed turn asked, the default when none was chosen', async () => {
     server.use(http.post('*/api/chat', () => new HttpResponse(null, { status: 500 })))
     renderWithQueryClient(<ChatView />)

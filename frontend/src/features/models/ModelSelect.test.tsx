@@ -101,6 +101,17 @@ describe('ModelSelect', () => {
     expect(select).toHaveValue('fake-extractive')
   })
 
+  it('goes to the first listed model when the default is not answering at load, and says so', async () => {
+    server.use(http.get('*/api/models', () => HttpResponse.json(MODELS.slice(1))))
+    const onChange = vi.fn()
+    renderWithQueryClient(<ModelSelect value={undefined} onChange={onChange} />)
+
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'The default model is not answering. Questions now go to fake-extractive.',
+    )
+    expect(onChange).toHaveBeenCalledWith('fake-extractive')
+  })
+
   it('says nothing while the chosen model keeps answering', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     serveChanging(MODELS, MODELS)
