@@ -22,13 +22,20 @@ export function ModelSelect({ value, onChange }: ModelSelectProps): JSX.Element 
     if (!models.data) return
     const before = previous.current
     previous.current = shown
-    // A model that stopped answering leaves the list (F-09b); questions go to the fallback.
-    if (before === undefined || models.data.some((model) => model.id === before)) return
     if (fallback === undefined) return
-    setNotice(`${before} stopped answering. Questions now go to ${fallback}.`)
+    // At load without the default listed, questions go to the model shown (F-09b review #1);
+    // later, a model that stopped answering leaves the list (F-09b) and they go to the fallback.
+    const atLoad = before === undefined
+    if (atLoad && (value !== undefined || models.data.some((model) => model.is_default))) return
+    if (!atLoad && models.data.some((model) => model.id === before)) return
+    setNotice(
+      atLoad
+        ? `The default model is not answering. Questions now go to ${fallback}.`
+        : `${before} stopped answering. Questions now go to ${fallback}.`,
+    )
     previous.current = fallback
     onChange(fallback)
-  }, [models.data, shown, fallback, onChange])
+  }, [models.data, value, shown, fallback, onChange])
 
   return (
     <div className="flex flex-col gap-1">
