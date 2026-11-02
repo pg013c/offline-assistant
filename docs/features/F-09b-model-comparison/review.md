@@ -38,3 +38,4 @@ Decision is filled in by the human: `fix`, `backlog (F-xx)`, or `reject: <reason
 | 2 | `aef40c5` test, `0c90cb4` fix |
 | 3 | `e04a784` test (test-only, no code change) |
 | 4 | `574b3bf` test, `523dc04` fix |
+| 5 | `4dfa393` test, `95cdfe2` fix |
