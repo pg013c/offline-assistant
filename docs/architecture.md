@@ -102,7 +102,7 @@ The diagram above is the target. The question flow runs end to end today; each p
 | `Embedder` | `SentenceTransformerEmbedder`: BGE-M3, 1,024 dimensions, Polish and English, MPS on the Mac, pinned and verified (ADR 0017); `FakeEmbedder` for tests | stays; F-09 compares models |
 | `ChunkIndex` | `QdrantChunkIndex`: one collection per embedding model with a dense vector, a BM25 sparse vector (Qdrant's IDF modifier) and the chunk as payload, both halves fused by reciprocal rank in one query, ties broken by dense similarity; `InMemoryChunkIndex` for tests | stays |
 | `Reranker` | `BgeReranker`: BGE reranker v2 M3, a multilingual cross-encoder, float16 on MPS and float32 on CPU, pinned and verified; `ASSISTANT_RERANKER=auto` (default) uses it with an Apple GPU only, `on` or `off` force it (ADR 0019); `WordOverlapReranker` for tests | stays |
-| `ChatModel` | `OpenAICompatibleChat`: any OpenAI-compatible server, by default Qwen3 8B on llama.cpp's `llama-server` started by `make llm` (ADR 0003, 0021). Answers are JSON (`answer`, `covered`) with `[n]` citation markers, streamed and validated, with retries; tool turns are validated tool calls capped at 256 tokens. `FakeExtractiveChatModel` (`fake-extractive`, the test model in the browser journeys) quotes the best passage. `ASSISTANT_CHAT_MODEL` chooses; a model declared able to call tools answers as the agent (F-07) | more models compared in F-09 |
+| `ChatModel` | `OpenAICompatibleChat`: any OpenAI-compatible server, by default Qwen3.5 9B on llama.cpp's `llama-server` started by `make llm` (ADR 0003, 0021, 0026). Answers are JSON (`answer`, `covered`) with `[n]` citation markers, streamed and validated, with retries; tool turns are validated tool calls capped at 256 tokens. `FakeExtractiveChatModel` (`fake-extractive`, the test model in the browser journeys) quotes the best passage. `ASSISTANT_CHAT_MODEL` chooses; a model declared able to call tools answers as the agent (F-07) | more models compared in F-09 |
 
 `create_app(settings, adapters)` takes the adapters to use; `build_adapters` wires the real ones, and route tests pass in-process fakes. At startup every model is checked against its pinned hashes (`pinned_models.py`), Tesseract against its languages and Qdrant against `ASSISTANT_QDRANT_URL`; each failure names what is missing and the command that fixes it (`make models`, `make qdrant`). The process runs with the Hugging Face offline flags. `ASSISTANT_DOCUMENT_PARSER=text-only` reads text and Markdown without Docling.
 
@@ -144,11 +144,11 @@ The diagram above is the target. The question flow runs end to end today; each p
 - **Answer and stream:** the answer is told whether the note was saved (`prompts/note_saved.md`, `note_not_saved.md`). The stream sends a `note` event, which the UI shows as a step.
 - **Reading back:** `GET /api/notes` and `GET /api/notes/{id}`.
 
-**Models and network mode** (F-08). `ChatModels` (`services/models.py`) holds what answers with each model.
+**Models and network mode** (F-08, F-09b). `ChatModels` (`services/models.py`) holds what answers with each model.
 
 - **Which models:** the configured one, which is the default, and `fake-extractive` beside a real model. `GET /api/models` lists them.
 - **Choosing per question:** a chat request may name a model (`ChatRequest.model`, at most 100 characters). An unknown one is a 422 `unknown_model`, resolved before the stream starts.
-- **Limitation:** the local model's server is checked once, at startup.
+- **Availability (F-09b):** `GET /api/models` lists a local model only while its server lists it, asked at most every few seconds. The UI refreshes the list, moves a question to the fallback when the chosen model stops answering, and says so.
 - **Network mode:** `ASSISTANT_ALLOW_NETWORK` (default off) is reported by `GET /api/health` as `network`, and the UI shows "Offline" or a warning (ADR 0004). Nothing uses the network until F-09.
 
 **The UI** (`frontend/`, F-08):
@@ -171,7 +171,7 @@ It uploads the pinned corpus (AI Act and GDPR, English and Polish) and resolves 
 
 It reports time to first token, tokens per second and each case's tools, and compares the run with `docs/evals/answer-baseline.json`. The API it started is stopped at the end.
 
-**The judge** (ADR 0022, ADR 0023) grades the answers when `make judge` serves Qwen3 30B-A3B on port 8081, with thinking on. It is used only by the evaluation, never by the API.
+**The judge** (ADR 0022, ADR 0025) grades the answers when `make judge` serves Gemma 4 26B-A4B on port 8081, with thinking off. `make judge JUDGE=qwen3.6-35b-a3b` serves Qwen3.6 35B-A3B instead, to re-judge Gemma 4's own answers. It is used only by the evaluation, never by the API.
 
 - **Input:** the harness sends each completed answer with its question, its reference key points, its numbered sentences and the full text of the passages they cite (`ChunkSummary.text`), in escaped tags. The request uses a JSON schema at temperature 0.
 - **Verdicts:** the judge says whether each key point is made, and whether each cited sentence is supported. Correctness is derived in code: all points made is correct, none is wrong, otherwise partial.

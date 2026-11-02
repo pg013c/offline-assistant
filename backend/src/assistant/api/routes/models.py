@@ -12,11 +12,11 @@ Models = Annotated[ChatModels, Depends(get_models)]
 
 
 @router.get("")
-def list_models(models: Models) -> list[ModelChoiceResponse]:
+async def list_models(models: Models) -> list[ModelChoiceResponse]:
     """The models a question can name now; the default answers when none is named."""
     return [
         ModelChoiceResponse(
             id=model.id, is_test_model=model.is_test_model, is_default=model.is_default
         )
-        for model in models.list_models()
+        for model in await models.list_models()
     ]

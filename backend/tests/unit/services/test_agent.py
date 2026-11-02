@@ -88,6 +88,9 @@ class ScriptedAgent:
     model_id = "scripted-agent"
     is_test_model = False
 
+    async def is_available(self) -> bool:
+        return True
+
     def __init__(
         self,
         turns: Sequence[ToolCalls | FinalText | ModelFailed],

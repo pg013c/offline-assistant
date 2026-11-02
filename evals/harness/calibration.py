@@ -26,10 +26,22 @@ class CalibrationItem:
 
 
 @dataclass(frozen=True)
+class Disagreement:
+    """One hand verdict the judge did not match; `judged` is None when it could not judge."""
+
+    item: str
+    kind: Literal["correctness", "support"]
+    sentence: int | None
+    expected: str
+    judged: str | None
+
+
+@dataclass(frozen=True)
 class Agreement:
     correctness: float
     support: float
     items: int
+    disagreements: tuple[Disagreement, ...] = ()
 
 
 def load_calibration(path: Path) -> list[CalibrationItem]:
@@ -65,19 +77,44 @@ def _item(entry: Mapping[str, Any]) -> CalibrationItem:
 def agreement(
     items: Sequence[CalibrationItem], verdicts: Mapping[str, Verdict | None]
 ) -> Agreement:
-    """Shares of hand verdicts the judge matched; an item it could not judge disagrees."""
+    """Shares of hand verdicts the judge matched, and each one it did not; an item it could
+    not judge disagrees."""
     correct = supported = sentences = 0
+    disagreements: list[Disagreement] = []
     for item in items:
         verdict = verdicts.get(item.id)
-        correct += verdict is not None and verdict.correctness == item.expected.correctness
+        judged = verdict.correctness if verdict is not None else None
+        if judged == item.expected.correctness:
+            correct += 1
+        else:
+            disagreements.append(
+                Disagreement(item.id, "correctness", None, item.expected.correctness, judged)
+            )
         for index, expected in item.expected.supported.items():
             sentences += 1
-            supported += verdict is not None and verdict.supported.get(index) == expected
+            found = verdict.supported.get(index) if verdict is not None else None
+            if found == expected:
+                supported += 1
+            else:
+                disagreements.append(
+                    Disagreement(
+                        item.id,
+                        "support",
+                        index,
+                        _support(expected),
+                        None if found is None else _support(found),
+                    )
+                )
     return Agreement(
         correctness=correct / len(items) if items else 0.0,
         support=supported / sentences if sentences else 0.0,
         items=len(items),
+        disagreements=tuple(disagreements),
     )
+
+
+def _support(value: bool) -> str:
+    return "supported" if value else "unsupported"
 
 
 def calibration_failures(result: Agreement) -> list[str]:

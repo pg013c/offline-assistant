@@ -28,12 +28,25 @@ export QDRANT_PORT ?= 6333
 
 # The local LLM for `make llm` (ADR 0021): llama.cpp's llama-server on LLM_PORT.
 export LLM_PORT ?= 8080
-# The model file's path comes from its pin (pinned_models.py), so the two cannot drift apart.
-LLM_FILE = $(shell $(BACKEND) python -c "from assistant.adapters.pinned_models import QWEN3_8B as m; print('$(ASSISTANT_MODELS_DIR)/' + m.directory + '/' + next(iter(m.files)))")
+# The served model, by its name in the registry (chat_models.py; ADR 0024).
+# The default comes from the registry (ADR 0026), read once when LLM_MODEL is not set.
+ifeq ($(origin LLM_MODEL),undefined)
+LLM_MODEL := $(shell $(BACKEND) python -c "from assistant.adapters.chat_models import DEFAULT_CHAT_MODEL; print(DEFAULT_CHAT_MODEL)")
+endif
+# The model file's path comes from its pin, so the two cannot drift apart; empty for an unknown name.
+LLM_FILE = $(shell $(BACKEND) python -c "from assistant.adapters.chat_models import CHAT_MODELS; s = CHAT_MODELS.get('$(LLM_MODEL)'); m = s and s.pinned; print('$(ASSISTANT_MODELS_DIR)/' + m.directory + '/' + next(iter(m.files)) if m else '')")
+LLM_MODELS_SERVED = $(shell $(BACKEND) python -c "from assistant.adapters.chat_models import CHAT_MODELS; print(', '.join(n for n, s in CHAT_MODELS.items() if s.pinned))")
+# Stops make, also under -n, when LLM_MODEL names no served model.
+LLM_CHECK_NAME = $(if $(LLM_FILE),,$(error LLM_MODEL=$(LLM_MODEL) is not a served model. Choose one of: $(LLM_MODELS_SERVED)))
 
-# The evaluation's judge for `make judge` (ADR 0022): llama-server on JUDGE_PORT.
+# The evaluation's judge for `make judge` (ADR 0022, ADR 0025): llama-server on JUDGE_PORT.
 export JUDGE_PORT ?= 8081
-JUDGE_FILE = $(shell $(BACKEND) python -c "from assistant.adapters.pinned_models import QWEN3_30B_A3B as m; print('$(ASSISTANT_MODELS_DIR)/' + m.directory + '/' + next(iter(m.files)))")
+# The judge, by its name in JUDGE_MODELS; the other name is the check that re-judges its answers.
+JUDGE ?= gemma-4-26b-a4b
+JUDGE_FILE = $(shell $(BACKEND) python -c "from assistant.adapters.pinned_models import JUDGE_MODELS; m = JUDGE_MODELS.get('$(JUDGE)'); print('$(ASSISTANT_MODELS_DIR)/' + m.directory + '/' + next(iter(m.files)) if m else '')")
+JUDGES = $(shell $(BACKEND) python -c "from assistant.adapters.pinned_models import JUDGE_MODELS; print(', '.join(JUDGE_MODELS))")
+# Stops make, also under -n, when JUDGE names no judge.
+JUDGE_CHECK_NAME = $(if $(JUDGE_FILE),,$(error JUDGE=$(JUDGE) is not a judge. Choose one of: $(JUDGES)))
 
 # Evaluation corpus, fetched by `make eval-corpus` (ADR 0018).
 export EVAL_CORPUS_DIR := $(abspath $(or $(EVAL_CORPUS_DIR),data/eval-corpus))
@@ -58,37 +71,37 @@ setup: node-version ## Install project dependencies
 models: ## Download the parsing and embedding models into ASSISTANT_MODELS_DIR (the only step that needs the network)
 	$(BACKEND) python scripts/download_models.py "$(ASSISTANT_MODELS_DIR)"
 
-llm-models: ## Download the local LLM (Qwen3 8B, about 5 GB) into ASSISTANT_MODELS_DIR, checked by hash
-	$(BACKEND) python scripts/download_models.py "$(ASSISTANT_MODELS_DIR)" --llm
+llm-models: ## Download the local LLM named by LLM_MODEL (default Qwen3.5 9B, about 5.7 GB) into ASSISTANT_MODELS_DIR, checked by hash
+	$(LLM_CHECK_NAME)$(BACKEND) python scripts/download_models.py "$(ASSISTANT_MODELS_DIR)" --llm $(LLM_MODEL)
 
 llm-preflight: ## Check that make llm can start: llama-server installed, model file pinned, port free
-	@$(BACKEND) python -c "from pathlib import Path; from assistant.adapters.pinned_models import LLM_MODELS, verify_models; verify_models(Path('$(ASSISTANT_MODELS_DIR)'), LLM_MODELS)" 2>/dev/null \
-	  || { echo "The local LLM is missing or changed in $(ASSISTANT_MODELS_DIR). Fetch it with: make llm-models"; exit 1; }
+	@$(LLM_CHECK_NAME)$(BACKEND) python -c "from pathlib import Path; from assistant.adapters.chat_models import CHAT_MODELS; from assistant.adapters.pinned_models import verify_models; verify_models(Path('$(ASSISTANT_MODELS_DIR)'), (CHAT_MODELS['$(LLM_MODEL)'].pinned,))" 2>/dev/null \
+	  || { echo "The local LLM $(LLM_MODEL) is missing or changed in $(ASSISTANT_MODELS_DIR). Fetch it with: make llm-models LLM_MODEL=$(LLM_MODEL)"; exit 1; }
 	@command -v llama-server >/dev/null || { echo "llama-server is not installed. Install it with: brew install llama.cpp"; exit 1; }
 	@if lsof -nP -iTCP:$(LLM_PORT) -sTCP:LISTEN >/dev/null 2>&1; then \
 	  owner="$$(lsof -nP -iTCP:$(LLM_PORT) -sTCP:LISTEN | awk 'NR==2 {print $$1 " (pid " $$2 ")"}')"; \
 	  echo "Port $(LLM_PORT) is already used by $$owner. Stop it or set LLM_PORT."; exit 1; \
 	fi
 
-llm: llm-preflight ## Serve the local LLM with llama-server on LLM_PORT (Metal, thinking off; ADR 0021)
-	llama-server -m "$(LLM_FILE)" --alias qwen3-8b --host 127.0.0.1 --port $(LLM_PORT) \
-	  --n-gpu-layers 99 --ctx-size 16384 --jinja --reasoning-budget 0
+llm: llm-preflight ## Serve the local LLM named by LLM_MODEL with llama-server on LLM_PORT (Metal, thinking off; ADR 0024)
+	$(LLM_CHECK_NAME)llama-server -m "$(LLM_FILE)" --alias $(LLM_MODEL) --host 127.0.0.1 --port $(LLM_PORT) \
+	  --n-gpu-layers 99 --ctx-size 16384 --jinja --reasoning off
 
-judge-models: ## Download the evaluation's judge (Qwen3 30B-A3B, about 18.6 GB) into ASSISTANT_MODELS_DIR, checked by hash
-	$(BACKEND) python scripts/download_models.py "$(ASSISTANT_MODELS_DIR)" --judge
+judge-models: ## Download the judge named by JUDGE (default Gemma 4 26B-A4B, about 14.4 GB) into ASSISTANT_MODELS_DIR, checked by hash
+	$(JUDGE_CHECK_NAME)$(BACKEND) python scripts/download_models.py "$(ASSISTANT_MODELS_DIR)" --judge $(JUDGE)
 
 judge-preflight: ## Check that make judge can start: llama-server installed, judge file pinned, port free
-	@$(BACKEND) python -c "from pathlib import Path; from assistant.adapters.pinned_models import JUDGE_MODELS, verify_models; verify_models(Path('$(ASSISTANT_MODELS_DIR)'), JUDGE_MODELS)" 2>/dev/null \
-	  || { echo "The judge is missing or changed in $(ASSISTANT_MODELS_DIR). Fetch it with: make judge-models"; exit 1; }
+	@$(JUDGE_CHECK_NAME)$(BACKEND) python -c "from pathlib import Path; from assistant.adapters.pinned_models import JUDGE_MODELS, verify_models; verify_models(Path('$(ASSISTANT_MODELS_DIR)'), (JUDGE_MODELS['$(JUDGE)'],))" 2>/dev/null \
+	  || { echo "The judge $(JUDGE) is missing or changed in $(ASSISTANT_MODELS_DIR). Fetch it with: make judge-models JUDGE=$(JUDGE)"; exit 1; }
 	@command -v llama-server >/dev/null || { echo "llama-server is not installed. Install it with: brew install llama.cpp"; exit 1; }
 	@if lsof -nP -iTCP:$(JUDGE_PORT) -sTCP:LISTEN >/dev/null 2>&1; then \
 	  owner="$$(lsof -nP -iTCP:$(JUDGE_PORT) -sTCP:LISTEN | awk 'NR==2 {print $$1 " (pid " $$2 ")"}')"; \
 	  echo "Port $(JUDGE_PORT) is already used by $$owner. Stop it or set JUDGE_PORT."; exit 1; \
 	fi
 
-judge: judge-preflight ## Serve the evaluation's judge with llama-server on JUDGE_PORT (thinking on; ADR 0023)
-	llama-server -m "$(JUDGE_FILE)" --alias qwen3-30b-a3b --host 127.0.0.1 --port $(JUDGE_PORT) \
-	  --n-gpu-layers 99 --ctx-size 16384 --jinja
+judge: judge-preflight ## Serve the judge named by JUDGE with llama-server on JUDGE_PORT (thinking off; ADR 0025)
+	$(JUDGE_CHECK_NAME)llama-server -m "$(JUDGE_FILE)" --alias $(JUDGE) --host 127.0.0.1 --port $(JUDGE_PORT) \
+	  --n-gpu-layers 99 --ctx-size 16384 --jinja --reasoning off
 
 eval-corpus: ## Download the evaluation corpus into EVAL_CORPUS_DIR, checked against pinned hashes
 	$(EVALS) python -m harness.corpus "$(EVAL_CORPUS_DIR)"
@@ -98,12 +111,12 @@ eval: ## Retrieval evaluation on the corpus, compared with the baseline; needs m
 	  echo "Qdrant is not running on port $(QDRANT_PORT). Start it with: make qdrant"; exit 1; }
 	HF_HUB_OFFLINE=1 $(EVALS) python -m harness.run
 
-eval-answers: ## Answer evaluation against the local LLM, compared with its baseline; needs make llm, models, qdrant, eval-corpus
+eval-answers: ## Answer evaluation against the LLM named by LLM_MODEL, compared with a baseline of that model; needs make llm, models, qdrant, eval-corpus
 	@curl -fs http://127.0.0.1:$(LLM_PORT)/health >/dev/null || { \
 	  echo "No model server on port $(LLM_PORT). Start it with: make llm"; exit 1; }
 	@curl -fs http://127.0.0.1:$(QDRANT_PORT)/readyz >/dev/null || { \
 	  echo "Qdrant is not running on port $(QDRANT_PORT). Start it with: make qdrant"; exit 1; }
-	HF_HUB_OFFLINE=1 $(EVALS) python -m harness.run --answers
+	$(LLM_CHECK_NAME)HF_HUB_OFFLINE=1 LLM_MODEL=$(LLM_MODEL) $(EVALS) python -m harness.run --answers
 
 qdrant: ## Start Qdrant in Docker on QDRANT_PORT (data in ASSISTANT_DATA_DIR/qdrant, telemetry off)
 	@if [ -z "$(ASSISTANT_DATA_DIR)" ]; then \

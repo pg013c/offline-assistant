@@ -1,9 +1,11 @@
 """The models a question can be answered with, and which is the default (F-08)."""
 
+import asyncio
 from collections.abc import Sequence
 from dataclasses import dataclass
 
 from assistant.domain.errors import UnknownModel
+from assistant.ports.chat_model import ChatModel
 from assistant.services.questions import Answerer
 
 
@@ -14,6 +16,8 @@ class ModelEntry:
     id: str
     is_test_model: bool
     answerer: Answerer
+    # Asked whether it answers each time the models are listed (F-09b).
+    model: ChatModel
 
 
 @dataclass(frozen=True, slots=True)
@@ -36,12 +40,16 @@ class ChatModels:
             self._entries[entry.id] = entry
         self._default = entries[0].id
 
-    def list_models(self) -> list[ModelChoice]:
+    async def list_models(self) -> list[ModelChoice]:
+        """The models that answer now; one whose server stops is left out until it answers."""
+        entries = list(self._entries.values())
+        available = await asyncio.gather(*(entry.model.is_available() for entry in entries))
         return [
             ModelChoice(
                 id=entry.id, is_test_model=entry.is_test_model, is_default=entry.id == self._default
             )
-            for entry in self._entries.values()
+            for entry, answers in zip(entries, available, strict=True)
+            if answers
         ]
 
     def answerer(self, model_id: str | None) -> Answerer:

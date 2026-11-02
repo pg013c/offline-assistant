@@ -34,7 +34,7 @@ check "dev starts when ASSISTANT_DATA_DIR is set" "$([[ $status -eq 0 ]] && echo
 
 # llm_preflight <env(1) arguments>: checks the local LLM's file and port without starting it.
 llm_preflight() {
-  env "$@" make -C "$root" --no-print-directory llm-preflight \
+  env -u LLM_MODEL "$@" make -C "$root" --no-print-directory llm-preflight \
     ENV_FILE="$scratch/missing.env" LLM_PORT=59997 2>&1
 }
 
@@ -54,7 +54,7 @@ check "eval-answers refuses to run without the model server, naming make llm" \
 
 # judge_preflight <env(1) arguments>: checks the judge's file and port without starting it.
 judge_preflight() {
-  env "$@" make -C "$root" --no-print-directory judge-preflight \
+  env -u JUDGE "$@" make -C "$root" --no-print-directory judge-preflight \
     ENV_FILE="$scratch/missing.env" JUDGE_PORT=59995 2>&1
 }
 
@@ -65,17 +65,121 @@ set -e
 check "judge refuses to start without the pinned judge file, naming make judge-models" \
   "$([[ $status -ne 0 && "$output" == *"make judge-models"* ]] && echo yes || echo no)"
 
-check "judge serves on JUDGE_PORT as qwen3-30b-a3b" \
-  "$(make -C "$root" --no-print-directory -n judge JUDGE_PORT=59994 ASSISTANT_MODELS_DIR="$scratch" 2>/dev/null \
-    | grep -q -- "--port 59994.*--alias qwen3-30b-a3b\|--alias qwen3-30b-a3b.*--port 59994" && echo yes || echo no)"
+# judge_recipe <make arguments>: what `make judge` would run, without the environment's JUDGE.
+judge_recipe() {
+  env -u JUDGE make -C "$root" --no-print-directory -n judge \
+    ENV_FILE="$scratch/missing.env" ASSISTANT_MODELS_DIR="$scratch" "$@" 2>&1
+}
 
-judge_recipe="$(make -C "$root" --no-print-directory -n judge ASSISTANT_MODELS_DIR="$scratch" 2>/dev/null)"
-check "judge thinks before it rules (ADR 0023)" \
-  "$([[ "$judge_recipe" == *"--alias qwen3-30b-a3b"* && "$judge_recipe" != *"--reasoning-budget 0"* ]] && echo yes || echo no)"
+# The judge and its check (ADR 0025), served from their pinned files with thinking off.
+judges=(
+  "gemma-4-26b-a4b llm/google--gemma-4-26B-A4B-it-qat-q4_0-gguf/gemma-4-26B_q4_0-it.gguf"
+  "qwen3.6-35b-a3b llm/ggml-org--Qwen3.6-35B-A3B-GGUF/Qwen3.6-35B-A3B-Q4_K_M.gguf"
+)
+for entry in "${judges[@]}"; do
+  read -r name file <<<"$entry"
+  recipe="$(judge_recipe JUDGE="$name" JUDGE_PORT=59994)"
+  check "judge serves $name from its pinned file on JUDGE_PORT, thinking off (ADR 0025)" \
+    "$([[ "$recipe" == *"-m \"$scratch/$file\""* && "$recipe" == *"--alias $name "* \
+      && "$recipe" == *"--port 59994 "* && "$recipe" == *"--reasoning off"* \
+      && "$recipe" == *"--ctx-size 16384"* && "$recipe" == *"--n-gpu-layers 99"* \
+      && "$recipe" == *"--jinja"* ]] && echo yes || echo no)"
+done
 
-llm_recipe="$(make -C "$root" --no-print-directory -n llm ASSISTANT_MODELS_DIR="$scratch" 2>/dev/null)"
-check "llm serves qwen3-8b with thinking off (ADR 0021)" \
-  "$([[ "$llm_recipe" == *"--alias qwen3-8b"* && "$llm_recipe" == *"--reasoning-budget 0"* ]] && echo yes || echo no)"
+check "judge serves gemma-4-26b-a4b when no judge is named" \
+  "$([[ "$(judge_recipe)" == *"--alias gemma-4-26b-a4b "* ]] && echo yes || echo no)"
+
+set +e
+output="$(judge_recipe JUDGE=qwen3.5-9b)"
+status=$?
+set -e
+check "judge refuses JUDGE=qwen3.5-9b, listing the judges" \
+  "$([[ $status -ne 0 && "$output" == *"qwen3.5-9b"* && "$output" == *"gemma-4-26b-a4b"* \
+    && "$output" == *"qwen3.6-35b-a3b"* ]] && echo yes || echo no)"
+
+set +e
+output="$(judge_preflight ASSISTANT_MODELS_DIR="$scratch/no-models" JUDGE=qwen3.6-35b-a3b)"
+status=$?
+set -e
+check "judge-preflight names the command that fetches the chosen judge" \
+  "$([[ $status -ne 0 && "$output" == *"make judge-models JUDGE=qwen3.6-35b-a3b"* ]] && echo yes || echo no)"
+
+check "judge-models fetches only the chosen judge" \
+  "$(env -u JUDGE make -C "$root" --no-print-directory -n judge-models ENV_FILE="$scratch/missing.env" \
+    ASSISTANT_MODELS_DIR="$scratch" JUDGE=qwen3.6-35b-a3b 2>/dev/null \
+    | grep -q -- "--judge qwen3.6-35b-a3b" && echo yes || echo no)"
+
+# llm_recipe <make arguments>: what `make llm` would run, without the environment's LLM_MODEL.
+llm_recipe() {
+  env -u LLM_MODEL make -C "$root" --no-print-directory -n llm \
+    ENV_FILE="$scratch/missing.env" ASSISTANT_MODELS_DIR="$scratch" "$@" 2>&1
+}
+
+# The default model, from the one place that names it (ADR 0026, F-09b review #2).
+default_model="$(uv run --directory "$root/backend" python -c \
+  "from assistant.adapters.chat_models import DEFAULT_CHAT_MODEL; print(DEFAULT_CHAT_MODEL)" 2>/dev/null || true)"
+
+check "the registry's default is qwen3.5-9b (ADR 0026)" \
+  "$([[ "$default_model" == "qwen3.5-9b" ]] && echo yes || echo no)"
+
+check "llm serves the registry's default when no model is named" \
+  "$([[ -n "$default_model" && "$(llm_recipe)" == *"--alias $default_model "* ]] && echo yes || echo no)"
+
+check "the example environment answers with the registry's default" \
+  "$([[ -n "$default_model" ]] && grep -qx "ASSISTANT_CHAT_MODEL=$default_model" "$root/.env.example" \
+    && echo yes || echo no)"
+
+check "the Makefile takes its default from the registry, not a name of its own" \
+  "$(grep -q '^LLM_MODEL ?= qwen' "$root/Makefile" && echo no || echo yes)"
+
+# Every served model in the registry (F-09b, ADR 0024) and its pinned file under the models dir.
+served_models=(
+  "qwen3.5-9b llm/unsloth--Qwen3.5-9B-GGUF/Qwen3.5-9B-Q4_K_M.gguf"
+  "qwen3.6-35b-a3b llm/ggml-org--Qwen3.6-35B-A3B-GGUF/Qwen3.6-35B-A3B-Q4_K_M.gguf"
+  "gemma-4-26b-a4b llm/google--gemma-4-26B-A4B-it-qat-q4_0-gguf/gemma-4-26B_q4_0-it.gguf"
+)
+shared_recipe=""
+for entry in "${served_models[@]}"; do
+  read -r name file <<<"$entry"
+  recipe="$(llm_recipe LLM_MODEL="$name")"
+  check "llm serves $name from its pinned file under its name, thinking off (ADR 0024)" \
+    "$([[ "$recipe" == *"-m \"$scratch/$file\""* && "$recipe" == *"--alias $name "* \
+      && "$recipe" == *"--reasoning off"* && "$recipe" == *"--ctx-size 16384"* \
+      && "$recipe" == *"--n-gpu-layers 99"* && "$recipe" == *"--jinja"* ]] && echo yes || echo no)"
+  # With the file and the name taken out, every model's server command must be the same. The
+  # preflight before it names the model on purpose, so only the llama-server command counts.
+  generic="$(sed -n '/^llama-server/,$p' <<<"$recipe")"
+  generic="${generic//$scratch\/$file/FILE}"
+  generic="${generic//--alias $name /--alias NAME }"
+  shared_recipe="${shared_recipe:-$generic}"
+  check "llm gives $name no flag of its own" "$([[ "$generic" == "$shared_recipe" ]] && echo yes || echo no)"
+done
+
+for name in no-such-model fake-extractive qwen3-8b ternary-bonsai-2-27b; do
+  set +e
+  output="$(llm_recipe LLM_MODEL="$name")"
+  status=$?
+  set -e
+  check "llm refuses LLM_MODEL=$name, listing the served models" \
+    "$([[ $status -ne 0 && "$output" == *"$name"* && "$output" == *"qwen3.5-9b"* \
+      && "$output" == *"gemma-4-26b-a4b"* && "$output" == *"qwen3.6-35b-a3b"* ]] && echo yes || echo no)"
+done
+
+set +e
+output="$(llm_preflight ASSISTANT_MODELS_DIR="$scratch/no-models" LLM_MODEL=gemma-4-26b-a4b)"
+status=$?
+set -e
+check "llm-preflight names the command that fetches the chosen model" \
+  "$([[ $status -ne 0 && "$output" == *"make llm-models LLM_MODEL=gemma-4-26b-a4b"* ]] && echo yes || echo no)"
+
+check "llm-models fetches only the chosen model" \
+  "$(env -u LLM_MODEL make -C "$root" --no-print-directory -n llm-models ENV_FILE="$scratch/missing.env" \
+    ASSISTANT_MODELS_DIR="$scratch" LLM_MODEL=qwen3.5-9b 2>/dev/null \
+    | grep -q -- "--llm qwen3.5-9b" && echo yes || echo no)"
+
+check "eval-answers answers with the model named by LLM_MODEL" \
+  "$(env -u LLM_MODEL make -C "$root" --no-print-directory -n eval-answers ENV_FILE="$scratch/missing.env" \
+    LLM_MODEL=qwen3.5-9b 2>/dev/null | grep -q "LLM_MODEL=qwen3.5-9b .*harness.run --answers" && echo yes || echo no)"
 
 [[ "$failures" -eq 0 ]] || { echo "$failures Makefile test(s) failed"; exit 1; }
 echo "All Makefile tests passed."

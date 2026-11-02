@@ -65,10 +65,10 @@ def model(
     server: Callable[[httpx.Request], httpx.Response], *, tools: bool = True, max_retries: int = 2
 ) -> OpenAICompatibleChat:
     return OpenAICompatibleChat(
-        model_id="qwen3-8b",
+        model_id="qwen3.5-9b",
         server=LlmServer(
             base_url="http://127.0.0.1:8080",
-            served_model="qwen3-8b",
+            served_model="qwen3.5-9b",
             timeout_seconds=30,
             max_retries=max_retries,
             tools=tools,
@@ -186,7 +186,7 @@ def test_earlier_tool_calls_and_results_are_sent_back_in_order() -> None:
 def test_a_model_not_declared_able_to_call_tools_is_refused_before_any_request() -> None:
     server = StubServer()
 
-    with pytest.raises(ToolsUnsupported, match="qwen3-8b"):
+    with pytest.raises(ToolsUnsupported, match=r"qwen3\.5-9b"):
         turn(model(server, tools=False))
 
     assert server.requests == []

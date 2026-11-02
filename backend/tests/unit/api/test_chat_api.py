@@ -174,7 +174,7 @@ def scripted_client(tmp_path: Path, events: list[ModelEvent]) -> TestClient:
         index=InMemoryChunkIndex(),
         parser=TextDocumentParser(),
         queue=InlineIngestionQueue(),
-        chat_model=ScriptedChatModel(events, model_id="qwen3-8b"),
+        chat_model=ScriptedChatModel(events, model_id="qwen3.5-9b"),
     )
     settings = Settings(data_dir=tmp_path, models_dir=tmp_path / "models", min_similarity=0)
     return TestClient(create_app(settings, adapters))
@@ -233,7 +233,7 @@ def test_a_model_failure_is_an_error_event_and_the_stream_still_ends(
         },
         {
             "type": "end",
-            "model_id": "qwen3-8b",
+            "model_id": "qwen3.5-9b",
             "found": True,
             "is_test_model": False,
             "usage": None,
@@ -244,8 +244,11 @@ def test_a_model_failure_is_an_error_event_and_the_stream_still_ends(
 class ScriptedAgent:
     """A model that calls tools from a script, then answers from a script (F-07)."""
 
-    model_id = "qwen3-8b"
+    model_id = "qwen3.5-9b"
     is_test_model = False
+
+    async def is_available(self) -> bool:
+        return True
 
     def __init__(
         self, turns: list[ToolCalls | FinalText | ModelFailed], answer: list[ModelEvent]

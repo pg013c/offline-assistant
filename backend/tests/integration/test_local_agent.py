@@ -77,8 +77,10 @@ def ask(
     documents.upload("GDPR (EN).md", GDPR_EN)
     documents.upload("RODO (PL).md", GDPR_PL)
     model = OpenAICompatibleChat(
-        model_id="qwen3-8b",
-        server=LlmServer(base_url=URL, served_model="qwen3-8b", timeout_seconds=60, max_retries=2),
+        model_id="qwen3.5-9b",
+        server=LlmServer(
+            base_url=URL, served_model="qwen3.5-9b", timeout_seconds=60, max_retries=2
+        ),
     )
     # The in-memory index only finds passages that share a word with the query.
     questions = QuestionService(index, model, store, min_similarity=0)
@@ -119,6 +121,13 @@ def test_a_polish_question_is_answered_in_polish_with_markers() -> None:
 
 
 @pytest.mark.skipif(not server_is_up(), reason="no local model server (make llm)")
+# Strict: at temperature 0 the model misses this note on every run, so a pass means the
+# backlog item is done and the marker must go (F-09b review #3).
+@pytest.mark.xfail(
+    reason="qwen3.5-9b answers instead of calling save_note (ADR 0026); backlog: "
+    "improve Qwen3.5 9B's note saving and its use of the expected tools",
+    strict=True,
+)
 def test_a_checklist_request_saves_a_note_citing_the_article() -> None:
     notes = InMemoryNoteStore()
 

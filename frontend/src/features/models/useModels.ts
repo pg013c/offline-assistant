@@ -5,7 +5,10 @@ import type { components } from '../../api/schema'
 
 export type ModelChoice = components['schemas']['ModelChoiceResponse']
 
-/** The models the API can answer with now (F-08). */
+// How often the list is asked for again, so a model whose server stops leaves it (F-09b).
+export const MODELS_REFRESH_MS = 10_000
+
+/** The models the API can answer with now (F-08), refreshed periodically (F-09b). */
 export function useModels() {
   return useQuery({
     queryKey: ['models'],
@@ -16,5 +19,6 @@ export function useModels() {
       }
       return data
     },
+    refetchInterval: MODELS_REFRESH_MS,
   })
 }

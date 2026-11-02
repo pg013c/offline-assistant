@@ -8,7 +8,7 @@ import pytest
 
 from harness import run
 from harness.answers import AnswerCase, ChatResult
-from harness.calibration import Agreement
+from harness.calibration import Agreement, Disagreement
 from harness.judge import JUDGE_PROMPT, JudgeInput, JudgeUnavailable, Verdict
 
 CASES = [
@@ -28,14 +28,16 @@ VERDICT = Verdict("correct", "All points.", {1: True})
 
 
 class FakeJudge:
-    """Answers `verdicts` calls, then stops answering."""
+    """Answers `verdicts` calls, then stops answering; it never thinks."""
 
     def __init__(self, verdicts: int) -> None:
         self.left = verdicts
         self.judged: list[JudgeInput] = []
-        self.thought = True
+        self.thought = False
+        self.model: str | None = None
 
-    def __call__(self, url: str) -> "FakeJudge":
+    def __call__(self, url: str, model: str) -> "FakeJudge":
+        self.model = model
         return self
 
     def judge(self, judged: JudgeInput) -> Verdict | None:
@@ -46,11 +48,22 @@ class FakeJudge:
         return VERDICT
 
 
+def judge_server(*served: str) -> object:
+    """A judge server that is healthy and lists the given models."""
+
+    def get(url: str, **_: object) -> httpx.Response:
+        request = httpx.Request("GET", url)
+        if url.endswith("/v1/models"):
+            listed = {"object": "list", "data": [{"id": name} for name in served]}
+            return httpx.Response(200, json=listed, request=request)
+        return httpx.Response(200, request=request)
+
+    return get
+
+
 @pytest.fixture
 def healthy(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(
-        httpx, "get", lambda url, **_: httpx.Response(200, request=httpx.Request("GET", url))
-    )
+    monkeypatch.setattr(httpx, "get", judge_server("gemma-4-26b-a4b"))
 
 
 @pytest.mark.usefixtures("healthy")
@@ -89,19 +102,57 @@ def test_the_judge_rules_on_each_completed_answer_only(monkeypatch: pytest.Monke
 
     assert verdicts == {"a": VERDICT}
     assert [judged.question for judged in judge.judged] == ["A?"]
+    assert judge.model == "gemma-4-26b-a4b"
     assert identity == {
-        "model": "qwen3-30b-a3b",
+        "model": "gemma-4-26b-a4b",
         "server": {"url": "http://judge"},
         "prompt_sha256": hashlib.sha256(JUDGE_PROMPT.encode()).hexdigest(),
         "max_tokens": 8192,
-        "thinking": True,
+        "thinking": False,
     }
+
+
+@pytest.mark.parametrize("served", ["qwen3.6-35b-a3b", "gemma-4-26b-a4b"])
+def test_the_judge_is_the_model_its_server_lists(
+    monkeypatch: pytest.MonkeyPatch, served: str
+) -> None:
+    monkeypatch.setattr(httpx, "get", judge_server(served))
+    monkeypatch.setattr(run, "JudgeClient", FakeJudge(verdicts=5))
+
+    _, identity = run.judge_answers(CASES, QUESTIONS, RESULTS, {"d:1": "Text."}, "http://judge")
+
+    assert identity["model"] == served
+
+
+def test_a_judge_server_that_lists_no_model_judges_nothing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(httpx, "get", judge_server())
+
+    verdicts, judge = run.judge_answers(CASES, QUESTIONS, RESULTS, {}, "http://judge")
+
+    assert verdicts is None
+    assert judge == {
+        "skipped": "the judge at http://judge lists no model; start it with make judge"
+    }
+
+
+@pytest.mark.usefixtures("healthy")
+def test_calibration_asks_the_model_the_judge_server_lists(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    judge = FakeJudge(verdicts=100)
+    monkeypatch.setattr(run, "JudgeClient", judge)
+
+    assert run.calibrate("http://judge") is not None
+    assert judge.model == "gemma-4-26b-a4b"
 
 
 def test_without_its_calibration_set_the_judge_is_not_calibrated(tmp_path: Path) -> None:
     assert run.calibrate("http://judge", tmp_path / "missing.yaml") is None
 
 
+@pytest.mark.usefixtures("healthy")
 def test_a_judge_that_stops_during_calibration_is_not_calibrated(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -116,13 +167,13 @@ JUDGED = {"cites_expected": 0.9, "judged_correct": 0.65, "citation_support": 0.9
 
 
 def test_judged_metrics_without_calibration_fail_the_run() -> None:
-    failures = run.answer_failures(JUDGED, {}, calibration=None, judged=True)
+    failures = run.answer_failures(JUDGED, {}, calibration=None, judged=True, same_model=True)
 
     assert failures == ["the judge was not calibrated: its calibration set did not run (ADR 0022)"]
 
 
 def test_a_judge_below_the_bar_fails_the_run() -> None:
-    failures = run.answer_failures(JUDGED, {}, calibration=BELOW, judged=True)
+    failures = run.answer_failures(JUDGED, {}, calibration=BELOW, judged=True, same_model=True)
 
     assert failures == [
         "the judge agrees with the calibration set on 80.0 % of correctness verdicts, "
@@ -133,7 +184,7 @@ def test_a_judge_below_the_bar_fails_the_run() -> None:
 def test_an_unjudged_run_needs_no_calibration() -> None:
     unjudged = {**JUDGED, "judged_correct": None, "citation_support": None}
 
-    assert run.answer_failures(unjudged, {}, calibration=None, judged=False) == []
+    assert run.answer_failures(unjudged, {}, calibration=None, judged=False, same_model=True) == []
 
 
 def test_metrics_from_a_judge_below_the_bar_are_set_apart() -> None:
@@ -145,3 +196,105 @@ def test_metrics_from_a_judge_below_the_bar_are_set_apart() -> None:
 
 def test_metrics_from_a_calibrated_judge_are_kept() -> None:
     assert run.trusted_judged(JUDGED, ABOVE) == (JUDGED, {})
+
+
+BASELINE = {"cites_expected": 0.95, "judged_correct": 0.80, "citation_support": 0.95}
+WORSE = {"cites_expected": 0.70, "judged_correct": 0.60, "citation_support": 0.85}
+
+
+def test_a_run_of_the_baselines_model_is_held_to_the_baseline() -> None:
+    failures = run.answer_failures(WORSE, BASELINE, calibration=ABOVE, judged=True, same_model=True)
+
+    assert any(failure.startswith("judged_correct dropped") for failure in failures)
+
+
+def test_a_run_of_another_model_is_held_to_the_floors_and_calibration_only() -> None:
+    failures = run.answer_failures(
+        WORSE, BASELINE, calibration=BELOW, judged=True, same_model=False
+    )
+
+    assert failures == [
+        "citation_support is 85.0, below its floor of 90.0 (ADR 0022)",
+        "the judge agrees with the calibration set on 80.0 % of correctness verdicts, "
+        "below 85 % (ADR 0022)",
+    ]
+
+
+def test_the_baselines_model_is_read_from_its_metadata() -> None:
+    baseline = {"metrics": {}, "metadata": {"chat_model": "qwen3.5-9b"}}
+
+    assert run.same_model(baseline, "qwen3.5-9b") is True
+    assert run.same_model(baseline, "gemma-4-26b-a4b") is False
+    assert run.same_model({"metrics": {}, "metadata": {}}, "qwen3.5-9b") is False
+
+
+def test_the_reports_calibration_keeps_each_disagreement() -> None:
+    calibration = Agreement(
+        correctness=0.5,
+        support=1.0,
+        items=2,
+        disagreements=(Disagreement("cal-09", "correctness", None, "partial", "correct"),),
+    )
+
+    assert run.calibration_metadata(calibration) == {
+        "correctness": 0.5,
+        "support": 1.0,
+        "items": 2,
+        "disagreements": [
+            {
+                "item": "cal-09",
+                "kind": "correctness",
+                "sentence": None,
+                "expected": "partial",
+                "judged": "correct",
+            }
+        ],
+    }
+
+
+def test_a_run_without_calibration_says_so_in_its_metadata() -> None:
+    assert run.calibration_metadata(None) == "not run"
+
+
+def test_the_default_model_is_read_from_the_backends_registry(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    commands: list[list[str]] = []
+
+    def command(arguments: list[str]) -> str:
+        commands.append(arguments)
+        return "gemma-4-26b-a4b"
+
+    monkeypatch.setattr(run, "_command", command)
+
+    assert run.default_chat_model() == "gemma-4-26b-a4b"
+    assert "DEFAULT_CHAT_MODEL" in commands[0][-1]
+
+
+@pytest.mark.parametrize(
+    ("judged_correct", "chat_model", "failures"),
+    [
+        (
+            0.70,
+            "qwen3.5-9b",
+            ["judged_correct is 70.0, below its floor of 75.0 for the default model (ADR 0026)"],
+        ),
+        (0.75, "qwen3.5-9b", []),
+        (None, "qwen3.5-9b", []),
+        (0.70, "gemma-4-26b-a4b", []),
+    ],
+)
+def test_judged_correctness_has_a_floor_for_the_default_model_only(
+    judged_correct: float | None, chat_model: str, failures: list[str]
+) -> None:
+    values = {**JUDGED, "judged_correct": judged_correct}
+
+    assert run.correctness_failures(values, chat_model, default="qwen3.5-9b") == failures
+
+
+def test_the_floor_follows_whichever_model_is_the_default() -> None:
+    values = {**JUDGED, "judged_correct": 0.70}
+
+    assert run.correctness_failures(values, "gemma-4-26b-a4b", default="gemma-4-26b-a4b") == [
+        "judged_correct is 70.0, below its floor of 75.0 for the default model (ADR 0026)"
+    ]

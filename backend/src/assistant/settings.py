@@ -14,7 +14,12 @@ class Settings(BaseSettings):
 
     data_dir: Path
     # A name from `adapters.chat_models`; the test model needs no server (FR-40).
-    chat_model: Literal["fake-extractive", "qwen3-8b"] = "fake-extractive"
+    chat_model: Literal[
+        "fake-extractive",
+        "qwen3.5-9b",
+        "qwen3.6-35b-a3b",
+        "gemma-4-26b-a4b",
+    ] = "fake-extractive"
     # The OpenAI-compatible server `make llm` starts (ADR 0021), a call's timeout in seconds
     # (AI-22) and how often a rejected answer is retried (AI-21).
     llm_url: str = "http://127.0.0.1:8080"

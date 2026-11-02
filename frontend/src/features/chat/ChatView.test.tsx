@@ -10,7 +10,7 @@ import { ChatView } from './ChatView'
 const QUOTE = 'Providers keep logs for six months.'
 
 const MODELS = [
-  { id: 'qwen3-8b', is_test_model: false, is_default: true },
+  { id: 'qwen3.5-9b', is_test_model: false, is_default: true },
   { id: 'fake-extractive', is_test_model: true, is_default: false },
 ]
 
@@ -165,7 +165,7 @@ describe('ChatView', () => {
   it('shows an answer the documents do not cover as no answer, without sources', async () => {
     serveAnswer([
       { type: 'text', text: 'The documents do not say what penalties apply.' },
-      { type: 'end', model_id: 'qwen3-8b', found: false, is_test_model: false },
+      { type: 'end', model_id: 'qwen3.5-9b', found: false, is_test_model: false },
     ])
     renderWithQueryClient(<ChatView />)
 
@@ -291,7 +291,7 @@ describe('ChatView', () => {
         quote: QUOTE,
         location: { heading_path: [], article: '12', paragraph: null, page: null },
       },
-      { type: 'end', model_id: 'qwen3-8b', found: true, is_test_model: false },
+      { type: 'end', model_id: 'qwen3.5-9b', found: true, is_test_model: false },
     ])
     renderWithQueryClient(<ChatView />)
     await ask('How long are logs kept?')
@@ -309,7 +309,7 @@ describe('ChatView', () => {
   it('leaves a marker without a citation as text', async () => {
     serveAnswer([
       { type: 'text', text: 'Kept [3].' },
-      { type: 'end', model_id: 'qwen3-8b', found: true, is_test_model: false },
+      { type: 'end', model_id: 'qwen3.5-9b', found: true, is_test_model: false },
     ])
     renderWithQueryClient(<ChatView />)
     await ask('How long?')
@@ -333,7 +333,7 @@ describe('ChatView', () => {
       }),
     )
     renderWithQueryClient(<ChatView />)
-    await screen.findByRole('option', { name: 'qwen3-8b' })
+    await screen.findByRole('option', { name: 'qwen3.5-9b' })
 
     await userEvent.selectOptions(
       screen.getByRole('combobox', { name: 'Model' }),
@@ -345,16 +345,42 @@ describe('ChatView', () => {
     expect(bodies).toEqual([{ question: 'How long?', model: 'fake-extractive' }])
   })
 
+  it('asks the model it shows when the default is not answering at load', async () => {
+    const bodies: unknown[] = []
+    server.use(
+      http.get('*/api/models', () =>
+        HttpResponse.json([{ id: 'fake-extractive', is_test_model: true, is_default: false }]),
+      ),
+      http.post('*/api/chat', async ({ request }) => {
+        bodies.push(await request.json())
+        const body = [
+          { type: 'text', text: 'Quoted.' },
+          { type: 'end', model_id: 'fake-extractive', found: true, is_test_model: true },
+        ]
+          .map((event) => `data: ${JSON.stringify(event)}\n\n`)
+          .join('')
+        return new HttpResponse(body, { headers: { 'Content-Type': 'text/event-stream' } })
+      }),
+    )
+    renderWithQueryClient(<ChatView />)
+    await screen.findByRole('option', { name: 'fake-extractive (test model)' })
+
+    await ask('How long?')
+
+    expect(await screen.findByText(/Answered by fake-extractive/)).toBeInTheDocument()
+    expect(bodies).toEqual([{ question: 'How long?', model: 'fake-extractive' }])
+  })
+
   it('names the model a failed turn asked, the default when none was chosen', async () => {
     server.use(http.post('*/api/chat', () => new HttpResponse(null, { status: 500 })))
     renderWithQueryClient(<ChatView />)
-    await screen.findByRole('option', { name: 'qwen3-8b' })
+    await screen.findByRole('option', { name: 'qwen3.5-9b' })
 
     await ask('Anything?')
 
     const turn = await screen.findByRole('article')
     await within(turn).findByRole('alert')
-    expect(turn).toHaveTextContent('Asked qwen3-8b')
+    expect(turn).toHaveTextContent('Asked qwen3.5-9b')
   })
 
   it('lets a new question stop the answer still being written', async () => {
@@ -369,7 +395,7 @@ describe('ChatView', () => {
         }
         const body = [
           { type: 'text', text: 'Second.' },
-          { type: 'end', model_id: 'qwen3-8b', found: true, is_test_model: false },
+          { type: 'end', model_id: 'qwen3.5-9b', found: true, is_test_model: false },
         ]
           .map((event) => `data: ${JSON.stringify(event)}\n\n`)
           .join('')
@@ -412,7 +438,7 @@ describe('ChatView', () => {
   ])('explains a %s error', async (code, message, shown) => {
     serveAnswer([
       { type: 'error', code, message },
-      { type: 'end', model_id: 'qwen3-8b', found: true, is_test_model: false, usage: null },
+      { type: 'end', model_id: 'qwen3.5-9b', found: true, is_test_model: false, usage: null },
     ])
     renderWithQueryClient(<ChatView />)
 

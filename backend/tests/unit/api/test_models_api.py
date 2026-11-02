@@ -17,17 +17,21 @@ POLICY = b"Providers keep logs for six months."
 USAGE = Usage(prompt_tokens=1, completion_tokens=1, first_token_ms=1.0, total_ms=2.0, attempts=1)
 
 
-def local_client(tmp_path: Path) -> TestClient:
+def local_model() -> ScriptedChatModel:
+    return ScriptedChatModel(
+        [TextDelta("Six months [1]."), Answered(ModelAnswer("Six months [1].", (1,)), USAGE)],
+        model_id="qwen3.5-9b",
+    )
+
+
+def local_client(tmp_path: Path, model: ScriptedChatModel | None = None) -> TestClient:
     """An app configured with a local model, so the test model is offered beside it."""
     adapters = Adapters(
         store=FakeDocumentStore(),
         index=InMemoryChunkIndex(),
         parser=TextDocumentParser(),
         queue=InlineIngestionQueue(),
-        chat_model=ScriptedChatModel(
-            [TextDelta("Six months [1]."), Answered(ModelAnswer("Six months [1].", (1,)), USAGE)],
-            model_id="qwen3-8b",
-        ),
+        chat_model=model or local_model(),
     )
     settings = Settings(data_dir=tmp_path, models_dir=tmp_path / "models", min_similarity=0)
     return TestClient(create_app(settings, adapters))
@@ -55,7 +59,7 @@ def test_a_local_model_is_offered_as_the_default_beside_the_test_model(tmp_path:
         models = client.get("/api/models").json()
 
     assert models == [
-        {"id": "qwen3-8b", "is_test_model": False, "is_default": True},
+        {"id": "qwen3.5-9b", "is_test_model": False, "is_default": True},
         {"id": "fake-extractive", "is_test_model": True, "is_default": False},
     ]
 
@@ -67,7 +71,7 @@ def test_a_question_is_answered_by_the_model_it_names_or_by_the_default(tmp_path
         _, default = chat(client, {"question": "How long are logs kept?"})
 
     assert named[-1]["model_id"] == "fake-extractive"
-    assert default[-1]["model_id"] == "qwen3-8b"
+    assert default[-1]["model_id"] == "qwen3.5-9b"
 
 
 def test_an_unknown_model_is_a_422_in_the_standard_error_shape(client: TestClient) -> None:
@@ -86,3 +90,17 @@ def test_a_model_name_over_100_characters_is_rejected_before_it_is_looked_up(
     assert response.status_code == 422
     assert response.json()["code"] == "invalid_request"
     assert [detail["field"] for detail in response.json()["details"]] == ["body.model"]
+
+
+def test_a_local_model_whose_server_stops_answering_is_not_offered_until_it_answers(
+    tmp_path: Path,
+) -> None:
+    model = local_model()
+    with local_client(tmp_path, model) as client:
+        model.available = False
+        without = [choice["id"] for choice in client.get("/api/models").json()]
+        model.available = True
+        again = [choice["id"] for choice in client.get("/api/models").json()]
+
+    assert without == ["fake-extractive"]
+    assert again == ["qwen3.5-9b", "fake-extractive"]

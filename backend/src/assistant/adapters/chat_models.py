@@ -6,7 +6,12 @@ import httpx
 
 from assistant.adapters.fakes.chat_model import FakeExtractiveChatModel
 from assistant.adapters.openai_compatible_chat import LlmServer, OpenAICompatibleChat
-from assistant.adapters.pinned_models import QWEN3_8B, PinnedModel
+from assistant.adapters.pinned_models import (
+    GEMMA_4_26B_A4B,
+    QWEN3_5_9B,
+    QWEN3_6_35B_A3B,
+    PinnedModel,
+)
 from assistant.ports.chat_model import ChatModel, ToolCallingModel
 from assistant.settings import Settings
 
@@ -22,11 +27,22 @@ class ChatModelSpec:
     streaming: bool = False
 
 
+def _served(name: str, pinned: PinnedModel) -> ChatModelSpec:
+    return ChatModelSpec(
+        served_model=name, pinned=pinned, tools=True, json_schema=True, streaming=True
+    )
+
+
+# The model `make llm` serves and the answer run uses when none is named (ADR 0026); the
+# Makefile and the evaluation read it from here.
+DEFAULT_CHAT_MODEL = "qwen3.5-9b"
+
+# The test model, the default, and the two models kept beside it.
 CHAT_MODELS: dict[str, ChatModelSpec] = {
     "fake-extractive": ChatModelSpec(served_model=None, pinned=None, tools=False),
-    "qwen3-8b": ChatModelSpec(
-        served_model="qwen3-8b", pinned=QWEN3_8B, tools=True, json_schema=True, streaming=True
-    ),
+    "qwen3.5-9b": _served("qwen3.5-9b", QWEN3_5_9B),
+    "qwen3.6-35b-a3b": _served("qwen3.6-35b-a3b", QWEN3_6_35B_A3B),
+    "gemma-4-26b-a4b": _served("gemma-4-26b-a4b", GEMMA_4_26B_A4B),
 }
 
 

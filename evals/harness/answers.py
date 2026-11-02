@@ -490,7 +490,7 @@ def answers_markdown(metrics: AnswerMetrics, metadata: Mapping[str, Any]) -> str
             "n/a"
             if value is None
             else f"{value:.0f}"
-            if name.endswith("_ms_median") or name.endswith("_ms_p95")
+            if name.endswith(("_ms_median", "_ms_p95", "_mib"))
             else f"{value:.1f}"
         )
         lines.append(f"| {name} | {shown} |")
@@ -518,9 +518,31 @@ def answers_markdown(metrics: AnswerMetrics, metadata: Mapping[str, Any]) -> str
         lines.append(f"| {case_id} | " + " | ".join(cells) + " |")
     lines += ["", "Missed cases:", ""]
     lines += [f"- {case}: {reason}" for case, reason in metrics.missed.items()] or ["- none"]
+    calibration = metadata.get("calibration")
+    if isinstance(calibration, Mapping) and "disagreements" in calibration:
+        lines += ["", "Calibration disagreements:", ""]
+        lines += _disagreement_rows(calibration["disagreements"]) or ["- none"]
+        metadata = {
+            **metadata,
+            "calibration": {k: v for k, v in calibration.items() if k != "disagreements"},
+        }
     lines += ["", "Run:", ""]
     lines += [f"- {name}: {value}" for name, value in metadata.items()]
     return "\n".join(lines) + "\n"
+
+
+def _disagreement_rows(disagreements: Iterable[Mapping[str, Any]]) -> list[str]:
+    """The calibration verdicts the judge did not match, as a table; none gives no rows."""
+    rows = [
+        f"| {d['item']} | {d['kind']} | {d['sentence'] or ''} | {d['expected']} "
+        f"| {d['judged'] or 'not judged'} |"
+        for d in disagreements
+    ]
+    return (
+        ["| Item | Verdict | Sentence | Hand | Judge |", "|---|---|---|---|---|", *rows]
+        if rows
+        else []
+    )
 
 
 def _fraction(count: int | None, total: int | None) -> str:

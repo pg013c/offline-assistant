@@ -11,13 +11,25 @@ Built to answer three practical questions about local AI:
 2. How do local models compare with a cloud model on **quality, latency, memory and cost**, measured on the same evaluation set?
 3. Can the whole thing be **installed and verified on an air-gapped machine**?
 
-> **Status:** chat UI for the demo (F-08), M2 complete. You can upload PDFs (including scans), Word files, photos of text, plain text or Markdown; they are parsed offline with Docling and Tesseract and split by article, paragraph and page. Questions find passages by meaning and by exact terms, across Polish and English (BGE-M3 and BM25 in Qdrant), reordered by a cross-encoder (BGE reranker v2 M3), and answers stream with a clickable source such as "Art. 6(1), p. 1". Documents can be deleted and re-indexed. Retrieval is measured: `make eval` scores 24 questions over the AI Act and the GDPR with and without the reranker against a recorded [baseline](docs/evals/2026-10-29-retrieval-reranker.md) (recall@3 95 %, recall@10 100 %, MRR 0.87, all out-of-scope questions refused, 0.5 s p95 search latency). Answers come from a local LLM, Qwen3 8B on llama.cpp, as validated JSON with citations of the passages used. Every sentence of an answer carries a citation marker, and when the documents do not cover a question the answer says so without citing anything. Questions that name an article or ask to compare go through an agent that reads whole articles and compares them with tools. Asked to, it saves a cited note or checklist as Markdown in the local notes folder, and only when asked. The chat keeps the session's questions as a thread: each `[n]` in an answer opens its passage, a selector picks the model, notes sit beside the documents, and the header shows the assistant is offline. Text inside documents is treated as data. `make eval-answers` measures all of this on 47 questions, 41 of them to answer. A local judge model, Qwen3 30B-A3B, grades each answer against reference key points and checks each cited sentence against its passages; it agrees with hand verdicts on 85 % of 48 calibration items:
+> **Status:** M2 complete; in M3, five local models compared and Qwen3.5 9B chosen as the default (F-09b). You can upload PDFs (including scans), Word files, photos of text, plain text or Markdown; they are parsed offline with Docling and Tesseract and split by article, paragraph and page. Questions find passages by meaning and by exact terms, across Polish and English (BGE-M3 and BM25 in Qdrant), reordered by a cross-encoder (BGE reranker v2 M3), and answers stream with a clickable source such as "Art. 6(1), p. 1". Documents can be deleted and re-indexed. Retrieval is measured: `make eval` scores 24 questions over the AI Act and the GDPR with and without the reranker against a recorded [baseline](docs/evals/2026-10-29-retrieval-reranker.md) (recall@3 95 %, recall@10 100 %, MRR 0.87, all out-of-scope questions refused, 0.5 s p95 search latency). Answers come from a local LLM, Qwen3.5 9B on llama.cpp (chosen in F-09b, [ADR 0026](docs/adr/0026-qwen3-5-9b-is-the-default-model.md)), as validated JSON with citations of the passages used. Every sentence of an answer carries a citation marker, and when the documents do not cover a question the answer says so without citing anything. Questions that name an article or ask to compare go through an agent that reads whole articles and compares them with tools. Asked to, it saves a cited note or checklist as Markdown in the local notes folder, and only when asked. The chat keeps the session's questions as a thread: each `[n]` in an answer opens its passage, a selector picks the model, notes sit beside the documents, and the header shows the assistant is offline. Text inside documents is treated as data. `make eval-answers` measures all of this on 47 questions, 41 of them to answer. A local judge model grades each answer against reference key points and checks each cited sentence against its passages. For this record it was Qwen3 30B-A3B, which agreed with hand verdicts on 85 % of 48 calibration items; from F-09b on it is Gemma 4 26B-A4B with thinking off ([ADR 0025](docs/adr/0025-gemma-4-judges-without-thinking.md)):
 
 - 90 % cite an expected passage, and all are in the question's language;
 - 68 % are judged correct (a partly correct answer counts half), and the judge finds the cited passages support the sentences;
 - every tool call is valid after retries;
 - notes are saved for 3 of 3 requests, citing the expected articles, and for none of the other 44 cases;
 - no planted instruction is followed ([record](docs/evals/2026-10-30-answers-judged.md)).
+
+F-09b ran five local models through the same suite on the same Mac, graded by the calibrated Gemma 4 judge (agreement 97.9 % / 95.9 %):
+
+| Model | Judged correct | Citation support | First token, median | Tokens/s | Peak memory |
+|---|---|---|---|---|---|
+| Qwen3 8B | 63 % | 95 % | 1.1 s | 49 | 16.7 GiB |
+| Qwen3.5 9B | 82 % | 98 % | 1.1 s | 44 | 15.4 GiB |
+| Qwen3.6 35B-A3B | 84 % | 98 % | 0.7 s | 72 | 28.7 GiB |
+| Gemma 4 26B-A4B | 79 % | 98 % | 0.8 s | 82 | 25.9 GiB |
+| Ternary-Bonsai-2 27B | 79 % | 98 % | 2.85 s | 29 | 21.0 GiB |
+
+All five meet the floors for citation support, tool calls and refusals. Under the 24 GiB memory limit, Qwen3.5 9B answers best ([record](docs/evals/2026-11-02-model-comparison.md)).
 
 ## What it will do
 
@@ -76,7 +88,7 @@ make qdrant
 make llm-models
 ```
 
-`make models` downloads the models (about 4.8 GB: document parsing, embeddings and the reranker, pinned by commit and checked by hash) into `ASSISTANT_MODELS_DIR`. It is the only step that needs the network; nothing is downloaded at runtime ([ADR 0004](docs/adr/0004-offline-first-no-egress.md)). `make llm-models` downloads the local LLM, Qwen3 8B (5 GB GGUF, pinned by hash), for `make llm`, which serves it with llama.cpp's `llama-server` on port 8080 (`brew install llama.cpp`; [ADR 0021](docs/adr/0021-llama-server-and-qwen3-8b.md)). Without it, set `ASSISTANT_CHAT_MODEL=fake-extractive` for the test model. `make qdrant` starts the vector database in Docker, pinned by digest, with telemetry off and data under `ASSISTANT_DATA_DIR/qdrant` ([ADR 0017](docs/adr/0017-qdrant-and-bge-m3-for-hybrid-search.md)).
+`make models` downloads the models (about 4.8 GB: document parsing, embeddings and the reranker, pinned by commit and checked by hash) into `ASSISTANT_MODELS_DIR`. It is the only step that needs the network; nothing is downloaded at runtime ([ADR 0004](docs/adr/0004-offline-first-no-egress.md)). `make llm-models` downloads the local LLM, Qwen3.5 9B (5.7 GB GGUF, pinned by hash), for `make llm`, which serves it with llama.cpp's `llama-server` on port 8080 (`brew install llama.cpp`; [ADR 0021](docs/adr/0021-llama-server-and-qwen3-8b.md), [ADR 0026](docs/adr/0026-qwen3-5-9b-is-the-default-model.md)). Another registered model is fetched and served by name, for example `make llm-models LLM_MODEL=qwen3.6-35b-a3b` and `make llm LLM_MODEL=qwen3.6-35b-a3b`, with the same flags for every model ([ADR 0024](docs/adr/0024-candidate-models-and-llama-cpp-upgrade.md)); set `ASSISTANT_CHAT_MODEL` to the same name. Without it, set `ASSISTANT_CHAT_MODEL=fake-extractive` for the test model. `make qdrant` starts the vector database in Docker, pinned by digest, with telemetry off and data under `ASSISTANT_DATA_DIR/qdrant` ([ADR 0017](docs/adr/0017-qdrant-and-bge-m3-for-hybrid-search.md)).
 
 ```bash
 make llm
@@ -104,7 +116,7 @@ make eval-corpus
 make eval
 ```
 
-`make eval` indexes the evaluation corpus (the AI Act and the GDPR in English and Polish, fetched once by `make eval-corpus` and checked against pinned hashes) into its own data directory and Qdrant collection. It then scores the retrieval cases in `evals/datasets/` with Promptfoo and fails if a metric is more than 5 points worse than the baseline in [docs/evals/](docs/evals/) or below its floor ([ADR 0020](docs/adr/0020-retrieval-targets.md)). Reports go to `evals/results/`. `make eval-answers` asks the same questions through the chat API with the local LLM (it needs `make llm`) and compares the answers with their own baseline. With the judge running (`make judge-models` once, about 18.6 GB, then `make judge`), it also judges the answers and checks the judge against its calibration set first; without it, the judged metrics are skipped.
+`make eval` indexes the evaluation corpus (the AI Act and the GDPR in English and Polish, fetched once by `make eval-corpus` and checked against pinned hashes) into its own data directory and Qdrant collection. It then scores the retrieval cases in `evals/datasets/` with Promptfoo and fails if a metric is more than 5 points worse than the baseline in [docs/evals/](docs/evals/) or below its floor ([ADR 0020](docs/adr/0020-retrieval-targets.md)). Reports go to `evals/results/`. `make eval-answers` asks the same questions through the chat API with the local LLM (it needs `make llm`) and compares the answers with their own baseline. `make eval-answers LLM_MODEL=<name>` answers with another served model; its report carries the model's name, and it is held to the floors and the judge's calibration, not to a baseline of another model. With the judge running (`make judge-models` once, about 14.4 GB for Gemma 4, then `make judge`; `JUDGE=qwen3.6-35b-a3b` serves the check judge instead), it also judges the answers and checks the judge against its calibration set first; without it, the judged metrics are skipped.
 
 `make test-integration` runs the tests with real adapters (Docling, BGE-M3, the reranker, Qdrant); it needs `make models`, `make qdrant` and Tesseract.
 
@@ -128,8 +140,9 @@ Code: [MIT](LICENSE). Models, tools and datasets keep their own licences:
 | [Qdrant](https://qdrant.tech/) server and [qdrant-client](https://github.com/qdrant/qdrant-client) | vector and keyword search | Apache-2.0 |
 | [BGE-M3](https://huggingface.co/BAAI/bge-m3) | multilingual embeddings | MIT |
 | [BGE reranker v2 M3](https://huggingface.co/BAAI/bge-reranker-v2-m3) | multilingual reranking | Apache-2.0 |
-| [Qwen3 8B](https://huggingface.co/Qwen/Qwen3-8B-GGUF) | local LLM, Q4_K_M GGUF | Apache-2.0 |
-| [Qwen3 30B-A3B](https://huggingface.co/Qwen/Qwen3-30B-A3B-GGUF) | evaluation judge, Q4_K_M GGUF, `make judge-models` ([ADR 0022](docs/adr/0022-local-judge-and-answer-floors.md)) | Apache-2.0 |
+| [Qwen3.5 9B](https://huggingface.co/unsloth/Qwen3.5-9B-GGUF) | local LLM (the default), Q4_K_M GGUF | Apache-2.0 |
+| [Gemma 4 26B-A4B](https://huggingface.co/google/gemma-4-26B-A4B-it-qat-q4_0-gguf) | local LLM, and the evaluation judge, QAT Q4_0 GGUF, `make judge-models` ([ADR 0025](docs/adr/0025-gemma-4-judges-without-thinking.md)) | Apache-2.0 |
+| [Qwen3.6 35B-A3B](https://huggingface.co/ggml-org/Qwen3.6-35B-A3B-GGUF) | local LLM, and re-judges the judge's own answers, Q4_K_M GGUF, `make judge-models JUDGE=qwen3.6-35b-a3b` ([ADR 0025](docs/adr/0025-gemma-4-judges-without-thinking.md)) | Apache-2.0 |
 | [llama.cpp](https://github.com/ggml-org/llama.cpp) | `make llm` serves the LLM | MIT |
 | [sentence-transformers](https://www.sbert.net/) | runs the embedding model | Apache-2.0 |
 | [scikit-learn](https://scikit-learn.org/) | dependency of sentence-transformers | BSD-3-Clause |

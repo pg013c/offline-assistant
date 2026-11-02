@@ -4,6 +4,7 @@ from harness.calibration import (
     AGREEMENT_BAR,
     CALIBRATION_FILE,
     CalibrationItem,
+    Disagreement,
     agreement,
     calibration_failures,
     load_calibration,
@@ -58,6 +59,37 @@ def test_an_item_the_judge_could_not_judge_counts_as_disagreement(tmp_path: Path
     result = agreement([item], {"cal-01": None})
 
     assert (result.correctness, result.support) == (0.0, 0.0)
+
+
+def test_the_agreement_names_each_verdict_the_judge_disagreed_with(tmp_path: Path) -> None:
+    [item] = items(tmp_path)
+    judged = {"cal-01": Verdict("correct", "x", {1: True, 2: True})}
+
+    result = agreement([item], judged)
+
+    assert result.disagreements == (
+        Disagreement("cal-01", "correctness", None, expected="partial", judged="correct"),
+        Disagreement("cal-01", "support", 2, expected="unsupported", judged="supported"),
+    )
+
+
+def test_an_item_the_judge_could_not_judge_is_listed_as_not_judged(tmp_path: Path) -> None:
+    [item] = items(tmp_path)
+
+    result = agreement([item], {"cal-01": None})
+
+    assert result.disagreements == (
+        Disagreement("cal-01", "correctness", None, expected="partial", judged=None),
+        Disagreement("cal-01", "support", 1, expected="supported", judged=None),
+        Disagreement("cal-01", "support", 2, expected="unsupported", judged=None),
+    )
+
+
+def test_full_agreement_lists_no_disagreement(tmp_path: Path) -> None:
+    [item] = items(tmp_path)
+    judged = {"cal-01": Verdict("partial", "x", {1: True, 2: False})}
+
+    assert agreement([item], judged).disagreements == ()
 
 
 def test_a_judge_below_the_bar_fails_the_run() -> None:

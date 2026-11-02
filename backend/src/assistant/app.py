@@ -150,6 +150,7 @@ def create_app(settings: Settings, adapters: Adapters | None = None) -> FastAPI:
             id=adapters.chat_model.model_id,
             is_test_model=adapters.chat_model.is_test_model,
             answerer=answers,
+            model=adapters.chat_model,
         )
     ]
     # The test model is always offered beside a real one, to compare with (F-08).
@@ -159,6 +160,7 @@ def create_app(settings: Settings, adapters: Adapters | None = None) -> FastAPI:
             ModelEntry(
                 id=test_model.model_id,
                 is_test_model=True,
+                model=test_model,
                 answerer=QuestionService(
                     adapters.index,
                     test_model,

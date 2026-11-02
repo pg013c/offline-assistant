@@ -15,10 +15,11 @@ import subprocess
 import sys
 import time
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, replace
+from dataclasses import asdict, dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import IO, Any
+from urllib.parse import urlsplit
 
 import httpx
 import yaml
@@ -43,13 +44,13 @@ from harness.corpus import CorpusDocument, documents, sha256
 from harness.dataset import load_answer_cases, load_cases
 from harness.gate import below_answer_floors, gate_failures
 from harness.judge import (
-    JUDGE_MODEL,
     JUDGE_PROMPT,
     MAX_TOKENS,
     JudgeClient,
     JudgeUnavailable,
     Verdict,
 )
+from harness.memory import PeakMemory, SystemProcesses, mapped_bytes
 from harness.metrics import CaseResult, compute, latency, top_out_of_scope_similarity
 from harness.promptfoo import (
     MODES,
@@ -68,12 +69,17 @@ PROMPTFOO_CONFIG = ROOT / "evals" / "promptfoo" / "retrieval.yaml"
 GATED_MODE = "reranked"
 BASELINE = ROOT / "docs" / "evals" / "retrieval-baseline.json"
 ANSWER_BASELINE = ROOT / "docs" / "evals" / "answer-baseline.json"
+# The judged-correctness floor of the default model (ADR 0026, PRD §9).
+CORRECTNESS_FLOOR = 0.75
 # The metrics that only the judge measures (ADR 0022).
 JUDGED = ("judged_correct", "citation_support")
 ANSWERS_CONFIG = ROOT / "evals" / "promptfoo" / "answers.yaml"
 STARTUP_SECONDS = 180
 INGESTION_SECONDS = 1800
+# The least time a Promptfoo call gets, and the time per case beyond it: the slowest model
+# of F-09b needs about 40 s for an agent case.
 PROMPTFOO_SECONDS = 600
+PROMPTFOO_SECONDS_PER_CASE = 60
 # The similarity threshold the suite measures at; the app's default (F-03).
 EVAL_THRESHOLD = 0.5
 POLL_SECONDS = 1.0
@@ -175,6 +181,14 @@ def run(config: RunConfig) -> Outcome:
 def run_answers(config: RunConfig) -> Outcome:
     """The answer suite from an empty index, against the configured chat model (F-06)."""
     started_at = datetime.now(UTC)
+    pin = llm_pin(config.chat_model, _served_pins())
+    # Found before the run starts, so a wrong server on the port fails it at once.
+    llm_server = _llm_server(config.llm_url)
+    memory = PeakMemory(
+        SystemProcesses(),
+        urlsplit(config.llm_url).port or 80,
+        mapped=mapped_bytes(llm_server.get("model_path")),
+    )
     corpus = verify_corpus(config.corpus_dir, config.corpus)
     ensure_port_free(config.port)
     _reset(config)
@@ -187,9 +201,11 @@ def run_answers(config: RunConfig) -> Outcome:
             chunks = _chunk_refs(api, document_ids)
         cases = load_answer_cases(config.dataset)
         expected = resolve(cases, chunks)
-        outputs = outputs_by_case(
-            _promptfoo(ANSWERS_CONFIG, cases, api_url, config.results_dir, started_at)
-        )
+        # The model server's memory is sampled while it answers (FR-44).
+        with memory:
+            outputs = outputs_by_case(
+                _promptfoo(ANSWERS_CONFIG, cases, api_url, config.results_dir, started_at)
+            )
         results = {case.id: parse_chat_stream(outputs[case.id]) for case in cases}
         # Notes are read back while the API still runs.
         with httpx.Client(base_url=api_url, timeout=60) as api:
@@ -232,22 +248,19 @@ def run_answers(config: RunConfig) -> Outcome:
         verdicts=verdicts,
     )
     trusted, untrusted = trusted_judged(metrics.values, calibration)
-    metrics = replace(metrics, values=trusted)
+    metrics = replace(
+        metrics,
+        values=trusted,
+        performance={**metrics.performance, "peak_memory_mib": memory.peak_mib},
+    )
     metadata = {
         **_metadata(config, started_at),
         "corpus": corpus,
         "chat_model": config.chat_model,
-        "llm_server": _llm_server(config.llm_url),
+        "chat_model_file": dict(pin),
+        "llm_server": llm_server,
         "judge": judge,
-        "calibration": (
-            {
-                "correctness": calibration.correctness,
-                "support": calibration.support,
-                "items": calibration.items,
-            }
-            if calibration
-            else "not run"
-        ),
+        "calibration": calibration_metadata(calibration),
         "untrusted": {
             name: {"value": value, "cases": metrics.cases[name]}
             for name, value in untrusted.items()
@@ -280,22 +293,30 @@ def run_answers(config: RunConfig) -> Outcome:
         "metadata": metadata,
     }
     baseline = (
-        json.loads(config.baseline.read_text(encoding="utf-8"))["metrics"]
+        json.loads(config.baseline.read_text(encoding="utf-8"))
         if config.baseline.exists()
-        else {}
+        else {"metrics": {}}
     )
     failures = answer_failures(
         metrics.values,
-        {name: values["value"] for name, values in baseline.items()},
+        {name: values["value"] for name, values in baseline["metrics"].items()},
         calibration,
         judged=verdicts is not None,
-    )
-    stem = config.results_dir / f"answers-{started_at:%Y%m%dT%H%M%SZ}"
-    report_json = stem.with_suffix(".json")
-    report_markdown = stem.with_suffix(".md")
+        same_model=same_model(baseline, config.chat_model),
+    ) + correctness_failures(metrics.values, config.chat_model, default_chat_model())
+    report_json, report_markdown = answer_reports(config.results_dir, config.chat_model, started_at)
     report_json.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", "utf-8")
     report_markdown.write_text(answers_markdown(metrics, metadata), encoding="utf-8")
     return Outcome(report_json, report_markdown, failures)
+
+
+def served_judge(url: str) -> str | None:
+    """The model the judge server lists, or None when it lists none (ADR 0025)."""
+    try:
+        listed = httpx.get(f"{url}/v1/models", timeout=5).json()["data"]
+        return str(listed[0]["id"]) if listed else None
+    except (httpx.HTTPError, ValueError, KeyError, IndexError, TypeError):
+        return None
 
 
 def _llm_server(url: str) -> dict[str, Any]:
@@ -305,6 +326,22 @@ def _llm_server(url: str) -> dict[str, Any]:
     except (httpx.HTTPError, ValueError):
         return {"url": url}
     return {"url": url, "build": props.get("build_info"), "model_path": props.get("model_path")}
+
+
+# Every served model's pinned file, from the backend's registry (ADR 0024).
+SERVED_PINS = (
+    "import json; from assistant.adapters.chat_models import CHAT_MODELS; "
+    "print(json.dumps({name: {'repository': s.pinned.repository, 'revision': s.pinned.revision, "
+    "'file': f, 'sha256': h} for name, s in CHAT_MODELS.items() if s.pinned "
+    "for f, h in s.pinned.files.items()}))"
+)
+
+
+def _served_pins() -> dict[str, dict[str, str]]:
+    pins: dict[str, dict[str, str]] = json.loads(
+        _command(["uv", "run", "--directory", str(ROOT / "backend"), "python", "-c", SERVED_PINS])
+    )
+    return pins
 
 
 def verify_corpus(corpus_dir: Path, pins: Sequence[CorpusDocument]) -> dict[str, str]:
@@ -342,6 +379,78 @@ def drop_collections(qdrant: httpx.Client, prefix: str) -> None:
             qdrant.delete(f"/collections/{name}").raise_for_status()
 
 
+def answer_reports(results_dir: Path, chat_model: str, started_at: datetime) -> tuple[Path, Path]:
+    """The JSON and Markdown reports of an answer run, named after the whole model name.
+
+    The suffix is appended, not set with `with_suffix`, which would cut `qwen3.5-9b` at its dot.
+    """
+    name = f"answers-{chat_model}-{started_at:%Y%m%dT%H%M%SZ}"
+    return results_dir / f"{name}.json", results_dir / f"{name}.md"
+
+
+def promptfoo_seconds(cases: int) -> float:
+    """How long the Promptfoo call may take: a budget per case, never below the old limit."""
+    return max(PROMPTFOO_SECONDS, PROMPTFOO_SECONDS_PER_CASE * cases)
+
+
+def calibration_metadata(calibration: Agreement | None) -> dict[str, Any] | str:
+    """The judge's calibration as the report keeps it, each disagreement included."""
+    if calibration is None:
+        return "not run"
+    return {
+        "correctness": calibration.correctness,
+        "support": calibration.support,
+        "items": calibration.items,
+        "disagreements": [asdict(item) for item in calibration.disagreements],
+    }
+
+
+def llm_pin(name: str, pins: Mapping[str, Mapping[str, str]]) -> Mapping[str, str]:
+    """The pinned file of the served model the run answers with (ADR 0024)."""
+    if name not in pins:
+        raise ValueError(f"{name} is not a served model; choose one of: {', '.join(pins)}")
+    return pins[name]
+
+
+# The default model, read from the backend's registry (ADR 0026, F-09b review #2).
+DEFAULT_CHAT_MODEL_COMMAND = (
+    "from assistant.adapters.chat_models import DEFAULT_CHAT_MODEL; print(DEFAULT_CHAT_MODEL)"
+)
+
+
+def default_chat_model() -> str:
+    """The default model, as the backend's registry names it (ADR 0026)."""
+    return _command(
+        [
+            "uv",
+            "run",
+            "--directory",
+            str(ROOT / "backend"),
+            "python",
+            "-c",
+            DEFAULT_CHAT_MODEL_COMMAND,
+        ]
+    )
+
+
+def correctness_failures(
+    values: Mapping[str, float | None], chat_model: str, default: str
+) -> list[str]:
+    """The judged-correctness floor, which holds for the default model only (ADR 0026)."""
+    now = values.get("judged_correct")
+    if chat_model != default or now is None or now >= CORRECTNESS_FLOOR - 1e-9:
+        return []
+    return [
+        f"judged_correct is {now * 100:.1f}, below its floor of {CORRECTNESS_FLOOR * 100:.1f} "
+        "for the default model (ADR 0026)"
+    ]
+
+
+def same_model(baseline: Mapping[str, Any], chat_model: str) -> bool:
+    """Whether the baseline was answered by this run's model, so the two compare."""
+    return bool(baseline.get("metadata", {}).get("chat_model") == chat_model)
+
+
 def default_answers_config(env: Mapping[str, str]) -> RunConfig:
     """`make eval-answers`: the answer suite against the local model (F-06), over the whole
     corpus including the injected documents (F-07)."""
@@ -351,7 +460,7 @@ def default_answers_config(env: Mapping[str, str]) -> RunConfig:
         dataset=ROOT / "evals" / "datasets" / "answers.yaml",
         baseline=ANSWER_BASELINE,
         floors=False,
-        chat_model="qwen3-8b",
+        chat_model=env.get("LLM_MODEL") or default_chat_model(),
         llm_url=f"http://127.0.0.1:{env.get('LLM_PORT', '8080')}",
         judge_url=f"http://127.0.0.1:{env.get('JUDGE_PORT', '8081')}",
     )
@@ -488,7 +597,12 @@ def judge_answers(
         httpx.get(f"{judge_url}/health", timeout=5).raise_for_status()
     except httpx.HTTPError:
         return None, {"skipped": f"no judge answers at {judge_url}; start it with make judge"}
-    client = JudgeClient(judge_url)
+    model = served_judge(judge_url)
+    if model is None:
+        return None, {
+            "skipped": f"the judge at {judge_url} lists no model; start it with make judge"
+        }
+    client = JudgeClient(judge_url, model)
     verdicts: dict[str, Verdict | None] = {}
     try:
         for case in cases:
@@ -501,7 +615,7 @@ def judge_answers(
             "skipped": f"the judge at {judge_url} stopped answering; start it with make judge"
         }
     return verdicts, {
-        "model": JUDGE_MODEL,
+        "model": model,
         "server": _llm_server(judge_url),
         "prompt_sha256": hashlib.sha256(JUDGE_PROMPT.encode()).hexdigest(),
         "max_tokens": MAX_TOKENS,
@@ -514,7 +628,10 @@ def calibrate(judge_url: str, path: Path = CALIBRATION_FILE) -> Agreement | None
     missing or the judge stops answering, which fails a judged run."""
     if not path.exists():
         return None
-    client = JudgeClient(judge_url)
+    model = served_judge(judge_url)
+    if model is None:
+        return None
+    client = JudgeClient(judge_url, model)
     items = load_calibration(path)
     try:
         return agreement(items, {item.id: client.judge(item.judged) for item in items})
@@ -527,11 +644,12 @@ def answer_failures(
     baseline: Mapping[str, float | None],
     calibration: Agreement | None,
     judged: bool,
+    same_model: bool,
 ) -> list[str]:
-    """The answer gate's failures, the judge's calibration among them (ADR 0022)."""
-    failures = gate_failures(dict(values), dict(baseline), floors=False) + below_answer_floors(
-        values
-    )
+    """The answer gate's failures, the judge's calibration among them (ADR 0022). The
+    regression rule holds only against a baseline of the same model (F-09b)."""
+    compared = dict(baseline) if same_model else {}
+    failures = gate_failures(dict(values), compared, floors=False) + below_answer_floors(values)
     if calibration is not None:
         failures += calibration_failures(calibration)
     elif judged:
@@ -621,7 +739,7 @@ def _promptfoo(
         command_line(Path(_executable("pnpm")), suite, tests, output),
         env=environment(os.environ, api_url),
         check=True,
-        timeout=PROMPTFOO_SECONDS,
+        timeout=promptfoo_seconds(len(cases)),
     )
     decoded: dict[str, Any] = json.loads(output.read_text(encoding="utf-8"))
     return decoded
@@ -749,6 +867,10 @@ def main() -> None:
     print(f"Report: {outcome.report_json}")
     if not config.baseline.exists():
         print(f"No baseline at {config.baseline}; this run can become it.")
+    elif config.chat_model != "fake-extractive" and not same_model(
+        json.loads(config.baseline.read_text(encoding="utf-8")), config.chat_model
+    ):
+        print(f"The baseline is of another model; {config.chat_model} met floors only.")
     if outcome.gate_failures:
         sys.exit(
             "Gate failures:\n" + "\n".join(f"- {failure}" for failure in outcome.gate_failures)

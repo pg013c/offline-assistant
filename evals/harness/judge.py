@@ -1,7 +1,8 @@
 """The judge (ADR 0022): a local model that grades answers against reference key points.
 
 It is called by the evaluation only, through the OpenAI-compatible API of the llama-server
-that `make judge` starts, with a JSON schema and at temperature 0.
+that `make judge` starts, with a JSON schema and at temperature 0. Which model judges is the
+server's choice (ADR 0025); the client asks for the model the server lists.
 """
 
 import json
@@ -14,7 +15,6 @@ from typing import Any, Literal
 import httpx
 
 JUDGE_PROMPT = (Path(__file__).parents[1] / "prompts" / "judge.md").read_text(encoding="utf-8")
-JUDGE_MODEL = "qwen3-30b-a3b"
 TIMEOUT_SECONDS = 600
 MAX_TOKENS = 8192
 _SCHEMA: dict[str, Any] = {
@@ -82,8 +82,11 @@ class _Invalid(Exception):
 class JudgeClient:
     """Asks the judge for a verdict; an unreadable or late reply is retried, then not judged."""
 
-    def __init__(self, url: str, http: httpx.Client | None = None, max_retries: int = 2) -> None:
+    def __init__(
+        self, url: str, model: str, http: httpx.Client | None = None, max_retries: int = 2
+    ) -> None:
         self._url = url
+        self._model = model
         self._http = http or httpx.Client(timeout=TIMEOUT_SECONDS)
         self._max_retries = max_retries
         # Whether any reply carried the judge's reasoning (ADR 0023).
@@ -91,7 +94,7 @@ class JudgeClient:
 
     def judge(self, judged: JudgeInput) -> Verdict | None:
         body = {
-            "model": JUDGE_MODEL,
+            "model": self._model,
             "messages": [
                 {"role": "system", "content": JUDGE_PROMPT},
                 {"role": "user", "content": _user_message(judged)},
