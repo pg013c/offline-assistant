@@ -44,7 +44,6 @@ from harness.corpus import CorpusDocument, documents, sha256
 from harness.dataset import load_answer_cases, load_cases
 from harness.gate import below_answer_floors, gate_failures
 from harness.judge import (
-    JUDGE_MODEL,
     JUDGE_PROMPT,
     MAX_TOKENS,
     JudgeClient,
@@ -311,7 +310,11 @@ def run_answers(config: RunConfig) -> Outcome:
 
 def served_judge(url: str) -> str | None:
     """The model the judge server lists, or None when it lists none (ADR 0025)."""
-    raise NotImplementedError
+    try:
+        listed = httpx.get(f"{url}/v1/models", timeout=5).json()["data"]
+        return str(listed[0]["id"]) if listed else None
+    except (httpx.HTTPError, ValueError, KeyError, IndexError, TypeError):
+        return None
 
 
 def _llm_server(url: str) -> dict[str, Any]:
@@ -558,7 +561,12 @@ def judge_answers(
         httpx.get(f"{judge_url}/health", timeout=5).raise_for_status()
     except httpx.HTTPError:
         return None, {"skipped": f"no judge answers at {judge_url}; start it with make judge"}
-    client = JudgeClient(judge_url, served_judge(judge_url) or "")
+    model = served_judge(judge_url)
+    if model is None:
+        return None, {
+            "skipped": f"the judge at {judge_url} lists no model; start it with make judge"
+        }
+    client = JudgeClient(judge_url, model)
     verdicts: dict[str, Verdict | None] = {}
     try:
         for case in cases:
@@ -571,7 +579,7 @@ def judge_answers(
             "skipped": f"the judge at {judge_url} stopped answering; start it with make judge"
         }
     return verdicts, {
-        "model": JUDGE_MODEL,
+        "model": model,
         "server": _llm_server(judge_url),
         "prompt_sha256": hashlib.sha256(JUDGE_PROMPT.encode()).hexdigest(),
         "max_tokens": MAX_TOKENS,
@@ -584,7 +592,10 @@ def calibrate(judge_url: str, path: Path = CALIBRATION_FILE) -> Agreement | None
     missing or the judge stops answering, which fails a judged run."""
     if not path.exists():
         return None
-    client = JudgeClient(judge_url, served_judge(judge_url) or "")
+    model = served_judge(judge_url)
+    if model is None:
+        return None
+    client = JudgeClient(judge_url, model)
     items = load_calibration(path)
     try:
         return agreement(items, {item.id: client.judge(item.judged) for item in items})

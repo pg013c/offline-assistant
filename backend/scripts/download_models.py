@@ -5,7 +5,7 @@ the files the app loads are fetched, and every file is checked against its pinne
 the API checks them again at startup. The directory can be copied to a machine without
 network instead of running this script there.
 
-Usage: python scripts/download_models.py <models-dir> [--llm <name> | --judge]
+Usage: python scripts/download_models.py <models-dir> [--llm <name> | --judge <name>]
 """
 
 import sys
@@ -43,8 +43,8 @@ if __name__ == "__main__":
         case [models_dir, "--llm", name] if (spec := CHAT_MODELS.get(name)) and spec.pinned:
             # One local LLM for llama-server, by its registry name (ADR 0021, ADR 0024).
             main(models_dir, (spec.pinned,))
-        case [models_dir, "--judge"]:
-            # The evaluation's judge for llama-server, about 18.6 GB (ADR 0022).
-            main(models_dir, tuple(JUDGE_MODELS.values()))
+        case [models_dir, "--judge", name] if name in JUDGE_MODELS:
+            # One of the evaluation's judges for llama-server, by its name (ADR 0025).
+            main(models_dir, (JUDGE_MODELS[name],))
         case _:
             sys.exit(__doc__)

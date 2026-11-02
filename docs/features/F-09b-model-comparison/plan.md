@@ -206,7 +206,7 @@ Results, 2026-11-01, llama.cpp 0.8.0 (build 11960), `make llm LLM_MODEL=<name>`:
   - docs: in the README, the judge sentence and the licence table.
 - Done when: the tests pass, `make check` is green, and `make judge` serves Gemma 4 that answers the calibration at 85 % or more.
 - [x] red
-- [ ] green
+- [x] green
 
 ### Step 10. Five judged runs and the published table
 

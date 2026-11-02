@@ -195,15 +195,10 @@ LLM_MODELS: tuple[PinnedModel, ...] = (
     TERNARY_BONSAI_2_27B,
 )
 
-# The evaluation's judge (ADR 0022), served by `make judge`, never loaded by the API.
-QWEN3_30B_A3B = PinnedModel(
-    repository="Qwen/Qwen3-30B-A3B-GGUF",
-    revision="e4d4bafdfb96a411a163846265362aceb0b9c63a",
-    directory="llm/Qwen--Qwen3-30B-A3B-GGUF",
-    files={
-        "Qwen3-30B-A3B-Q4_K_M.gguf": (
-            "0d003f6662faee786ed5da3e31b29c978de5ae5d275c8794c606a7f3c01aa8f5"
-        )
-    },
-)
-JUDGE_MODELS: dict[str, PinnedModel] = {"qwen3-30b-a3b": QWEN3_30B_A3B}
+# The evaluation's judges by name (ADR 0025), served by `make judge`, never loaded by the API:
+# the first is the judge, the second re-judges the first's own answers. Both are candidates
+# too (ADR 0024), and stay pinned here whichever the comparison keeps.
+JUDGE_MODELS: dict[str, PinnedModel] = {
+    "gemma-4-26b-a4b": GEMMA_4_26B_A4B,
+    "qwen3.6-35b-a3b": QWEN3_6_35B_A3B,
+}

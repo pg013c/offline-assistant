@@ -171,7 +171,7 @@ It uploads the pinned corpus (AI Act and GDPR, English and Polish) and resolves 
 
 It reports time to first token, tokens per second and each case's tools, and compares the run with `docs/evals/answer-baseline.json`. The API it started is stopped at the end.
 
-**The judge** (ADR 0022, ADR 0023) grades the answers when `make judge` serves Qwen3 30B-A3B on port 8081, with thinking on. It is used only by the evaluation, never by the API.
+**The judge** (ADR 0022, ADR 0025) grades the answers when `make judge` serves Gemma 4 26B-A4B on port 8081, with thinking off. `make judge JUDGE=qwen3.6-35b-a3b` serves Qwen3.6 35B-A3B instead, to re-judge Gemma 4's own answers. It is used only by the evaluation, never by the API.
 
 - **Input:** the harness sends each completed answer with its question, its reference key points, its numbered sentences and the full text of the passages they cite (`ChunkSummary.text`), in escaped tags. The request uses a JSON schema at temperature 0.
 - **Verdicts:** the judge says whether each key point is made, and whether each cited sentence is supported. Correctness is derived in code: all points made is correct, none is wrong, otherwise partial.
