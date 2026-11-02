@@ -1,6 +1,6 @@
 # 0023. The judge thinks before it rules
 
-- Status: accepted
+- Status: superseded by [0025](0025-gemma-4-judges-without-thinking.md)
 - Date: 2026-10-30
 - Related: F-09a, TEST-24, ADR 0022
 - Amends: ADR 0022, decision 2 ("thinking off")
