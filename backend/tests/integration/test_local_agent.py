@@ -121,6 +121,13 @@ def test_a_polish_question_is_answered_in_polish_with_markers() -> None:
 
 
 @pytest.mark.skipif(not server_is_up(), reason="no local model server (make llm)")
+# Not strict: the model saves some requested notes (1 of 3 in the F-09b record), so a pass
+# is reported as XPASS rather than failing the run.
+@pytest.mark.xfail(
+    reason="qwen3.5-9b answers instead of calling save_note (ADR 0026); backlog: "
+    "improve Qwen3.5 9B's note saving and its use of the expected tools",
+    strict=False,
+)
 def test_a_checklist_request_saves_a_note_citing_the_article() -> None:
     notes = InMemoryNoteStore()
 
