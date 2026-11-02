@@ -144,11 +144,11 @@ The diagram above is the target. The question flow runs end to end today; each p
 - **Answer and stream:** the answer is told whether the note was saved (`prompts/note_saved.md`, `note_not_saved.md`). The stream sends a `note` event, which the UI shows as a step.
 - **Reading back:** `GET /api/notes` and `GET /api/notes/{id}`.
 
-**Models and network mode** (F-08). `ChatModels` (`services/models.py`) holds what answers with each model.
+**Models and network mode** (F-08, F-09b). `ChatModels` (`services/models.py`) holds what answers with each model.
 
 - **Which models:** the configured one, which is the default, and `fake-extractive` beside a real model. `GET /api/models` lists them.
 - **Choosing per question:** a chat request may name a model (`ChatRequest.model`, at most 100 characters). An unknown one is a 422 `unknown_model`, resolved before the stream starts.
-- **Limitation:** the local model's server is checked once, at startup.
+- **Availability (F-09b):** `GET /api/models` lists a local model only while its server lists it, asked at most every few seconds. The UI refreshes the list, moves a question to the fallback when the chosen model stops answering, and says so.
 - **Network mode:** `ASSISTANT_ALLOW_NETWORK` (default off) is reported by `GET /api/health` as `network`, and the UI shows "Offline" or a warning (ADR 0004). Nothing uses the network until F-09.
 
 **The UI** (`frontend/`, F-08):
