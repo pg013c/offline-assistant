@@ -168,7 +168,6 @@ GEMMA_4_26B_A4B = PinnedModel(
         )
     },
 )
-LLM_MODELS: tuple[PinnedModel, ...] = (QWEN3_5_9B, QWEN3_6_35B_A3B, GEMMA_4_26B_A4B)
 
 # The evaluation's judges by name (ADR 0025), served by `make judge`, never loaded by the API:
 # the first is the judge, the second re-judges the first's own answers.
