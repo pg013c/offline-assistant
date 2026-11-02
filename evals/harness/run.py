@@ -69,8 +69,6 @@ PROMPTFOO_CONFIG = ROOT / "evals" / "promptfoo" / "retrieval.yaml"
 GATED_MODE = "reranked"
 BASELINE = ROOT / "docs" / "evals" / "retrieval-baseline.json"
 ANSWER_BASELINE = ROOT / "docs" / "evals" / "answer-baseline.json"
-# The served model a run answers with when LLM_MODEL names none (ADR 0026).
-DEFAULT_CHAT_MODEL = "qwen3.5-9b"
 # The judged-correctness floor of the default model (ADR 0026, PRD §9).
 CORRECTNESS_FLOOR = 0.75
 # The metrics that only the judge measures (ADR 0022).
@@ -305,7 +303,7 @@ def run_answers(config: RunConfig) -> Outcome:
         calibration,
         judged=verdicts is not None,
         same_model=same_model(baseline, config.chat_model),
-    ) + correctness_failures(metrics.values, config.chat_model)
+    ) + correctness_failures(metrics.values, config.chat_model, default_chat_model())
     report_json, report_markdown = answer_reports(config.results_dir, config.chat_model, started_at)
     report_json.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", "utf-8")
     report_markdown.write_text(answers_markdown(metrics, metadata), encoding="utf-8")
@@ -414,17 +412,33 @@ def llm_pin(name: str, pins: Mapping[str, Mapping[str, str]]) -> Mapping[str, st
     return pins[name]
 
 
+# The default model, read from the backend's registry (ADR 0026, F-09b review #2).
+DEFAULT_CHAT_MODEL_COMMAND = (
+    "from assistant.adapters.chat_models import DEFAULT_CHAT_MODEL; print(DEFAULT_CHAT_MODEL)"
+)
+
+
 def default_chat_model() -> str:
     """The default model, as the backend's registry names it (ADR 0026)."""
-    raise NotImplementedError
+    return _command(
+        [
+            "uv",
+            "run",
+            "--directory",
+            str(ROOT / "backend"),
+            "python",
+            "-c",
+            DEFAULT_CHAT_MODEL_COMMAND,
+        ]
+    )
 
 
 def correctness_failures(
-    values: Mapping[str, float | None], chat_model: str, default: str = DEFAULT_CHAT_MODEL
+    values: Mapping[str, float | None], chat_model: str, default: str
 ) -> list[str]:
     """The judged-correctness floor, which holds for the default model only (ADR 0026)."""
     now = values.get("judged_correct")
-    if chat_model != DEFAULT_CHAT_MODEL or now is None or now >= CORRECTNESS_FLOOR - 1e-9:
+    if chat_model != default or now is None or now >= CORRECTNESS_FLOOR - 1e-9:
         return []
     return [
         f"judged_correct is {now * 100:.1f}, below its floor of {CORRECTNESS_FLOOR * 100:.1f} "
@@ -446,7 +460,7 @@ def default_answers_config(env: Mapping[str, str]) -> RunConfig:
         dataset=ROOT / "evals" / "datasets" / "answers.yaml",
         baseline=ANSWER_BASELINE,
         floors=False,
-        chat_model=env.get("LLM_MODEL", DEFAULT_CHAT_MODEL),
+        chat_model=env.get("LLM_MODEL") or default_chat_model(),
         llm_url=f"http://127.0.0.1:{env.get('LLM_PORT', '8080')}",
         judge_url=f"http://127.0.0.1:{env.get('JUDGE_PORT', '8081')}",
     )

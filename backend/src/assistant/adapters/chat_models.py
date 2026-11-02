@@ -33,7 +33,11 @@ def _served(name: str, pinned: PinnedModel) -> ChatModelSpec:
     )
 
 
-# The test model, Qwen3.5 9B as the default (ADR 0026), and the two models kept beside it.
+# The model `make llm` serves and the answer run uses when none is named (ADR 0026); the
+# Makefile and the evaluation read it from here.
+DEFAULT_CHAT_MODEL = "qwen3.5-9b"
+
+# The test model, the default, and the two models kept beside it.
 CHAT_MODELS: dict[str, ChatModelSpec] = {
     "fake-extractive": ChatModelSpec(served_model=None, pinned=None, tools=False),
     "qwen3.5-9b": _served("qwen3.5-9b", QWEN3_5_9B),

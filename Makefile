@@ -29,7 +29,10 @@ export QDRANT_PORT ?= 6333
 # The local LLM for `make llm` (ADR 0021): llama.cpp's llama-server on LLM_PORT.
 export LLM_PORT ?= 8080
 # The served model, by its name in the registry (chat_models.py; ADR 0024).
-LLM_MODEL ?= qwen3.5-9b
+# The default comes from the registry (ADR 0026), read once when LLM_MODEL is not set.
+ifeq ($(origin LLM_MODEL),undefined)
+LLM_MODEL := $(shell $(BACKEND) python -c "from assistant.adapters.chat_models import DEFAULT_CHAT_MODEL; print(DEFAULT_CHAT_MODEL)")
+endif
 # The model file's path comes from its pin, so the two cannot drift apart; empty for an unknown name.
 LLM_FILE = $(shell $(BACKEND) python -c "from assistant.adapters.chat_models import CHAT_MODELS; s = CHAT_MODELS.get('$(LLM_MODEL)'); m = s and s.pinned; print('$(ASSISTANT_MODELS_DIR)/' + m.directory + '/' + next(iter(m.files)) if m else '')")
 LLM_MODELS_SERVED = $(shell $(BACKEND) python -c "from assistant.adapters.chat_models import CHAT_MODELS; print(', '.join(n for n, s in CHAT_MODELS.items() if s.pinned))")
