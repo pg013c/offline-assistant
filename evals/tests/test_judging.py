@@ -28,14 +28,16 @@ VERDICT = Verdict("correct", "All points.", {1: True})
 
 
 class FakeJudge:
-    """Answers `verdicts` calls, then stops answering."""
+    """Answers `verdicts` calls, then stops answering; it never thinks."""
 
     def __init__(self, verdicts: int) -> None:
         self.left = verdicts
         self.judged: list[JudgeInput] = []
-        self.thought = True
+        self.thought = False
+        self.model: str | None = None
 
-    def __call__(self, url: str) -> "FakeJudge":
+    def __call__(self, url: str, model: str) -> "FakeJudge":
+        self.model = model
         return self
 
     def judge(self, judged: JudgeInput) -> Verdict | None:
@@ -46,11 +48,22 @@ class FakeJudge:
         return VERDICT
 
 
+def judge_server(*served: str) -> object:
+    """A judge server that is healthy and lists the given models."""
+
+    def get(url: str, **_: object) -> httpx.Response:
+        request = httpx.Request("GET", url)
+        if url.endswith("/v1/models"):
+            listed = {"object": "list", "data": [{"id": name} for name in served]}
+            return httpx.Response(200, json=listed, request=request)
+        return httpx.Response(200, request=request)
+
+    return get
+
+
 @pytest.fixture
 def healthy(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(
-        httpx, "get", lambda url, **_: httpx.Response(200, request=httpx.Request("GET", url))
-    )
+    monkeypatch.setattr(httpx, "get", judge_server("gemma-4-26b-a4b"))
 
 
 @pytest.mark.usefixtures("healthy")
@@ -89,19 +102,57 @@ def test_the_judge_rules_on_each_completed_answer_only(monkeypatch: pytest.Monke
 
     assert verdicts == {"a": VERDICT}
     assert [judged.question for judged in judge.judged] == ["A?"]
+    assert judge.model == "gemma-4-26b-a4b"
     assert identity == {
-        "model": "qwen3-30b-a3b",
+        "model": "gemma-4-26b-a4b",
         "server": {"url": "http://judge"},
         "prompt_sha256": hashlib.sha256(JUDGE_PROMPT.encode()).hexdigest(),
         "max_tokens": 8192,
-        "thinking": True,
+        "thinking": False,
     }
+
+
+@pytest.mark.parametrize("served", ["qwen3.6-35b-a3b", "gemma-4-26b-a4b"])
+def test_the_judge_is_the_model_its_server_lists(
+    monkeypatch: pytest.MonkeyPatch, served: str
+) -> None:
+    monkeypatch.setattr(httpx, "get", judge_server(served))
+    monkeypatch.setattr(run, "JudgeClient", FakeJudge(verdicts=5))
+
+    _, identity = run.judge_answers(CASES, QUESTIONS, RESULTS, {"d:1": "Text."}, "http://judge")
+
+    assert identity["model"] == served
+
+
+def test_a_judge_server_that_lists_no_model_judges_nothing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(httpx, "get", judge_server())
+
+    verdicts, judge = run.judge_answers(CASES, QUESTIONS, RESULTS, {}, "http://judge")
+
+    assert verdicts is None
+    assert judge == {
+        "skipped": "the judge at http://judge lists no model; start it with make judge"
+    }
+
+
+@pytest.mark.usefixtures("healthy")
+def test_calibration_asks_the_model_the_judge_server_lists(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    judge = FakeJudge(verdicts=100)
+    monkeypatch.setattr(run, "JudgeClient", judge)
+
+    assert run.calibrate("http://judge") is not None
+    assert judge.model == "gemma-4-26b-a4b"
 
 
 def test_without_its_calibration_set_the_judge_is_not_calibrated(tmp_path: Path) -> None:
     assert run.calibrate("http://judge", tmp_path / "missing.yaml") is None
 
 
+@pytest.mark.usefixtures("healthy")
 def test_a_judge_that_stops_during_calibration_is_not_calibrated(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

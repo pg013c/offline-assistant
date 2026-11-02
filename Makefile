@@ -83,7 +83,7 @@ judge-models: ## Download the evaluation's judge (Qwen3 30B-A3B, about 18.6 GB) 
 	$(BACKEND) python scripts/download_models.py "$(ASSISTANT_MODELS_DIR)" --judge
 
 judge-preflight: ## Check that make judge can start: llama-server installed, judge file pinned, port free
-	@$(BACKEND) python -c "from pathlib import Path; from assistant.adapters.pinned_models import JUDGE_MODELS, verify_models; verify_models(Path('$(ASSISTANT_MODELS_DIR)'), JUDGE_MODELS)" 2>/dev/null \
+	@$(BACKEND) python -c "from pathlib import Path; from assistant.adapters.pinned_models import JUDGE_MODELS, verify_models; verify_models(Path('$(ASSISTANT_MODELS_DIR)'), tuple(JUDGE_MODELS.values()))" 2>/dev/null \
 	  || { echo "The judge is missing or changed in $(ASSISTANT_MODELS_DIR). Fetch it with: make judge-models"; exit 1; }
 	@command -v llama-server >/dev/null || { echo "llama-server is not installed. Install it with: brew install llama.cpp"; exit 1; }
 	@if lsof -nP -iTCP:$(JUDGE_PORT) -sTCP:LISTEN >/dev/null 2>&1; then \

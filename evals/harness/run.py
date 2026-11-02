@@ -309,6 +309,11 @@ def run_answers(config: RunConfig) -> Outcome:
     return Outcome(report_json, report_markdown, failures)
 
 
+def served_judge(url: str) -> str | None:
+    """The model the judge server lists, or None when it lists none (ADR 0025)."""
+    raise NotImplementedError
+
+
 def _llm_server(url: str) -> dict[str, Any]:
     """The model server's build and model file, from llama-server's /props (ADR 0021)."""
     try:
@@ -553,7 +558,7 @@ def judge_answers(
         httpx.get(f"{judge_url}/health", timeout=5).raise_for_status()
     except httpx.HTTPError:
         return None, {"skipped": f"no judge answers at {judge_url}; start it with make judge"}
-    client = JudgeClient(judge_url)
+    client = JudgeClient(judge_url, served_judge(judge_url) or "")
     verdicts: dict[str, Verdict | None] = {}
     try:
         for case in cases:
@@ -579,7 +584,7 @@ def calibrate(judge_url: str, path: Path = CALIBRATION_FILE) -> Agreement | None
     missing or the judge stops answering, which fails a judged run."""
     if not path.exists():
         return None
-    client = JudgeClient(judge_url)
+    client = JudgeClient(judge_url, served_judge(judge_url) or "")
     items = load_calibration(path)
     try:
         return agreement(items, {item.id: client.judge(item.judged) for item in items})

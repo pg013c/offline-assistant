@@ -45,6 +45,6 @@ if __name__ == "__main__":
             main(models_dir, (spec.pinned,))
         case [models_dir, "--judge"]:
             # The evaluation's judge for llama-server, about 18.6 GB (ADR 0022).
-            main(models_dir, JUDGE_MODELS)
+            main(models_dir, tuple(JUDGE_MODELS.values()))
         case _:
             sys.exit(__doc__)

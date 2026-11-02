@@ -3,6 +3,7 @@ from typing import get_args
 import httpx
 import pytest
 
+from assistant.adapters import pinned_models
 from assistant.adapters.chat_models import (
     CHAT_MODELS,
     ChatModelNotReady,
@@ -12,11 +13,13 @@ from assistant.adapters.chat_models import (
 from assistant.adapters.fakes.chat_model import FakeExtractiveChatModel
 from assistant.adapters.openai_compatible_chat import OpenAICompatibleChat
 from assistant.adapters.pinned_models import (
+    GEMMA_4_26B_A4B,
     JUDGE_MODELS,
     LLM_MODELS,
     PINNED_MODELS,
+    QWEN3_6_35B_A3B,
     QWEN3_8B,
-    QWEN3_30B_A3B,
+    PinnedModel,
 )
 from assistant.settings import Settings
 
@@ -144,14 +147,16 @@ def test_the_llm_is_pinned_as_adr_0021_says_and_kept_apart_from_make_models() ->
     assert QWEN3_8B not in PINNED_MODELS
 
 
-def test_the_judge_is_pinned_as_adr_0022_says_and_kept_apart_from_the_app_and_its_llm() -> None:
-    assert QWEN3_30B_A3B.repository == "Qwen/Qwen3-30B-A3B-GGUF"
-    assert QWEN3_30B_A3B.revision == "e4d4bafdfb96a411a163846265362aceb0b9c63a"
-    sha256 = "0d003f6662faee786ed5da3e31b29c978de5ae5d275c8794c606a7f3c01aa8f5"
-    assert QWEN3_30B_A3B.files == {"Qwen3-30B-A3B-Q4_K_M.gguf": sha256}
-    assert JUDGE_MODELS == (QWEN3_30B_A3B,)
-    assert QWEN3_30B_A3B not in PINNED_MODELS
-    assert QWEN3_30B_A3B not in LLM_MODELS
+def test_the_judge_is_gemma_4_and_its_check_is_qwen3_6_as_adr_0025_says() -> None:
+    assert JUDGE_MODELS == {"gemma-4-26b-a4b": GEMMA_4_26B_A4B, "qwen3.6-35b-a3b": QWEN3_6_35B_A3B}
+    assert next(iter(JUDGE_MODELS)) == "gemma-4-26b-a4b", "the first judge is the default"
+    assert all(model not in PINNED_MODELS for model in JUDGE_MODELS.values())
+
+
+def test_qwen3_30b_a3b_is_no_longer_pinned() -> None:
+    pins = [value for value in vars(pinned_models).values() if isinstance(value, PinnedModel)]
+
+    assert all(pin.repository != "Qwen/Qwen3-30B-A3B-GGUF" for pin in pins)
 
 
 @pytest.mark.parametrize(

@@ -54,7 +54,7 @@ check "eval-answers refuses to run without the model server, naming make llm" \
 
 # judge_preflight <env(1) arguments>: checks the judge's file and port without starting it.
 judge_preflight() {
-  env "$@" make -C "$root" --no-print-directory judge-preflight \
+  env -u JUDGE "$@" make -C "$root" --no-print-directory judge-preflight \
     ENV_FILE="$scratch/missing.env" JUDGE_PORT=59995 2>&1
 }
 
@@ -65,13 +65,49 @@ set -e
 check "judge refuses to start without the pinned judge file, naming make judge-models" \
   "$([[ $status -ne 0 && "$output" == *"make judge-models"* ]] && echo yes || echo no)"
 
-check "judge serves on JUDGE_PORT as qwen3-30b-a3b" \
-  "$(make -C "$root" --no-print-directory -n judge JUDGE_PORT=59994 ASSISTANT_MODELS_DIR="$scratch" 2>/dev/null \
-    | grep -q -- "--port 59994.*--alias qwen3-30b-a3b\|--alias qwen3-30b-a3b.*--port 59994" && echo yes || echo no)"
+# judge_recipe <make arguments>: what `make judge` would run, without the environment's JUDGE.
+judge_recipe() {
+  env -u JUDGE make -C "$root" --no-print-directory -n judge \
+    ENV_FILE="$scratch/missing.env" ASSISTANT_MODELS_DIR="$scratch" "$@" 2>&1
+}
 
-judge_recipe="$(make -C "$root" --no-print-directory -n judge ASSISTANT_MODELS_DIR="$scratch" 2>/dev/null)"
-check "judge thinks before it rules (ADR 0023)" \
-  "$([[ "$judge_recipe" == *"--alias qwen3-30b-a3b"* && "$judge_recipe" != *"--reasoning-budget 0"* ]] && echo yes || echo no)"
+# The judge and its check (ADR 0025), served from their pinned files with thinking off.
+judges=(
+  "gemma-4-26b-a4b llm/google--gemma-4-26B-A4B-it-qat-q4_0-gguf/gemma-4-26B_q4_0-it.gguf"
+  "qwen3.6-35b-a3b llm/ggml-org--Qwen3.6-35B-A3B-GGUF/Qwen3.6-35B-A3B-Q4_K_M.gguf"
+)
+for entry in "${judges[@]}"; do
+  read -r name file <<<"$entry"
+  recipe="$(judge_recipe JUDGE="$name" JUDGE_PORT=59994)"
+  check "judge serves $name from its pinned file on JUDGE_PORT, thinking off (ADR 0025)" \
+    "$([[ "$recipe" == *"-m \"$scratch/$file\""* && "$recipe" == *"--alias $name "* \
+      && "$recipe" == *"--port 59994 "* && "$recipe" == *"--reasoning off"* \
+      && "$recipe" == *"--ctx-size 16384"* && "$recipe" == *"--n-gpu-layers 99"* \
+      && "$recipe" == *"--jinja"* ]] && echo yes || echo no)"
+done
+
+check "judge serves gemma-4-26b-a4b when no judge is named" \
+  "$([[ "$(judge_recipe)" == *"--alias gemma-4-26b-a4b "* ]] && echo yes || echo no)"
+
+set +e
+output="$(judge_recipe JUDGE=qwen3-8b)"
+status=$?
+set -e
+check "judge refuses JUDGE=qwen3-8b, listing the judges" \
+  "$([[ $status -ne 0 && "$output" == *"qwen3-8b"* && "$output" == *"gemma-4-26b-a4b"* \
+    && "$output" == *"qwen3.6-35b-a3b"* ]] && echo yes || echo no)"
+
+set +e
+output="$(judge_preflight ASSISTANT_MODELS_DIR="$scratch/no-models" JUDGE=qwen3.6-35b-a3b)"
+status=$?
+set -e
+check "judge-preflight names the command that fetches the chosen judge" \
+  "$([[ $status -ne 0 && "$output" == *"make judge-models JUDGE=qwen3.6-35b-a3b"* ]] && echo yes || echo no)"
+
+check "judge-models fetches only the chosen judge" \
+  "$(env -u JUDGE make -C "$root" --no-print-directory -n judge-models ENV_FILE="$scratch/missing.env" \
+    ASSISTANT_MODELS_DIR="$scratch" JUDGE=qwen3.6-35b-a3b 2>/dev/null \
+    | grep -q -- "--judge qwen3.6-35b-a3b" && echo yes || echo no)"
 
 # llm_recipe <make arguments>: what `make llm` would run, without the environment's LLM_MODEL.
 llm_recipe() {

@@ -82,7 +82,9 @@ class _Invalid(Exception):
 class JudgeClient:
     """Asks the judge for a verdict; an unreadable or late reply is retried, then not judged."""
 
-    def __init__(self, url: str, http: httpx.Client | None = None, max_retries: int = 2) -> None:
+    def __init__(
+        self, url: str, model: str, http: httpx.Client | None = None, max_retries: int = 2
+    ) -> None:
         self._url = url
         self._http = http or httpx.Client(timeout=TIMEOUT_SECONDS)
         self._max_retries = max_retries

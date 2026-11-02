@@ -206,4 +206,4 @@ QWEN3_30B_A3B = PinnedModel(
         )
     },
 )
-JUDGE_MODELS: tuple[PinnedModel, ...] = (QWEN3_30B_A3B,)
+JUDGE_MODELS: dict[str, PinnedModel] = {"qwen3-30b-a3b": QWEN3_30B_A3B}

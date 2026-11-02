@@ -46,7 +46,9 @@ class StubJudge:
 
 def client(stub: StubJudge) -> JudgeClient:
     return JudgeClient(
-        "http://127.0.0.1:8081", http=httpx.Client(transport=httpx.MockTransport(stub))
+        "http://127.0.0.1:8081",
+        "gemma-4-26b-a4b",
+        http=httpx.Client(transport=httpx.MockTransport(stub)),
     )
 
 
@@ -56,6 +58,7 @@ def test_the_request_holds_the_prompt_the_schema_and_everything_the_judge_reads(
     client(stub).judge(INPUT)
 
     request = stub.requests[0]
+    assert request["model"] == "gemma-4-26b-a4b", "the model the judge server serves"
     assert request["temperature"] == 0
     assert request["max_tokens"] >= 8192, "room to think (ADR 0023)"
     assert request["response_format"]["type"] == "json_schema"
@@ -112,7 +115,9 @@ def test_a_judge_that_does_not_answer_is_unavailable() -> None:
         raise httpx.ConnectError("refused", request=request)
 
     judge = JudgeClient(
-        "http://127.0.0.1:8081", http=httpx.Client(transport=httpx.MockTransport(refuse))
+        "http://127.0.0.1:8081",
+        "gemma-4-26b-a4b",
+        http=httpx.Client(transport=httpx.MockTransport(refuse)),
     )
 
     with pytest.raises(JudgeUnavailable, match="make judge"):
@@ -150,7 +155,9 @@ def test_a_request_that_times_out_is_retried_then_not_judged() -> None:
         raise httpx.ReadTimeout("no verdict in time", request=request)
 
     judge = JudgeClient(
-        "http://127.0.0.1:8081", http=httpx.Client(transport=httpx.MockTransport(slow))
+        "http://127.0.0.1:8081",
+        "gemma-4-26b-a4b",
+        http=httpx.Client(transport=httpx.MockTransport(slow)),
     )
 
     assert judge.judge(INPUT) is None
@@ -164,7 +171,9 @@ def test_the_client_tells_whether_the_judge_thought() -> None:
 
     plain = client(StubJudge(json.dumps(VALID)))
     thoughtful = JudgeClient(
-        "http://127.0.0.1:8081", http=httpx.Client(transport=httpx.MockTransport(thinking))
+        "http://127.0.0.1:8081",
+        "gemma-4-26b-a4b",
+        http=httpx.Client(transport=httpx.MockTransport(thinking)),
     )
     plain.judge(INPUT)
     thoughtful.judge(INPUT)
