@@ -18,11 +18,11 @@ from harness.memory import (
     find_server,
     footprint_bytes,
     mapped_bytes,
-    peak_mb,
+    peak_mib,
     sample,
 )
 
-MB = 1024 * 1024
+MIB = 1024 * 1024
 
 
 class FakeTable:
@@ -73,33 +73,33 @@ def test_a_free_port_is_refused_naming_make_llm() -> None:
 
 
 def test_the_server_is_read_once_a_second_until_the_run_stops_it() -> None:
-    table = FakeTable(SERVER, [5000 * MB, 5200 * MB, 5100 * MB, 9999 * MB])
+    table = FakeTable(SERVER, [5000 * MIB, 5200 * MIB, 5100 * MIB, 9999 * MIB])
     clock = FakeClock(ticks=3)
 
     samples = sample(table, SERVER.pid, clock.stopped, clock.wait)
 
-    assert samples == [5000 * MB, 5200 * MB, 5100 * MB]
+    assert samples == [5000 * MIB, 5200 * MIB, 5100 * MIB]
     assert clock.waits == [1.0, 1.0, 1.0]
     assert set(table.read_pids) == {SERVER.pid}
 
 
 def test_a_server_that_ends_stops_the_sampling_and_its_samples_still_count() -> None:
-    table = FakeTable(SERVER, [5000 * MB, 6000 * MB])
+    table = FakeTable(SERVER, [5000 * MIB, 6000 * MIB])
 
     samples = sample(table, SERVER.pid, FakeClock(ticks=10).stopped, FakeClock(ticks=10).wait)
 
-    assert samples == [5000 * MB, 6000 * MB]
-    assert peak_mb(samples, mapped=0) == 6000.0
+    assert samples == [5000 * MIB, 6000 * MIB]
+    assert peak_mib(samples, mapped=0) == 6000.0
 
 
-def test_the_peak_is_the_largest_sample_plus_the_mapped_model_file_in_mb() -> None:
-    samples = [800 * MB, 1200 * MB + MB // 2, 900 * MB]
+def test_the_peak_is_the_largest_sample_plus_the_mapped_model_file_in_mib() -> None:
+    samples = [800 * MIB, 1200 * MIB + MIB // 2, 900 * MIB]
 
-    assert peak_mb(samples, mapped=19_000 * MB) == pytest.approx(20_200.5)
+    assert peak_mib(samples, mapped=19_000 * MIB) == pytest.approx(20_200.5)
 
 
 def test_without_samples_there_is_no_peak() -> None:
-    assert peak_mb([], mapped=19_000 * MB) is None
+    assert peak_mib([], mapped=19_000 * MIB) is None
 
 
 def test_the_footprint_is_read_from_the_tools_byte_output() -> None:
@@ -129,7 +129,7 @@ def test_an_unknown_model_file_is_refused_naming_props(path: str | None) -> None
         mapped_bytes(path)
 
 
-def test_the_markdown_gives_the_peak_memory_in_whole_mb() -> None:
+def test_the_markdown_gives_the_peak_memory_in_whole_mib() -> None:
     answered = ChatResult(
         answer="Logs are kept [1].",
         cited=("d:1",),
@@ -141,9 +141,9 @@ def test_the_markdown_gives_the_peak_memory_in_whole_mb() -> None:
     metrics = score_answers(
         [AnswerCase("en-a", "en", "answer", frozenset({"d:1"}))], {"en-a": answered}
     )
-    metrics.performance["peak_memory_mb"] = 5200.6
+    metrics.performance["peak_memory_mib"] = 5200.6
 
-    assert "| peak_memory_mb | 5201 |" in answers_markdown(metrics, {})
+    assert "| peak_memory_mib | 5201 |" in answers_markdown(metrics, {})
 
 
 def test_a_tool_that_hangs_is_stopped_and_gives_no_reading(monkeypatch: pytest.MonkeyPatch) -> None:

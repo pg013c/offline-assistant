@@ -76,6 +76,11 @@ def sample(
     return samples
 
 
+def peak_mib(samples: list[int], mapped: int) -> float | None:
+    """The largest sample plus the mapped model file, in MiB (F-09b review #8)."""
+    raise NotImplementedError
+
+
 def peak_mb(samples: list[int], mapped: int) -> float | None:
     """The largest sample plus the mapped model file, in MB (1024 x 1024 bytes); None without
     samples."""

@@ -15,7 +15,7 @@ from pathlib import Path
 import httpx
 import pytest
 
-from harness.memory import SystemProcesses, find_server, mapped_bytes, peak_mb, sample
+from harness.memory import SystemProcesses, find_server, mapped_bytes, peak_mib, sample
 
 pytestmark = pytest.mark.integration
 
@@ -101,9 +101,11 @@ def test_the_peak_memory_covers_the_buffers_llama_server_allocates_and_little_mo
     ticks = iter(range(3))
 
     samples = sample(table, found.pid, lambda: next(ticks, None) is None, time.sleep)
-    peak = peak_mb(samples, mapped=mapped_bytes(str(model)))
+    peak = peak_mib(samples, mapped=mapped_bytes(str(model)))
 
     buffers = sum(float(size) for size in BUFFER.findall(log.read_text(errors="replace")))
     assert buffers > 4000
     assert peak is not None
-    assert 0.9 * buffers <= peak <= buffers + 2048, f"peak {peak:.0f} MB, buffers {buffers:.0f} MiB"
+    assert 0.9 * buffers <= peak <= buffers + 2048, (
+        f"peak {peak:.0f} MiB, buffers {buffers:.0f} MiB"
+    )
