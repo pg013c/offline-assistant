@@ -27,7 +27,7 @@ F-09b ran five local models through the same suite on the same Mac, graded by th
 | Qwen3.5 9B | 82 % | 98 % | 1.1 s | 44 | 15.8 GB |
 | Qwen3.6 35B-A3B | 84 % | 98 % | 0.7 s | 72 | 29.4 GB |
 | Gemma 4 26B-A4B | 79 % | 98 % | 0.8 s | 82 | 26.5 GB |
-| Ternary-Bonsai-2 27B | 79 % | 98 % | 2.8 s | 29 | 21.5 GB |
+| Ternary-Bonsai-2 27B | 79 % | 98 % | 2.85 s | 29 | 21.5 GB |
 
 All five meet the floors for citation support, tool calls and refusals. Under the 24 GB memory limit, Qwen3.5 9B answers best ([record](docs/evals/2026-11-02-model-comparison.md)).
 
@@ -116,7 +116,7 @@ make eval-corpus
 make eval
 ```
 
-`make eval` indexes the evaluation corpus (the AI Act and the GDPR in English and Polish, fetched once by `make eval-corpus` and checked against pinned hashes) into its own data directory and Qdrant collection. It then scores the retrieval cases in `evals/datasets/` with Promptfoo and fails if a metric is more than 5 points worse than the baseline in [docs/evals/](docs/evals/) or below its floor ([ADR 0020](docs/adr/0020-retrieval-targets.md)). Reports go to `evals/results/`. `make eval-answers` asks the same questions through the chat API with the local LLM (it needs `make llm`) and compares the answers with their own baseline. `make eval-answers LLM_MODEL=<name>` answers with another served model; its report carries the model's name, and it is held to the floors and the judge's calibration, not to a baseline of another model. With the judge running (`make judge-models` once, about 18.6 GB, then `make judge`), it also judges the answers and checks the judge against its calibration set first; without it, the judged metrics are skipped.
+`make eval` indexes the evaluation corpus (the AI Act and the GDPR in English and Polish, fetched once by `make eval-corpus` and checked against pinned hashes) into its own data directory and Qdrant collection. It then scores the retrieval cases in `evals/datasets/` with Promptfoo and fails if a metric is more than 5 points worse than the baseline in [docs/evals/](docs/evals/) or below its floor ([ADR 0020](docs/adr/0020-retrieval-targets.md)). Reports go to `evals/results/`. `make eval-answers` asks the same questions through the chat API with the local LLM (it needs `make llm`) and compares the answers with their own baseline. `make eval-answers LLM_MODEL=<name>` answers with another served model; its report carries the model's name, and it is held to the floors and the judge's calibration, not to a baseline of another model. With the judge running (`make judge-models` once, about 14.4 GB for Gemma 4, then `make judge`; `JUDGE=qwen3.6-35b-a3b` serves the check judge instead), it also judges the answers and checks the judge against its calibration set first; without it, the judged metrics are skipped.
 
 `make test-integration` runs the tests with real adapters (Docling, BGE-M3, the reranker, Qdrant); it needs `make models`, `make qdrant` and Tesseract.
 

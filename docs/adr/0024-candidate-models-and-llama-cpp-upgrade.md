@@ -1,6 +1,6 @@
 # 0024. Pin four candidate models for the comparison, and upgrade llama.cpp to serve them
 
-- Status: accepted
+- Status: accepted, amended by [0026](0026-qwen3-5-9b-is-the-default-model.md)
 - Date: 2026-10-31
 - Related: FR-40, FR-44, FR-45, NFR-03, AI-40, AI-61, F-09b, ADR 0004, ADR 0021, ADR 0022, ADR 0023
 

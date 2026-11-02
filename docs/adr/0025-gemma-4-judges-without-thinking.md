@@ -33,7 +33,7 @@ Both models are already pinned as F-09b candidates (ADR 0024) and are Apache-2.0
 
 ## Decision
 
-1. **Judge model:** Gemma 4 26B-A4B. It uses the file ADR 0024 pins, `gemma-4-26B_q4_0-it.gguf`, SHA-256 `3eca3b8f…49e70e`.
+1. **Judge model:** Gemma 4 26B-A4B. It uses the file ADR 0024 pins, `gemma-4-26B_q4_0-it.gguf`, SHA-256 `3eca3b8f…eca51d`.
 2. **Thinking off:** `make judge` serves it with `--reasoning off` and the flags `make llm` uses. The harness records `thinking: false`.
 3. **The rest of ADR 0022 stands:** the prompt, the 85 % bar for correctness and for support, the answer floors and calibration on every judged run.
 4. **Self-judging check:** Gemma 4 is also a candidate, so its own answers are judged a second time. Qwen3.6 35B-A3B with thinking off, which passes the bar, re-judges them.
