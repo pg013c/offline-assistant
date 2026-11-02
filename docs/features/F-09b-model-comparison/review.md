@@ -31,7 +31,6 @@ Finding 3 is kept with corrected reasoning. The test fixes the model to `qwen3.5
 Decision is filled in by the human: `fix`, `backlog (F-xx)`, or `reject: <reason>`.
 
 ## Resolution
-
 | # | Commits |
 |---|---|
 | 1 | `832375c` test, `0c5a1db` fix |
@@ -41,5 +40,6 @@ Decision is filled in by the human: `fix`, `backlog (F-xx)`, or `reject: <reason
 | 5 | `4dfa393` test, `95cdfe2` fix |
 | 6 | `69aedfc` docs |
 | 7 | `69aedfc` docs |
+| 8 | `b10f972` test, `e9f4722` fix |
 | 9 | `69aedfc` docs |
 | 11 | `69aedfc` docs |
