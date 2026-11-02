@@ -3,7 +3,7 @@ from typing import get_args
 import httpx
 import pytest
 
-from assistant.adapters import pinned_models
+from assistant.adapters import chat_models, pinned_models
 from assistant.adapters.chat_models import (
     CHAT_MODELS,
     ChatModelNotReady,
@@ -176,3 +176,10 @@ def test_the_test_model_is_no_agent() -> None:
     model = chat_model_for(settings("fake-extractive"))
 
     assert tool_model_for(settings("fake-extractive"), model) is None
+
+
+def test_the_registry_names_the_default_model_of_adr_0026() -> None:
+    default = getattr(chat_models, "DEFAULT_CHAT_MODEL", None)
+
+    assert default == "qwen3.5-9b"
+    assert CHAT_MODELS[default].pinned is not None

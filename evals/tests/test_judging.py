@@ -256,8 +256,19 @@ def test_a_run_without_calibration_says_so_in_its_metadata() -> None:
     assert run.calibration_metadata(None) == "not run"
 
 
-def test_the_default_model_is_the_one_adr_0026_chose() -> None:
-    assert run.DEFAULT_CHAT_MODEL == "qwen3.5-9b"
+def test_the_default_model_is_read_from_the_backends_registry(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    commands: list[list[str]] = []
+
+    def command(arguments: list[str]) -> str:
+        commands.append(arguments)
+        return "gemma-4-26b-a4b"
+
+    monkeypatch.setattr(run, "_command", command)
+
+    assert run.default_chat_model() == "gemma-4-26b-a4b"
+    assert "DEFAULT_CHAT_MODEL" in commands[0][-1]
 
 
 @pytest.mark.parametrize(
@@ -278,4 +289,12 @@ def test_judged_correctness_has_a_floor_for_the_default_model_only(
 ) -> None:
     values = {**JUDGED, "judged_correct": judged_correct}
 
-    assert run.correctness_failures(values, chat_model) == failures
+    assert run.correctness_failures(values, chat_model, default="qwen3.5-9b") == failures
+
+
+def test_the_floor_follows_whichever_model_is_the_default() -> None:
+    values = {**JUDGED, "judged_correct": 0.70}
+
+    assert run.correctness_failures(values, "gemma-4-26b-a4b", default="gemma-4-26b-a4b") == [
+        "judged_correct is 70.0, below its floor of 75.0 for the default model (ADR 0026)"
+    ]

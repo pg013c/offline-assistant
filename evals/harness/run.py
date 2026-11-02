@@ -414,7 +414,14 @@ def llm_pin(name: str, pins: Mapping[str, Mapping[str, str]]) -> Mapping[str, st
     return pins[name]
 
 
-def correctness_failures(values: Mapping[str, float | None], chat_model: str) -> list[str]:
+def default_chat_model() -> str:
+    """The default model, as the backend's registry names it (ADR 0026)."""
+    raise NotImplementedError
+
+
+def correctness_failures(
+    values: Mapping[str, float | None], chat_model: str, default: str = DEFAULT_CHAT_MODEL
+) -> list[str]:
     """The judged-correctness floor, which holds for the default model only (ADR 0026)."""
     now = values.get("judged_correct")
     if chat_model != DEFAULT_CHAT_MODEL or now is None or now >= CORRECTNESS_FLOOR - 1e-9:

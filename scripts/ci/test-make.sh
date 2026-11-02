@@ -115,11 +115,22 @@ llm_recipe() {
     ENV_FILE="$scratch/missing.env" ASSISTANT_MODELS_DIR="$scratch" "$@" 2>&1
 }
 
-check "llm serves qwen3.5-9b when no model is named (ADR 0026)" \
-  "$([[ "$(llm_recipe)" == *"--alias qwen3.5-9b "* ]] && echo yes || echo no)"
+# The default model, from the one place that names it (ADR 0026, F-09b review #2).
+default_model="$(uv run --directory "$root/backend" python -c \
+  "from assistant.adapters.chat_models import DEFAULT_CHAT_MODEL; print(DEFAULT_CHAT_MODEL)" 2>/dev/null || true)"
 
-check "the example environment answers with qwen3.5-9b (ADR 0026)" \
-  "$(grep -qx "ASSISTANT_CHAT_MODEL=qwen3.5-9b" "$root/.env.example" && echo yes || echo no)"
+check "the registry's default is qwen3.5-9b (ADR 0026)" \
+  "$([[ "$default_model" == "qwen3.5-9b" ]] && echo yes || echo no)"
+
+check "llm serves the registry's default when no model is named" \
+  "$([[ -n "$default_model" && "$(llm_recipe)" == *"--alias $default_model "* ]] && echo yes || echo no)"
+
+check "the example environment answers with the registry's default" \
+  "$([[ -n "$default_model" ]] && grep -qx "ASSISTANT_CHAT_MODEL=$default_model" "$root/.env.example" \
+    && echo yes || echo no)"
+
+check "the Makefile takes its default from the registry, not a name of its own" \
+  "$(grep -q '^LLM_MODEL ?= qwen' "$root/Makefile" && echo no || echo yes)"
 
 # Every served model in the registry (F-09b, ADR 0024) and its pinned file under the models dir.
 served_models=(
