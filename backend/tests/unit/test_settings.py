@@ -22,6 +22,8 @@ def clean_environment(monkeypatch: pytest.MonkeyPatch) -> None:
         "ASSISTANT_LLM_URL",
         "ASSISTANT_LLM_TIMEOUT",
         "ASSISTANT_MAX_RETRIES",
+        "ASSISTANT_NOTES_DIR",
+        "ASSISTANT_ALLOW_NETWORK",
     ):
         monkeypatch.delenv(name, raising=False)
     # main() sets these; recording them here restores them after each test.
@@ -67,13 +69,13 @@ def test_search_settings_are_read_from_the_environment(
 ) -> None:
     monkeypatch.setenv("ASSISTANT_DATA_DIR", str(tmp_path))
     monkeypatch.setenv("ASSISTANT_MODELS_DIR", str(tmp_path / "models"))
-    monkeypatch.setenv("ASSISTANT_QDRANT_URL", "http://qdrant.internal:6333")
+    monkeypatch.setenv("ASSISTANT_QDRANT_URL", "http://qdrant:6333")
     monkeypatch.setenv("ASSISTANT_QDRANT_COLLECTION_PREFIX", "e2e")
     monkeypatch.setenv("ASSISTANT_MIN_SIMILARITY", "0.42")
 
     settings = load_settings()
 
-    assert settings.qdrant_url == "http://qdrant.internal:6333"
+    assert settings.qdrant_url == "http://qdrant:6333"
     assert settings.qdrant_collection_prefix == "e2e"
     assert settings.min_similarity == 0.42
 
@@ -274,3 +276,104 @@ def test_network_mode_is_switched_on_by_its_variable(
     monkeypatch.setenv("ASSISTANT_ALLOW_NETWORK", "1")
 
     assert load_settings().allow_network is True
+
+
+SERVICE_URL_VARIABLES = ["ASSISTANT_LLM_URL", "ASSISTANT_QDRANT_URL"]
+
+
+def _settings_for(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, **values: str) -> Settings:
+    monkeypatch.setenv("ASSISTANT_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("ASSISTANT_MODELS_DIR", str(tmp_path / "models"))
+    for name, value in values.items():
+        monkeypatch.setenv(name, value)
+    return load_settings()
+
+
+@pytest.mark.parametrize("variable", SERVICE_URL_VARIABLES)
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http://127.0.0.1:8080",
+        "http://127.10.0.1:6333",
+        "http://[::1]:6333",
+        "http://localhost:8080",
+        "https://LOCALHOST:6333",
+        "http://qdrant:6333",
+        "http://llm:8080",
+    ],
+)
+def test_service_urls_on_this_machine_are_accepted_offline(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, variable: str, url: str
+) -> None:
+    settings = _settings_for(monkeypatch, tmp_path, **{variable: url})
+
+    field = variable.removeprefix("ASSISTANT_").lower()
+    assert getattr(settings, field) == url
+
+
+@pytest.mark.parametrize("variable", SERVICE_URL_VARIABLES)
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http://example.com:6333",
+        "http://8.8.8.8:6333",
+        "http://192.168.1.10:6333",
+        "http://[2001:db8::1]:6333",
+        # Resolvers read a bare number as an IPv4 address (here 192.168.1.1).
+        "http://3232235777:6333",
+        # The loopback address is the user name; the host is example.com.
+        "http://127.0.0.1@example.com:6333",
+    ],
+)
+def test_service_urls_off_this_machine_are_refused_offline(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, variable: str, url: str
+) -> None:
+    with pytest.raises(SettingsError, match=rf"{variable}.*ASSISTANT_ALLOW_NETWORK"):
+        _settings_for(monkeypatch, tmp_path, **{variable: url})
+
+
+@pytest.mark.parametrize("variable", SERVICE_URL_VARIABLES)
+@pytest.mark.parametrize("url", ["http://example.com:6333", "https://8.8.8.8"])
+def test_network_mode_accepts_remote_service_urls(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, variable: str, url: str
+) -> None:
+    settings = _settings_for(monkeypatch, tmp_path, ASSISTANT_ALLOW_NETWORK="1", **{variable: url})
+
+    field = variable.removeprefix("ASSISTANT_").lower()
+    assert getattr(settings, field) == url
+
+
+@pytest.mark.parametrize("allow_network", ["0", "1"])
+@pytest.mark.parametrize("variable", SERVICE_URL_VARIABLES)
+@pytest.mark.parametrize("url", ["ftp://127.0.0.1:6333", "file:///tmp/qdrant", "127.0.0.1:6333"])
+def test_service_urls_must_be_http(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, allow_network: str, variable: str, url: str
+) -> None:
+    with pytest.raises(SettingsError, match=rf"{variable}.*http"):
+        _settings_for(
+            monkeypatch, tmp_path, ASSISTANT_ALLOW_NETWORK=allow_network, **{variable: url}
+        )
+
+
+def test_both_bad_urls_are_named_together(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    with pytest.raises(SettingsError) as refused:
+        _settings_for(
+            monkeypatch,
+            tmp_path,
+            ASSISTANT_LLM_URL="http://llm.example.com:8080",
+            ASSISTANT_QDRANT_URL="http://qdrant.example.com:6333",
+        )
+
+    assert "ASSISTANT_LLM_URL" in str(refused.value)
+    assert "ASSISTANT_QDRANT_URL" in str(refused.value)
+
+
+def test_a_refused_url_does_not_echo_its_credentials(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    with pytest.raises(SettingsError, match="ASSISTANT_QDRANT_URL") as refused:
+        _settings_for(
+            monkeypatch, tmp_path, ASSISTANT_QDRANT_URL="http://admin:s3cret@example.com:6333"
+        )
+
+    assert "s3cret" not in str(refused.value)

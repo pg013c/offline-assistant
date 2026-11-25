@@ -149,7 +149,7 @@ The diagram above is the target. The question flow runs end to end today; each p
 - **Which models:** the configured one, which is the default, and `fake-extractive` beside a real model. `GET /api/models` lists them.
 - **Choosing per question:** a chat request may name a model (`ChatRequest.model`, at most 100 characters). An unknown one is a 422 `unknown_model`, resolved before the stream starts.
 - **Availability (F-09b):** `GET /api/models` lists a local model only while its server lists it, asked at most every few seconds. The UI refreshes the list, moves a question to the fallback when the chosen model stops answering, and says so.
-- **Network mode:** `ASSISTANT_ALLOW_NETWORK` (default off) is reported by `GET /api/health` as `network`, and the UI shows "Offline" or a warning (ADR 0004). Nothing uses the network until F-09.
+- **Network mode:** `ASSISTANT_ALLOW_NETWORK` (default off) is reported by `GET /api/health` as `network`, and the UI shows "Offline" or a warning (ADR 0004). Nothing uses the network until F-09. With it off, settings refuse an `ASSISTANT_LLM_URL` or `ASSISTANT_QDRANT_URL` that is not loopback, `localhost` or a Compose service name.
 
 **The UI** (`frontend/`, F-08):
 
