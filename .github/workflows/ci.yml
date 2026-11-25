@@ -159,6 +159,7 @@ jobs:
           uv sync --directory backend --locked
           uv sync --directory evals --locked
           corepack enable pnpm
+          corepack install --global "$(jq -r .packageManager frontend/package.json)"
           pnpm --dir evals install --frozen-lockfile
           sudo apt-get update
           sudo apt-get install --yes --no-install-recommends tesseract-ocr tesseract-ocr-eng tesseract-ocr-pol
@@ -199,6 +200,7 @@ jobs:
           COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
         run: |
           corepack enable pnpm
+          corepack install --global "$(jq -r .packageManager frontend/package.json)"
           pnpm --dir frontend install --frozen-lockfile
 
       - name: Format, lint, types, tests
@@ -229,6 +231,7 @@ jobs:
         run: |
           uv sync --directory backend --locked
           corepack enable pnpm
+          corepack install --global "$(jq -r .packageManager frontend/package.json)"
           pnpm --dir frontend install --frozen-lockfile
 
       - name: Generated client matches the backend schema
@@ -264,6 +267,7 @@ jobs:
         run: |
           uv sync --directory backend --locked
           corepack enable pnpm
+          corepack install --global "$(jq -r .packageManager frontend/package.json)"
           pnpm --dir frontend install --frozen-lockfile
           pnpm --dir frontend exec playwright install --with-deps chromium
           sudo apt-get install --yes --no-install-recommends tesseract-ocr tesseract-ocr-eng tesseract-ocr-pol
